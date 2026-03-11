@@ -29,6 +29,7 @@ import {
   type AuthResult,
 } from './supabase';
 import { bootstrapUser } from './api';
+import { identifyUser, resetPurchasesUser } from './purchases';
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signIn(email, password);
     if (result.ok && result.session) {
       setSession(result.session);
+      // Identify user in RevenueCat so purchase history follows across devices
+      void identifyUser(result.session.user.id);
     }
     return result;
   }, []);
@@ -85,14 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signUp(email, password);
     if (result.ok && result.session) {
       setSession(result.session);
-      // Bootstrap the backend user record
+      // Bootstrap backend + identify in RevenueCat
       await bootstrapUser();
+      void identifyUser(result.session.user.id);
     }
     return result;
   }, []);
 
   const logout = useCallback(async () => {
     await signOut();
+    await resetPurchasesUser();
     setSession(null);
   }, []);
 
