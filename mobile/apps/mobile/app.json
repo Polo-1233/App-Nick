@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "R90 Navigator",
+    "slug": "r90-navigator",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "r90",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/images/icon.png",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/ecran4.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0A0A0A"
+    },
+    "ios": {
+      "bundleIdentifier": "com.metalab.r90navigator",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "R90 Navigator reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.",
+        "NSUserNotificationUsageDescription": "Get a gentle nudge when it's time to start your pre-sleep routine or take a recovery nap."
+      }
+    },
+    "android": {
+      "package": "com.metalab.r90navigator",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0A0A0A"
+      },
+      "permissions": [
+        "READ_CALENDAR",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      [
+        "expo-navigation-bar",
+        {
+          "position": "absolute"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0A0A",
+          "image": "./assets/images/ecran4.png",
+          "resizeMode": "cover"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "R90 Navigator reads your calendar to detect conflicts with your sleep schedule and suggest adjustments."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#22C55E"
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7d42ee2c-3236-4060-b482-11c5a8065fd1"
+      }
+    }
+  }
+}

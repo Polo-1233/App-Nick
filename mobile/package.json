@@ -1,0 +1,25 @@
+{
+  "name": "r90-digital-navigator",
+  "version": "1.0.0-rc.1",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspace=@r90/tests",
+    "dev:mobile": "npm run start --workspace=@r90/mobile",
+    "lint": "echo 'TODO: setup linting'"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "expo": "~54.0.0",
+    "expo-constants": "~18.0.13",
+    "expo-linking": "~8.0.11",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  }
+}

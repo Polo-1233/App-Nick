@@ -1,0 +1,145 @@
+/**
+ * supabase.ts — Supabase client for the R90 Navigator mobile app.
+ *
+ * Single source of truth for:
+ *   - Auth (signup, login, session management, JWT retrieval)
+ *   - No direct DB access from the app — all data goes through the nick_brain backend
+ *
+ * The app uses Supabase Auth only. All data reads/writes go via the nick_brain
+ * HTTP backend (lib/api.ts), which uses the service role key server-side.
+ *
+ * Credentials: from .env (injected via expo-constants / app.config.js).
+ * Fallback: hardcoded for dev builds — replace with environment variables before production.
+ */
+
+import { createClient, type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+const SUPABASE_URL      = 'https://ullvnvtyjmaclkrruhds.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsbHZudnR5am1hY2xrcnJ1aGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTc2MzUsImV4cCI6MjA4ODc3MzYzNX0.hThK9Dv858RWkb_59H3xhDkZJwD8kq6y4PyqwC4R-7M';
+
+// ─── SecureStore adapter ──────────────────────────────────────────────────────
+
+/**
+ * Custom storage adapter backed by expo-secure-store.
+ * Required because Supabase's default localStorage doesn't exist in React Native.
+ */
+const SecureStoreAdapter = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      return null;
+    }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch {
+      // Non-fatal — session will be lost on app restart in edge cases
+    }
+  },
+  async removeItem(key: string): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      // Non-fatal
+    }
+  },
+};
+
+// ─── Client ───────────────────────────────────────────────────────────────────
+
+export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage:          SecureStoreAdapter,
+    autoRefreshToken: true,
+    persistSession:   true,
+    detectSessionInUrl: false, // not needed in React Native
+  },
+});
+
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+export interface AuthResult {
+  ok:      boolean;
+  user?:   User;
+  session?: Session;
+  error?:  string;
+}
+
+/**
+ * Sign up a new user with email + password.
+ * Returns the Supabase session on success.
+ */
+export async function signUp(email: string, password: string): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error || !data.session) {
+    return { ok: false, error: error?.message ?? 'Sign up failed' };
+  }
+  return { ok: true, user: data.user ?? undefined, session: data.session };
+}
+
+/**
+ * Sign in an existing user with email + password.
+ */
+export async function signIn(email: string, password: string): Promise<AuthResult> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.session) {
+    return { ok: false, error: error?.message ?? 'Sign in failed' };
+  }
+  return { ok: true, user: data.user, session: data.session };
+}
+
+/**
+ * Sign out the current user. Clears local session.
+ */
+export async function signOut(): Promise<void> {
+  await supabase.auth.signOut();
+}
+
+/**
+ * Get the current active session (restoring from SecureStore if needed).
+ * Returns null if no session exists.
+ */
+export async function getSession(): Promise<Session | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
+
+/**
+ * Get the JWT access token for the current session.
+ * Automatically refreshes if expired.
+ * Returns null if not authenticated.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return null;
+
+  // Check if token needs refresh (Supabase does this automatically,
+  // but we force-refresh if within 60s of expiry)
+  const expiresAt = data.session.expires_at ?? 0;
+  const nowSec    = Math.floor(Date.now() / 1000);
+  if (expiresAt - nowSec < 60) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshed.session) return null;
+    return refreshed.session.access_token;
+  }
+
+  return data.session.access_token;
+}
+
+/**
+ * Subscribe to auth state changes (login / logout / token refresh).
+ * Returns an unsubscribe function.
+ */
+export function onAuthStateChange(
+  callback: (session: Session | null) => void
+): () => void {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (_event, session) => callback(session)
+  );
+  return () => subscription.unsubscribe();
+}

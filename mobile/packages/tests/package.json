@@ -1,0 +1,15 @@
+{
+  "name": "@r90/tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "tsx src/run-scenarios.ts"
+  },
+  "dependencies": {
+    "@r90/core": "*",
+    "@r90/types": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

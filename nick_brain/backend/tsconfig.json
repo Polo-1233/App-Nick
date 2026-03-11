@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "../backend-dist",
+    "rootDir": "..",
+    "strict": true,
+    "noUncheckedIndexedAccess": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true
+  },
+  "include": [
+    "./**/*.ts",
+    "../engine/**/*.ts"
+  ],
+  "exclude": ["**/*.test.ts", "**/*.mjs", "../engine-dist/**", "../backend-dist/**", "../node_modules/**"]
+}
