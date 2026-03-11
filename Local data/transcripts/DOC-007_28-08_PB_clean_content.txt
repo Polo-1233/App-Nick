@@ -1,0 +1,963 @@
+[0000][Heading 2] Page 1. Front Cover
+[0002][Normal] R90PLAYBOOK
+[0003][Normal] SLEEPING REDEFINED
+[0004][Normal] Everyone performs better when they recover smarter
+[0005][Normal] The sleepING Performance Technique
+[0006][Normal] RESET
+[0007][Normal] Your Body & Mind in 16 x 90-minute Cycles...
+[0008][Normal] Elite Sports Coach Nick Littlehales
+[0009][Normal] From the Author of the #1 International Best-Selling & Game -Changing Book SLEEP
+[0011][Normal] Page 2. Inside Front Cover
+[0013][Normal] “This is a tremendously exciting development in the world of sport and one, I wholeheartedly support. Nick Littlehales provides leading professionals in the world of sport, including Manchester United Football Club with a better understanding of this natural physical and mental process enabling players to maximise the quality and consistency of sleep and in turn overall performance.” Sir Alex Ferguson Former Manager Manchester United FC and Leadership Legend 2005
+[0015][Normal] Page 3.
+[0017][Normal] Sleep!
+[0018][Normal] Put an ING on it!
+[0019][Normal] HYDRATING - EATING – EXERCISING - SLEEPING
+[0022][Normal] Page 4.
+[0023][Normal] Dedication 
+For my father, Herbert James (Jim) Littlehales F1 motor sport engineer & Inventor.
+Plus, all the athletes, players, sports science professionals, coaches, managers
+friends, mentors and peers who have and continue contribute their help and support.
+[0025][Normal] Wild Poppy Publishing House
+Nottingham UK  
+www.wildpoppypublishing.co.uk
+Wild Poppy is committed to a sustainable future for our business, our readers and our planet.
+[0027][Normal] First Published 2025 The moral right of the author has been asserted 
+Copyright © Nick Littlehales. All rights reserved 2025
+No portion of this book may be reproduced in any form without written permission from the publisher or author.
+[0028][Normal] Medical Disclaimer: The R90 Playbook its contents, advice and or guidance provided by Nick Littlehales is not a clinical medical program nor intended for the diagnosis or treatment of sleep disorders when a qualified physician or clinic should be consulted.
+[0030][Normal] Page 5. Blank
+[0031][Normal] Page 6.
+[0032][Normal] About Nick
+[0033][Normal] Nick Littlehales is recognised by elite sporting professionals worldwide as the world’s first and leading Elite Sports Sleeping Coach. A true innovative recovery thinker with over 35 years industry and elite sport experience worldwide.
+[0035][Normal] From PGA pro to sleep-industry disruptor, he redefined recovery in elite sports before anyone realised it mattered. His radical approach drew the attention of Sir Alex Ferguson and led Penguin Random House to commission him to encapsulate his journey and techniques into what became the global bestseller that reshaped how the world views sleep.
+[0037][Normal] He pioneered the “fourth pillar” of performance—proving sleep isn’t passive, but an active tool for long-term success. He inspired Manchester United’s treble-winning era, helped turn British Cycling into Olympic champions, and supported Manchester City to dominate the Premier League? Team Sky’s historic Tour de France wins? He was there to!
+
+His passionate, practical, measurable and proven methods are endorsed by leading organisations, managers, coaches, athletes, medical science professionals in world sport and business private and public sectors. His Impact Undeniable
+
+Founder of the Revolutionary R90 Technique 
+The Professionals Sleeping & Lifestyle Performance Game Changer
+[0038][Normal] International #1 Best Selling Author of the Ground Breaking Book SLEEP
+The book that redefined how sleep is perceived today.
+Published in 18 Languages, impacting millions of readers - sleepers worldwide.
+[0040][Normal] Nick Littlehales Elite Sports Sleeping Coach Since 1998 
+Renowned Performance Strategist. Innovator. Game Changer
+[0042][Normal] Page 7.
+[0043][Normal] The R90 Technique Backstory...
+[0044][Normal] I’ve been redefining sleep since 1998—long before anyone knew it mattered. After years as a director at Slumberland, one of Europe’s biggest sleep-comfort groups, and serving as the first Chairman of the UK Sleep Council, I knew it was time for a change.
+[0045][p3] A local football club sponsorship led to a conversation that would redefine recovery in elite sport and changed everything: Sir Alex Ferguson and Dave Fevre Manchester United FC.
+[0046][p3] Sleep isn’t a passive break. It’s a performance strategy.
+[0047][p3] When Sir Alex for the very first time decided to double up on pre-season training sessions, I and Senior Physiotherapist Rob Swire introduced the first-ever midday recovery room in elite football the results were undeniable. For the very first time in world sport, we discovered that individual chronotypes—morning vs. evening types—directly impacted on and off-pitch performance.
+[0048][p3] Sleep, Right Time, Right Place, Right Way. Game changed.
+[0049][p3] The results changed the game, opening the door to work with the FA and England’s World Cup squad in 1998, plus a groundbreaking workshop at Arsenal FC with Arsène Wenger and Senior Physiotherapist Gary Lewin and the influencing help of Thierry Henry.
+[0050][p3] The media dubbed me "The Sleep Coach." With my new nickname I leaned in and developed what’s now known as the R90 Technique—a method proving that sleep isn’t just passive downtime; it’s the fourth pillar of performance.
+[0051][p3] If it’s not measurable, it’s meaningless.
+[0052][p3] By 2004, I was working with so many more premiership clubs, Liverpool FC , Chelsea FC and the England National Squad for the Euro Championships, this time dialling into individualised player recovery.
+[0053][p3] In 2008, Sir Dave Brailsford invited me into British Cycling and Team Sky. The mission? Apply the “Aggregation of Marginal Gains” strategy to make British riders the best in the world. Culminating at the London 2012 Games with Olympic dominance, Tour de France victories, world records—delivered.
+[0054][Normal] Page 8.
+[0055][p3] Small gains. Big wins. Always.
+By 2013, sleep was a recognised competitive edge. That year, I worked with Real Madrid C.F., Southampton FC, and Manchester City FC, optimising everything from first-team recovery protocols, at home and away, to academy player development and training ground facilities. Driving league titles, shatter personal records, and extending the careers of some of the highest profile athletes and players. Performance. Recovery. Longevity.
+[0056][p3] If you change the conversation, you change the game.
+[0057][p3] Then came the call. In 2014 Penguin Random House wanted the book. Not the other way around. Asking me to write SLEEP, published in 2016, It became a #1 International Bestseller, translated into 18 languages and tore down outdated myths and reframed how the modern world would perceive sleep for ever.
+[0058][p3] The Myth of 8 Hours, the power of Naps and... the New Plan to Recharge Your Body and Mind
+[0059][p3] It established me, somewhat overwhelmingly as a Renowned Recovery Performance Strategist, Innovator, and Game-Changer.
+[0060][p3] Today, I coach across pretty much every sport imaginable including emerging new sports—plus business, healthcare, education, shift and front line workers, mental health and wellbeing you name it—because everyone deserves the right to sleep well and enjoy the benefits from getting right. More often than not.
+
+Everyone performs better in every way when they recover smarter.
+[0061][p3] The R90 Playbook is your blue print, your cheat sheet. Decades of elite coaching distilled into practical, no-fluff tactics designed to fit your schedule, your rhythm, and your life.
+[0062][p3] For me, sleep isn’t passive or something you just “fit in”—it’s sleeping an active tool to stay unbeatable. So now, you have the R90 Technique Playbook at your fingertips, you’re ready to join the next generation of high performers rewriting the rules of recovery.
+[0063][p3] SleepING. It’s Power. Your Energy Regenerator.
+[0064][p3] Go for it.
+[0065][Normal] Page 9.  Whatever is in play for you, regain the NRG you need to get it done...
+[0067][Normal] Page 10.
+[0069][Normal] CONTENTS
+[0071][Normal] HOW TO GUIDE (HTG)  .11
+[0072][Normal] Make your R90 Playbook work out for you.
+[0074][Normal] INTRO What’s in play in our way  .24
+[0075][Normal] Why and what’s in play and the 7 KSPIs — Key Sleeping Performance Indicators.
+[0077][Normal] KSPI 1. 24/7 RHYTHM Awareness Session .37
+[0078][Normal] Understanding our relationship with our planet’s 24-hour circadian rhythm.
+[0079][Normal] KSPI 2. RHYTHM IN SYNC  Awareness Session .47
+[0080][Normal] Identifying with and adapting to your natural chronotype.
+[0082][Normal] KSPI 3. CYCLES IN RHYTHM  Technique Session  .59
+[0083][Normal] Thinking in 16 x 90-minute cycles 24/7 rather than hours.
+[0085][Normal] KSPI 4. ACTIVITY RHYTHM Technique Session  .73
+[0086][Normal] Integrating new tactics & habits into your sixteen cycles.
+[0088][Normal] KSPI 5. ENVIRONMENT Awareness Session .101
+[0089][Normal] Revisiting your sleeping space, where you choose or have to sleep.
+[0091][Normal] KSPI 6. INTERVENTIONS Awareness Session .115
+[0092][Normal] What’s a positive intervention and what’s probably not.
+[0094][Normal] KSPI 7. Your R90 in Play Technique Session .127
+[0095][Normal] Create your personal R90 Playbook.
+[0097][Normal] Page 11. It’s all about tactics, techniques and mastering new habits
+[0098][Normal] I’ve gained a deep understanding of the science behind sleep and the practical strategies that can help people optimise their sleeping hours, regardless of their situation.
+[0100][Normal] Page 12.
+[0102][Normal] How to use this Playbook…
+[0103][Normal] Like tactical playbooks used by managers and coaches in world sport, this one is the very same and designed to take you on a sleeping awareness journey, with me as your personal sleeping coach.
+[0105][Normal] Read about what my experience has revealed to me along the way, among them some elite sleeping secrets, and learn about the 7 KSPIs (Key Sleeping Performance Indicators) in play for us all.
+[0107][Normal] This is your How-to Guide (HTG)
+[0110][Normal] Page 13.
+[0112][Normal] My 7 KSPIs - Key Sleeping Performance Indicators
+[0114][Normal] -Circadian Rhythms
+[0115][Normal (Web)] Our planet’s circadian rhythms, a 24-hour cycle managed by our body clock, regulating all our internal systems, like eating patterns, hormone production, emotional balance, digestion and sleeping cycles.
+[0116][Normal] -Chronotyping
+[0117][Normal (Web)] Our chronotypes, a genetic and formative characteristic — are you a morning person, an evening person, or an In-betweener? They help determine optimal times for high and low intensity performance and mental and physical activities.
+[0119][Normal] -Polyphasic Sleep Wake Cycles
+[0120][Normal (Web)] Redefining our sleep in 90-minute cycles rather than hours, being the length of clinically measured time to develop the four sleep stages — refocuses our attention on the key restorative stages 3 & 4.
+[0121][Normal] -Pre- and Post-Routines
+[0122][Normal] What we do from the point of wake and just before we try to enter a sleep state are key to what to expect from our sleeping hours ahead.
+[0124][Normal] Page 14.
+[0126][Normal] -Activity and Recovery Rhythms
+[0127][Normal] Our ability to naturally integrate our lives and behaviour, within our planet’s rolling 24 hours, dominated by rhythms, patterns, and cycles is a key performance and sleeping factor in play for us all.
+[0129][Normal] -Environment
+[0130][Normal] As humans, we are designed to sleep anywhere, anytime all over our planet, so wherever we choose to sleep wants to reflect our natural relationship and sensory familiarisation with our outside world.
+[0132][Normal] -Interventions
+What we choose to sleep on and with, and potentially aides our ability to sleep or get in the way of it.
+[0134][Normal] Your journey through these Key Sleeping Performance Indicators kick-starts with seven
+[0135][Normal] KSPI sessions.
+[0137][Normal] Page 15.
+[0139][Normal] Playbooks provide what’s required to get it done!
+[0141][Normal] And yes, it has been developed by working with high achieving elite athletes around the world. However, they don’t all look or act the same, have the same demands or challenges, are the same ages, genders or have the same cultures.
+[0143][Normal] Where they are all the same is they have to sleep and make that work within the 24-hour rhythms of our planet’s light, dark and temperature rotations.
+[0145][Normal] R90NRG (graphic)
+[0147][Normal] Replenishing the energy (NRG) we have used up during our hours awake.
+[0149][Normal] And they want what we all want: to feel refreshed and recharged to get what needs to get done, not that our hours allocated to sleeping were a waste of valuable time.
+[0151][Normal] It’s all about feeling confident to have a proactive sleep approach in play! And that’s what I want you to achieve as you journey through your R90 Playbook.
+[0155][Normal] Page 16.
+[0157][Normal] -Your journey starts by adopting just one thing throughout the KSPI sessions. Put an ING on it!
+[0159][Normal] Why an ING? Because it helps you redefine how you perceive sleep. With an ING on it, it transforms sleep into SleepING, a daily functional activity, as important as our other active key health pillars: hydrating, eating, exercising, and, of course, socialising.
+[0161][Normal] -Making notes helps your brain consolidate the information, so you forget what was actually important to you.
+[0163][Normal] Time-out thoughts and notes can be invaluable!
+[0165][Normal] Whatever suits you, a journal, a note pad, voice notes, a tablet device, scribble or doodle, it really helps you to reflect on what is in play.
+[0167][Normal] Page 17.
+[0169][Normal] -Scan through the whole playbook first, consolidate what’s important, intriguing, and relevant to you.
+[0171][Normal] In your own time (NO RUSH) scan, swipe, and flick through the whole playbook. Make mental or actual notes because in every session I have included the key factors worth knowing and tried to add something that has value to you, understanding you may well have a lot of sleep knowledge already.
+[0173][Normal] Why?
+[0175][Normal] Because it is exactly what I do first with any elite athlete. Together, we are going to create your very own R90 Playbook, and your awareness of everything that’s in play at this stage makes it so much easier for you.
+[0177][Normal] What sessions, that trigger a “that’s interesting” or “what’s that got to do with sleeping” response, may be worth diving into first?
+[0179][Normal] Page 18.
+[0181][Normal] -As you scan through, reflect on what you would really like to improve on. You might feel like you have heard all of this before? Of course, I would not be surprised at all, with our world's heightened sleep awareness.
+[0183][Normal] I would, however, ask you to reflect on just how much of what you know, you actually implement and apply every day. Is it working for you, or could you redefine it and make it even better?
+[0185][Normal] Maybe you have some challenging weeks and months coming up? Reflect on times when you may have faced high-pressure or extreme circumstances. How could you have used the R90 Technique during those times? It’s all about becoming, being and feeling more resilient — a word I hear so much more these days!
+[0187][Normal] -The INTRO session highlights what could (and will) be working against you, by raising your awareness of the key sleeping factors in play.
+[0189][Normal] Page 19. Your journey really kicks off with my: 7 KSPI Sessions
+[0191][Normal] Page 20.
+[0193][Normal] You have four awareness sessions...
+[0194][Normal] ...which I have purposely kept brief (no fluff) and easy to take on board.
+[0195][Normal] Each one opens up with my key factors in play worth knowing, and leads you out with my key coach insight, three takeaway grabs, and a time-out reflection activity. So, you can take what you need onto your next session.
+[0197][Normal] And three technique sessions...
+[0198][Normal] ... revealing why and how 16 x 90-minute cycles can really work for you. With your last session (KSPI 7) being about applying all your knowledge, awareness, notes and thoughts into your own personal R90 24-Hour 16-Cycle Planner.
+[0200][Normal] Page 21.
+[0202][Normal] Coach Insight
+[0203][Normal] KPIs are Key Performance Indicators, measurable values that help evaluate the success of an individual or organisation in achieving their goals. KPIs are like signposts that tell you how well you're doing and whether you're on the right track to reach your objectives. R90 KSPIs are simply the Key Sleeping Performance Indicators, your sleeping signposts.
+[0205][Normal] KSPIs. The academy kids pronounce this KissPees!
+[0206][Normal] When I published my book "Sleep" in 2016, it quickly became a bestseller, attracting not only adults seeking to enhance their performance but also school teachers eager to educate children about the importance of sleep and what they can do every day to improve it. One day, I received an email from a teacher in the USA who had been using my book in her classroom with grade 4 children.
+[0207][Normal] "At first I thought it would be too complicated, but my students fully embraced the concept of KSPIs and even redefined how they would pronounce them —
+[0209][Normal] We have our KissPees in play, Miss “
+[0214][Normal] Page 22. KissPees!
+[0216][Normal] Page 23. WORRYING about sleep is its main disruptor...
+[0218][Normal] Page 24.
+[0220][Normal] - In the session on page 127 – KSPI 7 Your R90 in Play:
+[0222][Normal] You have a set of templates designed to help you transfer your notes, map out your key new tactics and create your personal R90 Technique Planner.
+[0224][Normal] A blank template – a typical planner using a wake time of 06:00, 06:30, 07:30 – an elite athlete case study – a multi shift planner – and forecasting templates.
+[0226][Normal] Screen grabs work, as you go through the playbook, maybe go to print, whatever suits you best.
+[0228][Normal] When you reach this point, you should have what you need to move onto the next session.
+[0229][Normal] If not, jump back in later.
+[0231][Normal] Again, No Rush!
+[0232][Normal] I would normally go through each session at least three times to ensure whoever I am coaching has a good grasp of what they need to focus on. The same applies to your first planners, until you get something that works the best for whatever circumstances could come your way.
+[0234][Normal] For some, it could be all over in less than 90 minutes, for others over a period of seven days or a few weeks. So, however your playbook journey and awareness develops, you will have what I call an ARP (anchor reset point), your rolling sixteen 90-minute cycles and CRPs and MRMs (recovery activities) all in play.
+[0236][Normal] My aim with you and your R90 Playbook is to not turn you into a sleep expert! I simply ask you to adopt a positive, proactive sleeping mindset by putting an ING on it, taking one little step per KSPI session.
+[0238][Normal] One small step is all you need to kick-start your sleeping redefined journey and your NO sleeping worries technique in play — RESULT!!
+[0241][Normal] Page 25.
+[0243][Normal] R90 Technique Playbook Intro
+[0245][Normal] What’s in play and in our way: the 7 KSPIs — Key Sleeping Performance Indicators.
+[0247][Normal] On my sleep industry journey, I was unable to establish what was a defined approach to achieving a good night’s sleep. How important it is to our health and wellbeing was very clear, however, in all my research, including spending time with sleep clinicians and academics, all the advice seemed to focus on guidelines that were unrealistic for so many people and therefore ignored. 
+
+Hence, the mantra of taking sleep for granted because we simply could not control it or try to. I did meet many people who experienced sleeping really well, but could not tell how they achieved it, so I became curious to what might be in play for them.
+[0249][Normal] Page 26. RHYTHM... RESET...REPEAT
+[0251][Normal] Page 27. The R90 Technique is so much more than a better sleep approach.
+[0253][Normal] Page 28.
+[0255][Normal] R90NRG
+[0256][Normal] It became clear that people who slept well had a certain rhythm in how they went about their day. Some would spend most of the day being active outside and many would enjoy an early morning start with breakfast. They would have a good midday lunch and a lighter early evening dinner. They, whilst going to sleep quite early at 9/10 pm, really looked forward to sleeping and waking up to get another day underway.
+[0258][Normal] And as I had learnt about morning and evening chronotypes it became clearer to me what the key factor in defining a positive sleeping approach could look like.
+[0260][Normal] One of them was developing a natural rhythm more aligned with our planet’s 24-hour clock, known as circadian rhythms. These factors, whether by choice or simply because of an occupational need, were clearly playing a significant role in helping some sleepers do it better than most.
+[0262][Normal] Many of my clients tell me that the R90 Technique is so much more than a better sleep approach...
+[0264][Normal] Which is great, because that’s exactly how I want them to feel. It does not focus on what happens when you are asleep, but on everything you do when awake.
+[0266][Normal] Page 29.
+[0268][Normal] Your R90 Technique Playbook
+[0270][Normal] Is a sleeping toolbox of proven tactics and habits that I have used to help elite athletes optimise their long hours allocated to sleeping.
+[0272][Normal] It is my hope it will also help you achieve a personal best feeling more often than not, and avoid the feeling that it could be a waste of valuable time!
+[0274][Normal] And most definitely not taking it for granted.
+[0276][Normal] Think of it like a personal journey, together with me, as your personal sleeping coach, through what my experience has revealed to me and how you can benefit from it.
+[0278][Normal] On your playbook journey, you will become aware of my 7 Key Sleeping Performance Indicators (KSPIs). Each one focused on you simply understanding what’s in play, helping you identify practical, achievable and sustainable tactics and habits redefining your current approach to sleep, or I should say SleepING.
+[0280][Normal] You will set an ARP (anchor reset point), your most natural and consistent start time to your day. You will have your sixteen 90-minute cycles; cycles that promote you to subconsciously flow through your next 24 hours, more aware and alert to what works best for you — What, Why and When.
+[0282][Normal] Page 30.
+[0283][Normal] R = RHYTHM RESYNC RESET REGAIN REPEAT
+[0284][Normal] 90 = 90-MINUTE CYCLES
+[0285][Normal] 16 x 90-minute cycles in 4 phases 24 hours rolling
+[0287][Normal] Page 31.
+[0289][Normal] Okay What’s in play that could be getting in your way?
+[0290][Normal] Humans v Nature: As humans we are smart, but not as smart as we sometimes think we are, which I hear a lot more these days than ever before.
+[0292][Normal] Page 32.
+[0294][Normal] Yourself
+[0295][Normal] We have always taken sleep for granted, just fitting it in after everything has been done and we are now aware that there are only so many hours left to sleep before we have to go again. It’s therefore not a true performance criterion because no matter how well we sleep — even not at all — we still need to get it done. It is, however, a very important emotional criterion, because many of us worry about how well we will sleep and how we will feel after sleep.
+[0297][Normal] The reality for most, is however we feel we just get on with it, most likely in a fatigued shadow of our personal best more often than not.
+[0299][Normal] Polyphasic v Monophasic
+[0300][Normal] Up until we invented electric light (the light bulb), not that long ago, we have evidence that as humans we would adopt a polyphasic approach to our sleep wake cycles (SWC). That means we were gathering our sleep and overall recovery in multiple periods throughout every 24 hours, common ones being bi-phasic (twice a day), tri-phasic (three times a day), and even up to six times a day.
+[0302][Normal] Monophasic
+[0303][Normal] One nocturnal block of hours. It was at this “light bulb” moment, when we shifted how we roll through our natural (circadian) rhythms in every 24 hours and became monophasic sleepers! Principally sleeping and recovering in just one nocturnal block, and the emerging mindset of you had better get your full eight hours a night!
+[0305][Normal] DST — Humans at war with nature
+[0306][Normal] Daylight Saving Time was certainly not introduced as a human-centric performance factor. Luckily, more countries and a greater number of our population are no longer affected by it. However, if you do happen to live in a country that still adopts it, then shifting through the natural seasons is more complicated than it should be.
+[0308][Normal] Page 33.
+[0310][Normal] It’s SAD
+[0311][Normal] Seasonal affective disorder is a common side effect of DST as we move from autumn into spring because we can easily get out of sync with sunrise and sunset and experience under-exposure to that wonderful free energy recharger and natural functionality reset tool. Daylight.
+[0313][Normal] Isolated Interventions
+[0314][Normal] Because we have a some-what random “take it for granted/just fit in” approach and mindset, even today, isolated solutions have always been our go to when it comes to any sleep concerns we may be experiencing.
+[0316][Normal] It might be a close friend’s advice; the doctor, only if it’s really, really bad; certainly not a sleep clinic! I can sort this out myself, surely?
+[0318][Normal] 24/7 Technology
+[0319][Normal] New tech is truly amazing and provides the platform to do so much good,  but it can also be somewhat intimidating when we reflect on the impact it has now and even more so in the future. Maybe we just need to be more aware of its time-consuming and more often than not misleading consequences on our overall wellbeing.
+[0321][Normal] Especially with the instant access ability to bring global influencers, interventions, and other stuff we think we need or need to know into our personal life. This is a challenge for us all and a key player in taking the pressure off or adding the pressure onto our allocated sleeping hours.
+[0323][Normal] Now, here’s the thing!
+[0324][Normal] We now have the world at our fingertips and that world knows we have growing sleep concerns, or, as important, far more awareness (Sleep Noise) that all of our problems could be caused by our lack of sleep expertise.
+[0328][Normal] Page 34.
+[0330][Normal] Device Dipping
+[0331][Normal] When you are under sleep pressure, searching for something that could help you sleep or sleep better than you are, (triggering the world's quick fix sleep algorithms) can be counterproductive. However, interventions can be important, they just need to be selected as part of your overall approach, with due consideration, to why, what and for how long, it will be in play.
+[0333][Normal] We should all be aware of misleading, over promising marketing slogans that can trick us into believing there are actually quick fixes.
+[0335][Normal] ‘Are you looking for the ultimate perfect night’s sleep?’
+[0337][Normal] ‘Try our perfect night’s sleep guaranteed pillow! ‘
+[0339][Normal] ‘Look no further, just take four of these a day, every day.’
+[0341][Normal] ‘Buy your first three months’ supply now and get one week’s supply half price’...
+[0343][Normal] Sleep Science
+[0344][Normal] Of course, scientific research will continue to remind us of how very important sleep is to our current and future health and wellbeing. At the same time, what we learn today can shift tomorrow as our technological and scientific world advances at pace.
+[0346][Normal] Sleep Noise
+[0347][Normal] Be mindful of the increasing sleep fear factor in play, constantly reminding us, why it’s so important and we better get it right every night or else!
+[0349][Normal] What else could be in play to get in your way?
+[0350][Normal] Not so smart human advancements that we don’t know about yet...
+[0352][Normal] Page 35.
+[0354][Normal] Reflection?
+[0355][Normal] Sleep Dating 7-Minute Quiz:
+[0356][Normal] I asked some top performers and clinical sleep influencers some quick-fire hard questions to make us both reflect.
+[0359][Normal] — What are you actually doing to help you sleep like you think you should be?
+[0361][Normal] — Are you doing something, anything, every day that will help you sleep?
+[0363][Normal] — Would you like to get it over with quicker?
+[0365][Normal] — Has it ever impacted you enough to stop you getting what you had planned, done?
+[0367][Normal] — What do you actually want from the hours you allocate to sleep?
+[0370][Normal] Page 36.
+[0372][Normal] Sleep Date Quiz Outcomes:
+[0374][Normal] We just have to adopt an approach we hope works out!
+[0376][Normal] We actually do very little, if anything at all to help us sleep!
+[0378][Normal] We just want to not feel it was a waste of our valuable time!
+[0380][Normal] If it were possible to get it over and done with quicker, we would!
+[0382][Normal] And just want to get our energy back to go again and get it done!
+[0384][Normal] The answers have not been surprising at all, and as you reflect on them at this point in your redefined sleeping journey, maybe you come up with similar conclusions — or maybe not. Either way, it’s never been a better time to redefine sleeping.
+[0386][Normal] If you grab just one thing from your R90 Playbook, your journey will have begun. That’s it, just one thing you can do tomorrow, you know will help you get the most out of the hours you allocate to sleeping, being more aware of what’s in play.
+[0388][Normal] Page 37. Blank
+[0390][Normal] Page 38.
+[0392][Normal] KSPI 1 24/7 RHYTHM
+[0393][Normal] Understanding our relationship with our planet’s 24-hour circadian rhythm
+[0394][Normal] AWARENESS SESSION
+[0397][Normal] Page 39.
+[0399][Normal] What’s Worth Knowing
+[0401][Normal] To understand our natural rhythms, let's go off-grid. Picture us on an uninhabited island, living by sunlight and firelight, hunting and gathering our food. As the last embers fade, we yawn and curl up under the stars. When dawn breaks, the birds sing us awake. We rise slowly, empty our bladders, eat, and go about our day. No rushing, no artificial light — just following the ancient patterns etched in our DNA.
+[0403][Normal] That's how our internal master clock keeps us ticking. Bright morning daylight, especially blue light, halts production of the sleep hormone melatonin and signals a rise in serotonin to boost mood and alertness. As daylight fades, the process reverses: melatonin rises, easing us towards sleep, peaking in the small hours when the deepest sleep stages occur.
+[0405][Normal] But when an isolated island retreat-like existence isn't on the cards, you can still take some simple steps to help your inner clock resync.
+[0407][Normal] Page 40.
+[0409][Normal] A key sleeping success factor is being more aware that our brains and internal rhythms really love it when we are more synchronised.
+[0411][Normal] Think of circadian rhythms as your body’s natural reset alarm clock. They help regulate when you should feel awake and active and when you should feel less active, ready for sleeping, in every 24-hour period.
+[0413][Normal] Earth's Rotation and the Sun
+[0414][Normal] Our sleep-wake cycles are influenced by the Earth's rotation, leading to natural patterns of light and dark.
+[0416][Normal] Circadian rhythms are developed as our planet rotates around the sun.
+[0418][Normal] Human and Mammal 24-Hour Functionality
+[0419][Normal] Both humans and other mammals are naturally synchronised to a 24-hour cycle, impacting our biological functions. Think of your daily rhythm as a rolling set of continuous 24-hour cycles, not just segmented into a Monday through Sunday week.
+[0421][Normal] Page 41.
+[0423][Normal] The external circadian rhythm triggers our internal biological clock.
+[0425][Normal] Polyphasic Sleep-Wake Cycles
+[0426][Normal] Not that long ago, electric light started to desynchronise us with our natural external rhythms. Therefore, embracing multiple recovery periods throughout your 24 hours can be a more natural and beneficial approach than just one block at night.
+[0428][Normal] Biphasic, triphasic and multiphasic sleep wake cycles are more natural to us as humans.
+[0430][Normal] Light Awareness Everywhere
+[0431][Normal] When you get early morning daylight, it signals to your brain that it's time to wake up, unsupressing your sleeping-suppressed bodily functions. Boosting your alertness and NRG required for the active wake hours.
+[0433][Normal] It’s daylight (blue light) that triggers our light receptors to activate the hormone serotonin, and diminished (amber) light the hormone melatonin.
+[0435][Normal] Be conscious of the lighting conditions both at home and when travelling, whether you are under- or over-exposed, as they can affect your circadian rhythms and overall well-being.
+[0437][Normal] Seasonal Shifts in Daylight
+[0438][Normal] Identify with and adapt to changes in daylight throughout the year, aiming for an average of approximately 12 hours of daylight, 4 hours of diminished amber light, and 8 hours of dark (blackout), throughout the seasons.
+[0440][Normal] Inside Outside Resync
+[0441][Normal] It’s all about the four phases in every 24 hours — Sunrise — Midday — Sunset — Night. Think about how much time you actually spend inside and outside during these key synchronising phases. Too much or too little is a resync factor in play.
+[0443][Normal] Circadian Rhythm Desync
+[0444][Normal] Welcome to the modern world, where the technological advancements and the demands of 24/7 life effectively disorientate our circadian rhythms. Our tech-saturated, always-on-it lifestyle has left many of us in the dark, pun intended, about how to optimise our sleeping hours.
+[0446][Normal] Page 42. Inside Outside Resync.
+[0448][Normal] Page 43.
+[0450][Normal] KSPI 1 Session Key Notes
+[0452][Normal] Coach Insight
+[0453][Normal] Sleep or sleepING: Simply changing how you refer to it — Put and “ING on it” and make it feel like your other key health pillars in play, hydrating, eating and exercising. A more proactive approach (mindset) kick-started by your point of reset, your sunrise, your ARP anchor reset point that triggers your next 24 hours. You then have your sixteen rhythmic cycles ahead of you, opportunities to develop tactics that define habits, keeping you as synchronised as you can be with our natural circadian rhythms in play every day.
+[0456][Normal] Page 44.
+[0458][Normal] Season dependent, it could be up to 80,000 Lux outside, inside by a window just 3000 and in the middle of the room just 500 lux. Be aware that your average human exposure, from sunrise onto sunset would ideally be 10,000 Lux.
+[0460][Normal] -Why not: Download a lux meter app — you can get them for free — onto your phone (device) and check light levels everywhere you go. Maybe you have an actual light meter? Photographers do...
+[0462][Normal] -Light is measured in Lux.
+[0463][Normal] With your app or actual light meter, stand in middle of a room with a window at midday. Move toward the window and notice how the lux levels change, then step outside and compare. This shows how much light exposure can vary, even over a few meters. Aim for an average of 1000 Lux in each 90-minute cycle during phases 1 and 2 (see KSPI3 for more).
+[0465][Normal] It's a practical tactic to simply make you more circadian rhythm conscious, and light aware in every room and place you’re active in, outside and inside.
+[0467][Normal] Consider a wearable blue light device.
+[0468][Normal] If your environment makes it hard to get enough natural light-especially in the morning- wearable blue light devices like AYO glasses can help support your circadian rhythm wherever you are.
+[0470][Normal] This advanced light therapy solution, which has been clinically validated, actively enhances sleep, mood and performance by engaging with your body’s natural biological processes.
+[0471][Normal] For more information, visit GOAYO.com
+[0473][Normal] Page 45.
+[0475][Normal] Your Takeaway Grabs... (TAGS)
+[0477][Normal] Identify with what would be your most consistent wake-up time. And make it your ARP (Anchor Reset Point), your personal sunrise time, to reset and kick-start your next 24-hours. Keep it simple to on the hour or half: 06:30 is common. More on ARPs and cycles in KSPI 3.
+[0479][Normal] Be more aware of sunrise times and how quickly you can be exposed to natural daylight as much as possible. If getting outside isn't an option, consider using a light therapy lamp (Dawn Wake Simulator 10,000 Lux) in your bedroom. Applying a bedroom blackout intervention can really help transition through the seasons and fluctuating sunrise times.
+[0481][Normal] Developing a heightened awareness of the true amount and what type of light is around you wherever you are or go will help you manage periods of under- and over-exposure almost subconsciously. The key factor in play here is knowing which hormones are triggered by light and when they should be active in any 24 hours.
+[0484][Normal] Page 46.
+[0486][Normal] Time-Out Reflections
+[0488][Normal] -What are steps you can take today to optimise your exposure to natural light at home and/or at work?
+[0490][Normal] -How do feel about how much time you spend inside or outside?
+[0492][Normal] That’s it, Session Complete YOU’VE GOT IT
+[0494][Normal] What’s Next: Move to KSPI 2
+[0496][Normal] What is a Chronotype? And why it could help you understand why certain cycles and phases are when you could be at your best and when you’re not.
+[0498][Normal] Page 47. Blank
+[0500][Normal] Page 48.
+[0502][Normal] KSPI 2 RHYTHM IN SYNC
+[0503][Normal] Identifying with and adapting to your natural chronotype.
+[0504][Normal] AWARENESS SESSION
+[0506][Normal] Page 49.
+[0508][Normal] What’s worth knowing
+[0510][Normal] Think of a chronotype as your sleeping and activity blueprint. This is the internal characteristic we all have inside us that determines whether we’re likely to wake alert and be more active sooner in the day (morning types or AMers), or whether we come into action later and stay awake and alert for longer in the evening (evening types or PMers); or an inbetweener, somewhere in the middle.
+[0512][Normal] Understanding your own chronotype can help you plan your activities through the day to fit in with your own body clock. Simply adjust your routines to get the most out of your day and, more importantly, to maintain your energy levels for improved performance and recovery.
+[0514][Normal] Page 50.
+[0516][Normal] Genetics, formative growth years, your place on the planet — all can add up in developing your chronotype characteristics and why and when you feel at your best rolling through 24 hours.
+[0517][Normal] It's late at night, the stadium is roaring, and the pressure is on. As a manager, you face the tough decision of choosing the right player for the final penalty kick. Player A, a morning type, looks exhausted but is the most reliable penalty taker. Player B, an evening type, still seems alert despite the long game, but is not the most consistent from the spot.
+[0519][Normal] Whom do you choose?
+[0520][Normal] This choice of whether to work with or against the body clock you have is fascinating and goes far beyond when we choose to get into bed and when we wake up. In the past, we simply used labels like “owls” and “larks” but understanding the science of chronotypes now allows us to manage our daily routine much better and on an individual level.
+[0522][Normal] Genetics and Early Experiences
+[0523][Normal] Your chronotype is likely influenced by genetics and also, more relevant, by your formative years, like growing up on a farm or maybe in a city, in the northern or southern hemispheres, and by parental behaviour.
+[0525][Normal] Morning and Evening Types
+[0526][Normal] Humans and other mammals adapt to external influences, resulting in morning types (AMers) — larks, bears — and evening types (PMers) — lions, wolves… What is the best time to get the key tasks completed?
+[0528][Normal] The lion hunts at night utilising its night vision to increase the chances of a kill and sleeps, napping it out, conserving energy during the daylight hours. Adopting a daytime hunting tactic increases the risk of starving.
+[0530][Normal] Page 51.
+[0532][Normal] AMers wake up early, they love mornings and breakfast and they thrive in phases 1 & 2  but then fade in phase 3. They are not great with night shifts and time zone travel.
+[0534][Normal] Chronotype Variations
+[0535][Normal] There are people who fall between the typical morning and evening types, referred to as  "in-betweeners," pretty much wired and tired all the time. Like a dolphin always active, even sleeping on the go.
+[0537][Normal] What’s in play for us all and our chronotypes is our lifestyle choices and, of course, occupational demands that very rarely are aligned with what would suit us best.
+[0539][Normal] Optimal Synchronisation
+[0540][Normal] Identifying with which phase or phases of the day you feel most in sync with your natural rhythm (sunrise into midday, midday into sunset, sunset into the evening and onto the night), can be a sleeping game changer.
+[0542][Normal] Your Best 24 Hours
+[0543][Normal] If you had complete control over your schedules, how would you re-structure them? Ideally, you would aim to have your natural chronotype characteristics in play as often as possible, keeping you more synchronised with your natural rhythm.
+[0545][Normal] Page 52. AMers just love it early get up and go
+[0547][Normal] Page 53. PMers love it later and being evening active
+[0549][Normal] Page 54.
+[0551][Normal] PMers prefer to wake  up later, they skip breakfast, put up with phase 1 & 2 and love phase
+[0552][Normal] 3 & even into 4. They are happier with shifts and time zone travel.
+[0554][Normal] Adaptability to External Influences
+[0555][Normal] Being more aware of how external factors, both within and outside your control, can affect your natural chronotype characteristic rhythm and help you learn to adapt accordingly.
+[0557][Normal] Simply knowing when you would ideally work and play, in which phases of your 24 hours, can really help you develop tactics and habits to protect yourself.
+[0559][Normal] Being chronotype aware makes you more observant to the chronotypes of outside influencers, like life partners, friends, children, bosses, managers, and colleagues. It also makes you aware of what they want to do and when, and how you can adapt when that conflicts with what you would like to do and when.
+[0561][Normal] And here’s the thing, we all pretty much live in a world dictated by AMers rules. Maybe PMers should have more say on when, what and why?
+[0564][Normal] Page 55.
+[0566][Normal] KSPI 2 Session Key Notes
+[0568][Normal] Coach Insight
+[0569][Normal] Understanding your chronotype can be a key sleeping success factor in play, especially since most of us live in a world that doesn't cater to our natural rhythms. We mask our true characteristics with alarm clocks, overactivity and over-stimulation, leading to what’s referred to as "social jet lag”. By recognising and respecting your body’s internal rhythm, you can at least try to optimise your daily routine, performance, and well-being.
+[0571][Normal] Your friend is an AMer and loves to hit the gym before work at 06:00. This is a good, healthy thing to do, and you want to join in, but you’re a PMer and hate very early mornings. Your friend, however, does not fancy an early evening gym session after work like you would prefer. We face these types of behaviour dilemmas all the time and need reset tactics to help us adapt.
+[0573][Normal] AMers and PMers can work together and do what they love doing when it suits them both. As long as you have your sixteen cycles in play, PMers can adjust to an earlier wake time ARP using light to reset and make the gym session, resetting with a midpoint CRP. AMers using the midpoint CRP can make the evening gym session. As long as we have pre- and post-activity tactics in play, we can optimise our 24 hours without the consequences. More on ARPs, CRPs, and cycles in KSPI 3.
+[0575][Normal] Page 56.
+[0577][Normal] Your Takeaway Grabs (TAGS)
+[0579][Normal] Identify With Your Chronotype: Are you a morning type (AMer) who thrives in phases 1 and 2, or an evening type (PMer) who prefers phase 3 and even a bit of phase 4? Or an in-betweener, just always on the go? Think about how you would at least start to re-organise your schedules step by step as if you had more, if not complete, control.
+[0581][Normal] Tackle External Influencers: Identify external influencers that might be counterproductive, reflecting on what tactics and habits you could implement now and/or over time to protect yourself and your time. The same applies to some practical adjustments to avoid always feeling overwhelmed by these influencers and the resulting consequences.
+[0583][Normal] Understand Your Social Environment: Being more aware of your chronotype makes you more alert to the chronotypes of others who influence your activities and behaviour. Life partners, children, friends, bosses, managers, colleagues, and not forgetting our virtual influencers — what are they making you do when you are not at your best or ready for it?
+[0584][Normal] Think about how you could use daylight exposure to help you and your chronotype reset, from the point of waking up, to how you move around a building and where you choose to sit in any room and how you set your home office up.
+[0586][Normal] Page 57. Blank
+[0588][Normal] Page 58.
+[0590][Normal] Time Out Reflections
+[0591][Normal] -Where in your life are instances where your chronotype and that of the people around you collide?
+[0593][Normal] That’s it, Session Complete YOU’VE GOT IT
+[0595][Normal] What’s Next: Move to KSPI 3
+[0596][Normal] Redefining how you approach sleep is thinking about it differently. This session is designed to do just that — 16 x 90-minute cycles and your favourite 5-a-day.
+[0598][Normal] Page 59. Blank
+[0600][Normal] Page 60.
+[0602][Normal] KSPI 3 CYCLES IN RHYTHM
+[0603][Normal] Thinking in 16 x 90-minute cycles 24/7 rather than hours
+[0604][Normal] TECHNIQUE SESSION
+[0607][Normal] Page 61.
+[0609][Normal] Let’s get your ARP and sixteen cycles in play!
+[0611][Normal] A Game of Ninety Minutes: Sleeping in Cycles, Not Hours
+[0612][Normal] You bolt upright in bed, heart racing, mind consumed by the thought of missing out on your “eight hours” of precious sleep. The concept of eight hours every night is a recent behaviour shift, not a universal truth. Instead, imagine your sleep as a series of 90-minute cycles, a principle grounded in scientific research and central to your sleeping approach being redefined by the R90 Technique.
+[0613][Normal] There is no ‘One Size Fits All’ when it comes to sleeping. The truth is that we are all individuals and have varied needs and demands. That is why thinking and developing your 24-hour tactics, techniques, and habits with a 90-minute cycle mindset is a key success factor for your sustainable personal best.
+[0615][Normal] Page 62.
+[0617][Normal] In a clinical sleep environment, hypnograms measure brain wave patterns and the four sleep stages that develop during a 90-minute cycle.
+[0619][Normal] Clinical Measurement of Sleep Cycles
+[0620][Normal] In a clinical environment, sleep can be measured in 90-minute cycles, which provide a more accurate picture of how brain wave patterns develop the four sleep stages, important to what we get from the hours we allocate to sleeping. By thinking in 90-minute cycles rather than hours, you can better reset your 24-hour rhythm.
+[0622][Normal] Four Stages of Sleep
+[0623][Normal] Our brains develop four stages of sleep, each of which plays a key role in enabling a full recovery process and preparing us for our next 24-hour activities, overall health and well-being.
+[0625][Normal] Deeper Sleep Stages
+[0626][Normal] Non-REM (NREM) stage 3 and REM stage 4 are key restorative stages, usually being developed by our brains during the first three 90-minute cycles of our sleep, accounting for up to 25% of our total sleep time.
+[0628][Normal] There are some very important processes being attended to by your brain when you reach stage 3 and 4. I won’t list them, just emphasise how important it is to do everything you can during your wake hours to help your brain develop them naturally.
+[0630][Normal] Page 63.
+[0632][Normal] Understanding Sleeping Cycles
+[0634][Normal] Think of your sleeping as a journey up and down the stairs. You stand at the top awake, PJs on, teeth brushed, then gradually move down (asleep) through the four different stages of sleep.
+[0636][Normal] NREM Stage 1
+[0637][Normal] Light transitioning from a wake into sleep state
+[0639][Normal] NREM Stage 2
+[0640][Normal] Slow wave heart rate and body temp drops
+[0642][Normal] NREM Stage 3
+[0643][Normal] Deepest shutdown, blood pressure, breathing, and muscles relax
+[0645][Normal] REM Stage 4
+[0646][Normal] Body immobilised, brain active, rapid eye movement, and dreams
+[0648][Normal] It’s a journey your brain controls, and ideally, you travel down the stairs through these stages and reaching the bottom and enjoy the good stuff in stages 3 & 4 for a short while before heading back up to start another cycle.
+[0650][Normal] We can’t expect to enjoy stages 3 & 4 if we have asked too much of our brains from the
+[0651][Normal] moment of wake and throughout the day.
+[0653][Normal] Page 64.
+[0655][Normal] If we think of an eight hours sleeping target, but in cycles, that would be five 90-minute cycles and 7.5 hours with 15 minutes in and out. With this refocus, we now understand that it’s not all about the time we allocate, but have we done anything leading up to it, that helps us get to the bottom of the stairs naturally during our first three 90-minute cycles because thereafter cycles 4 & 5 are about lighter sleep stages and readiness to wake.
+[0657][Normal] And of course, what can you avoid taking with you into these cycles that will make it more difficult? Worry, anxiety, stress, overthinking plans, a full stomach, over-hydrating, bladder/bowel movements, external noise, too hot, too cold, temperature, light — your 16-cycle-tactics will help you manage these disruptors!
+[0659][Normal] 23:00 > ARP 06:30 — Five 90-minute rolling sleeping cycles (7.5 hours).
+[0661][Normal] Page 65.
+[0663][Normal] Setting your ARP
+[0664][Normal] Think on the hour or half, remembering we are trying to develop a subconscious R90 Technique that is with you all the time. Keep it simple and just reflect on what is your most consistent start time in any seven days and make that your everyday start time.
+[0666][Normal] AMers normally have the same ARP, PMers maybe not, as they would choose a later time than maybe an occupational one. Either way, it’s okay to identify with one or two ARPs at this stage.
+[0668][Normal] The specifics don't matter as much as the consistency of your approach, which I would rather you thought about as your 16 cycles in rhythm.
+[0670][Normal] Your ARP is helping you and your brain reset into another new and next 24 hours — your rolling reset sunrise.
+[0672][Normal] Ouch for some, lie-ins can be great, catching up on sleep during days off or even on weekends. However, the R90-tactic will lead to new habits and develop more personal time and space for you, which you will love. No pressure, the technique allows you to adapt when required.
+[0674][Normal] Select one now, you can always adjust it to suit after a week or two in play!
+[0675][Normal] 05:00 05:30 - 06:00 06:30 - 07:00 07:30 - 08:00
+[0677][Normal] Page 66.
+[0679][Normal] Establishing your 24-hour sixteen cycles
+[0680][Normal] Simply starting from your ARP, you can break your 24 hours up into 16 cycles. Four cycles in phase one into midday, your next four cycles in phase 2 into early evening and your next three /four cycles in phase 3 and off into six, five, four, or even three sleeping cycles in phase 4.
+[0682][Normal] Now you can establish what sleeping times would work best for you and when. Maybe 6 cycles (9 hours), 5 cycles (7.5 hours), 4 cycles (6 hours), just by counting back from your ARP.
+[0684][Normal] Example
+[0685][Normal] A five-cycle technique (7.5 hours) between 23:00 and an ARP of 06:30 reveals that these stages would be developed in cycle 12, 13 and 14 between 23:00 and 03:30, with the final two cycles 15 & 16 between 03:30 and 06:30 all about lighter sleep stages and into wake.
+[0688][Normal] Five 90-minute rolling sleeping cycles (7.5 hours) =
+[0689][Normal] The common eight-hour monophasic nocturnal block of sleep most try to achieve just redefined — 23:00 into 06:30
+[0691][Normal] Page 67.
+[0693][Normal] Disturbed sleep
+[0694][Normal] The common outcomes are not being able to get into sleep, staying asleep and waking up after maybe two or three cycles (02:00 03:00) and worrying about not being able to go back to sleep.
+[0696][Normal] Remember: before the invention of the light bulb, polyphasic sleep wake cycles meant it was normal to wake up and feel active for a cycle, then go back to sleep for one or two more cycles, get up again and go — with the phase 2 CRP (controlled reset period) in play. More on CRPs in KSPI 4.
+[0698][Normal] It’s a bit old school but it works:
+[0699][Normal] Don’t worry about coming home later and not being able to hit your normal sleep time. Think of it like missing a bus you wanted to take and then just have to catch another one. Wait for the next cycle to come along and go to bed then.
+[0701][Normal] The same applies to an earlier start to catch a flight, attend a meeting, or do something amazing — just go back a cycle! If you need a chillout or lie-in, then just shift on a cycle. Your ARP is the anchor point you should keep in play as much as you can to help you reset back into your normal routine.
+[0703][Normal] Page 68. Working shifts? Go shifting with confidence!
+[0705][Normal] Page 69.
+[0707][Normal] KSPI 3 Session Key Notes
+[0709][Normal] Coach Insight
+[0710][Normal] We are not in control of our sleep quality or how sleep stages are developed when asleep, our brain is in control of that and the outcomes. So, as we prepare to and enter a sleep state and let go, we need to be confident that we have at least done everything — anything — we can to help our brains do our sleeping work for us.
+[0712][Normal] And it all starts from your ARP 24-hour reset point and how you light up your first 90-minute cycle of the day. Yes, pre-sleeping activities are helpful, but of little consequence without anything being in play before you reach that point.
+[0714][Normal] Page 70.
+[0716][Normal] Your Takeaway Grabs... (TAGS)
+[0718][Normal] R90NRG: Regaining the energy you need from your sleeping hours is directly influenced by your wake activities. From your Anchor Reset Point (ARP), into the first cycle of your new and next 24 hours, through to sleeping cycles 11 & 12, dependent on your schedules.
+[0720][Normal] Post Sleep Cycle 1: At your ARP and during your first 90-minute cycle of the day, you should be focused on an early exposure to daylight and the blue light within its spectrum. Outside ideally or in front of a light therapy device that produces 10,000 Lux. Light exposure helps to activate the hormone serotonin and unsuppress our bodily functions suppressed during sleep. Light also triggers a cortisol and adrenaline spike, resetting our inner clock, to expect a shift to melatonin, ideally in 12 hours’ time.
+[0722][Normal] Your Sleep Wake Cycles: A common sleep-wake cycle approach would be five 90-minute cycles (7.5 hours) applied nocturnally in phase 3 & 4, with an ARP of 06:30 and a sleep time of 23:00.
+[0724][Normal] Page 71.
+[0726][Normal] Five a day (24 hours): Thinking 35 cycles in seven days redefines your approach so much better than a random “get in as many hours as you can”, not being that concerned about the outcomes.
+[0728][Normal] R90 Six Cycles :    21:30 > 23:00  > 00:30  > 02:00  > 03:30  > 05:00  > 06:30
+[0729][Normal] R90 Five  Cycles : 23:00  > 00:30  > 02:00  > 03:30  > 05:00  > 06:30
+[0730][Normal] R90 Four Cycles:  00:30  > 02:00  > 03:30  > 05:00  > 06:30
+[0732][Normal] Remember your ARP has to be a time that is your most consistent one. You can, of course, adapt this before you set it for a longer period of time. Keep it practical and achievable.
+[0734][Normal] It’s the same sun, planet, and 24 hours for us
+[0735][Normal] all. The great thing about the R90 Technique
+[0736][Normal] is it can accommodate whatever is required to
+[0737][Normal] optimise any demanding and/or extreme set of
+[0738][Normal] circumstances.
+[0740][Normal] Just like elite athletes, our life choices, multitasking, multishift schedules inside our 24/7 world demands we have to adapt as we shift from one period to the next. More on this in KSPI 4.
+[0742][Normal] Page 72
+[0744][Normal] Time Out Reflections
+[0746][Normal] -How might viewing your day in 90-minute cycles, rather than hours, change your approach to planning sleep and daily activities?
+[0748][Normal] -Consider your current routine and where you could potentially apply this technique to improve your energy levels and overall well-being.?
+[0750][Normal] That’s it, Session Complete YOU’VE GOT IT
+[0752][Normal] What’s Next: Move to KSPI 4
+[0753][Normal] From circadian rhythms to chronotypes, your four phases, rolling 24 hours and 16 x 90-minute cycles. Now let's get some rhythm, tactics, and habits we can apply, like CRPs and MRMs.
+[0755][Normal] Page 73 Blank
+[0757][Normal] Page 74
+[0759][Normal] KSPI 4 ACTIVITY RHYTHM
+[0760][Normal] Integrating new tactics & habits into your sixteen cycles
+[0761][Normal] TECHNIQUE SESSION
+[0763][Normal] Page 75
+[0765][Normal] Let’s first reflect on a common R90 five cycle technique
+[0767][Normal] Five 90-minute cycles, 11pm into an ARP of 06:30am (7.5 hours), 1 x Midpoint CRP &
+[0768][Normal] 6 x Micro Reset Moments.
+[0769][Normal] You stumble in around 23:00 after a late night at the office followed by dinner and drinks with colleagues, a tough work shift, a late flight. You kick off your shoes, brush your teeth and face-plant onto the bed. But then…your mind starts racing. Why can't you just get to sleep?
+[0771][Normal] Here's the tactic — if you came home at 23:00, you wouldn't just jump straight into bed. You would hang out until 00:30, giving yourself time to properly wind down, complete some pre-sleep tactics, rehydrate, bladder and bowel movements all sorted and then slide right into the start of your next sleep cycle.
+[0773][Normal] Of course, this would mean four cycles, not five, and 6 hours, not 7.5 sleeping hours. However, you know that you will have increased the chances of entering the key restorative sleep stages 3 & 4 in the first two cycles from 00:30 into 03:30 by hanging out for the later cycle. And, of course, there is always your midpoint 30-minute CRP to reset and regain your rhythm.
+[0775][Normal] Page 76
+[0777][Normal] Because you have been applying the R90 24Hr 16Cycle Technique for some weeks now, you have the confidence that you will need to adapt when schedule challenges pop up.
+[0779][Normal] You, of course, want to take full advantage of everything you deem to be fulfilling activities and events, at the same time be able to regain a balance coping with the sometimes unforeseen negative challenges.
+[0781][Normal] You have become more aware of what a pre-sleep routine is all about and apply it as much as you can, during your final 90-minute wake cycle. For you, it is all about transitioning from your wake activities and assisting your brain to enter a sleeping state. You focus on lower lux light levels dim lighting (amber), encouraging the hormone melatonin to get in play because you know that helps the process of suppressing functionality, preparing you to enter your first sleep stage naturally.
+[0783][Normal] You have learnt to manage your interaction with technology, avoiding using it for anything that could be considered over stimulating, disrupting and intrusive. Of course, easier said than done, but every week your new habits have started to become the norm.
+[0785][Normal] Shifting your body temperature down just a few degrees, proved tricky, but because you are more aware of this warmer to cooler tactic, whether you achieve it is not as important as not intentionally increasing it!
+[0787][Normal] Now you have some simple distractive mindspace habits in play pre-sleep: A quick yoga round; Pilates; breathing; stretching 10 minutes. These all help you mentally and physically warm down from the day. Downloading (notes away), decluttering (put it away), lockdown (security) happen without conscious thought now and add up as important prep for you to enter your long sleeping hours.
+[0789][Normal] New Day - Your Next 24 Hours
+[0790][Normal] Post-sleep habits kick in maybe just before your ARP because you use a dawn wake simulator lamp (DWS) that gradually lightens up your bedroom creating your own artificial sunrise waking you naturally into your ARP! Especially as you have to transition through the seasons and fluctuating sunrise times.
+[0792][Normal] Whenever you can, you free up the windows, to get your first
+[0793][Normal] daylight hit!
+[0795][Normal] You're off into your first cycle 1 of the new day, now aware that this is all about resetting yourself back up. Kicking back on the melatonin, activating your inner clock reset with a spike of adrenaline and cortisol and, of course, triggering the hormone serotonin — the hormone that unsuppresses everything that has been suppressed during your sleep and gets you optimised and fully functional.
+[0797][Normal] What makes this happen naturally is how quickly you get exposed to natural daylight, at, and directly after, your ARP. This really helps make your day the best it could be, as you roll through your cycles.
+[0799][Normal] Page 77
+[0801][Normal] R90NRG = ARP + Daylight (Blue) — 10,000 Lux Device
+[0803][Normal] I’m sure you are aware that failing to prepare means preparing to fail — what you do at the start of your day, from your ARP, before even trying to go to sleep later directly impacts on what you get out of it,
+[0805][Normal] The Power of:
+[0806][Normal] CRP Controlled Reset Period
+[0808][Normal] MRMs Micro Reset Moments
+[0810][Normal] POST Sleeping Habits & Tactics
+[0812][Normal] PRE Sleeping Habits & Tactics
+[0814][Normal] There you are again, in the midday windowless meeting room. A brutal combination of your workplace, your lunch, and the fact you are in a natural human rest and reset period (micro sleeping) has you nodding off as the presenter delivers key stuff you need to remember…
+[0816][Normal] Regaining consciousness with a jolt, you desperately look around, hoping no one saw you slip away into a subconscious state. We've all been there.
+[0818][Normal] That afternoon slump — the post-lunch energy vacuum. In most workplaces, it's obligatory to just power through in a rest and fatigued haze.
+[0822][Normal] Page 78
+[0824][Normal] If you play your cards right though, this midday slump does not have to happen. Instead it should be one of your two prime windows in the day to grab a controlled Cycle Reset Period (CRP) — a rebranding of that unappreciated productivity tool, the nap. It’s in phase 2. when our circadian rhythms create the ideal windows to reset and recharge.
+[0826][Normal] A CRP is a 30-minute midpoint reset period, aka human natural nap it out cycle — just think of any activity that displaces you from the norm. A vacant mindspace period helps you and your brain.
+[0828][Normal] Just think one CRP in phase 2 could make the emotional, feeling and performance difference
+[0829][Normal] you want.
+[0831][Normal] It doesn't even matter if you don't get into a micro sleep state. Maybe it is even better if you don’t try to. Just adopting whatever tactic enables you to disconnect, create that vacant mindspace moment, can work wonders.
+[0834][Normal] Page 79
+[0836][Normal] Think CRPs Phase 2. Your CRP tactic cycles 6/7/8
+[0838][Normal] I know you have no time to take 30 minutes out of your afternoon! Just be aware every day that if you could, you would!
+[0840][Normal] Eventually, with a few adjustments, you will get this tactic in play. Maybe not every day at first, but when you miss one you will feel it, so in time, every day becomes a habit, even if sometimes it’s just grabbing 15/20 minutes.
+[0842][Normal] Why?
+[0843][Normal] Because it will actually help you be more productive, take the pressure off your downtime in phase 3, developing an unrushed approach into your sleeping hours. And also take care of those planned for and unforeseen later sleeping times.
+[0845][Normal] CRP time out = making more time for you.
+[0847][Normal] Page 80 Your personal best in play more often than NOT!
+[0849][Normal] Page 81
+[0851][Normal] What CRP activities would work for you? Are any of them already in play?
+[0853][Normal] So many to mention, but here are a few:
+[0855][Normal] -Quiet, safe chillout spot  —  Let your brain nap you out if it wants to
+[0857][Normal] -Yoga — Pilates — Meditation —  Mindfulness — Breathing
+[0859][Normal] -Learn a new skill — Language — Instrument — Brain training — Study
+[0861][Normal] -Read — Paint — Draw — Listen
+[0863][Normal] -Sit and watch — Walk — Exercise — Sauna — Steam — Cold water
+[0865][Normal] -Hair cut — Head massage — Shopping
+[0867][Normal] Page 82
+[0869][Normal] Think ... MRMs
+[0870][Normal] These are as important as, if not more than, a CRP because they simply help you and your brain reset on the go. Micro Reset Moments of 2-5 minutes are nothing more than how we rolled before the amazing, but somewhat intrusive tech hit us.
+[0872][Normal] In every 90-minute cycle, just try to adjust your habits so you develop these moments subconsciously. Think: you have four cycles in each of the first three phases of your 24 hours rolling.
+[0874][Normal] Phase 1 Active Cycle MRM Tactics 1 through 4 into Midday
+[0876][Normal] Phase 2 Active Cycle MRM Tactics 4 through 8 into early Evening
+[0878][Normal] Phase 3 Active Cycle MRM Tactics 8 through to 10 and onto Sleep
+[0880][Normal] Page 83 Get your NRG back! And get what needs to be done, DONE!
+[0882][Normal] Page 84
+[0884][Normal] What MRM activities would work for you? Are any of them already in play?
+[0886][Normal] So many to mention, but here are a few:
+[0888][Normal] -Just look out of a window  —  Just hit stop that now, restart in a minute or so
+[0890][Normal] -A moment out to refill — Half fill a hydration bottle or grab a smaller one
+[0892][Normal] -Lighten it up — By a window — Looking at something that triggers calm
+[0894][Normal] -Turn left not always right — Time out in a different direction
+[0896][Normal] -Changing room time out pre and post a workout
+[0898][Normal] -Mix up your set habits — Switch on your light therapy desk lamp
+[0899][Normal] Page 85
+[0901][Normal] Can you develop some new habits to kick-start your 24 hours in cycle 1
+[0903][Normal] Post-Sleeping Habits & Tactics
+[0905][Normal] What activities would work for you? Are any of them already in play?
+[0907][Normal] -A dawn wake simulator lamp — Blackout interventions
+[0909][Normal] -Early exposure to daylight — Getting outside
+[0911][Normal] -Earlier ARP wake — More time to get fully functional un-rushed
+[0913][Normal] -Rehydrating refuelling — Bladder and bowel movements
+[0915][Normal] -Light exercise — Mental challenge
+[0918][Normal] Page 86
+[0920][Normal] Pre-Sleeping Habits & Tactics
+[0921][Normal] Phase 3. Sleeping Prep Cycles 10/11/12
+[0922][Normal] Realistically and practically, what would work for you? They have to be habits that just come naturally for you, as you move closer to the point of entering a sleep state.
+[0924][Normal] Personal reset moments for you and your brain
+[0926][Normal] -Go diminished (amber) light aware
+[0928][Normal] -Declutter — Tech down — Download
+[0930][Normal] -Natural body temp — Room a few degrees lower
+[0932][Normal] -Shower rinse — Fresh linen — Cool pillow
+[0934][Normal] -A stroll — Light distractive exercise — Stretching — Massage
+[0936][Normal] -Sensory — Sounds — Smells — Pillow sprays — Nature
+[0938][Normal] Page 87
+[0940][Normal] Hydrating and Fuelling up
+[0941][Normal] A healthy diet is a no-brainer, that works for you whatever dietary disciplines you are or need to be following. Plenty of fresh, whole foods, easy on the processed junk!
+[0943][Normal] Take more time out (twice as long) to eat any meal and target key cycles in your day to rehydrate and fuel up.
+[0945][Normal] Page 88
+[0947][Normal] -Think Healthy Gut = Healthy Sleeping Hours
+[0949][Normal] Whether it's hitting the gym, pounding the pavement, or just a brisk walk with the dog, the key is to make it a non-negotiable part of your rolling 24 hours. Just keep thinking about what you do and in which cycles makes the most sense.
+[0951][Normal] Exercise is a no-brainer = Exercising your right to get the NRG you want back from your
+[0952][Normal] sleeping hours.
+[0954][Normal] Page 89
+[0956][Normal] 24/7
+[0957][Normal] Disruptors & Disturbed Sleep! Night Shifts, Multi Shifts, 7 on 7 off Schedules
+[0959][Normal] They play a far more significant role in our 24/7 world today. However, our 24 hours and four phases aligned with the natural circadian rhythms of our planet and sun can’t be shifted. They can, however, be optimised with your increased awareness of the key factors in play and using your 16 cycles effectively, with of course plenty of reset tactics in play.
+[0961][Normal] Page 90
+[0963][Normal] Pre & During Reset Tactics
+[0965][Normal] When you can’t get into sleep, think 15-minute rule and stop trying, get up but remain in a chillout phase and wait for sleep onset to come back in the next cycle, then go again. Don’t worry, you will reset.
+[0967][Normal] If you wake probably in your third cycle, 02:00/03:00 which is very common, and can’t get back into a sleep state, again don’t worry. Simply do the same, get up, remain in a chillout phase and wait for sleep onset to come back into play, maybe even a full cycle later.
+[0969][Normal] These common disruptors are normally triggered because we are far from being aligned with our circadian rhythms, including past polyphasic sleep wake cycles when it would have been natural to wake and be active at different times.
+[0971][Normal] This is why you will be able to use your reset CRP and MRM tactics to maintain your rhythm and help you handle extreme factors without losing your confidence, and, by default, worrying about it.
+[0976][Normal] Page 91
+[0978][Normal] -Monophasic (one block of nocturnal sleeping hours) works for some, but not for an increasing amount of us.
+[0979][Normal] For multi shifters, we simply identify the sleeping hours phase and apply the very same principle of factoring in those all-important CRPs and MRMs into the other phases and key cycles.
+[0981][Normal] -Light exposure plays a key role in resetting our natural rhythm, when we have a schedule that conflicts with it.
+[0983][Normal] A key intervention would be using natural daylight or a light therapy tool to help reset exposure relative to what would normally be in play in a multi shifter’s somewhat unnatural 24 hours.
+[0985][Normal] Page 92
+[0987][Normal] Now is the Time to Redefine IT!
+[0988][Normal] Unfortunately, some of the shift patterns I experience today, like 7 night shifts followed by 7 days off on repeat, make any technique really hard to maintain. It’s doable, but the personal wellbeing consequences for the individual and any direct family members are always present.
+[0990][Normal] From public sector front-line workers and first responders to extreme sports, in my experience working with these complicated factors, implementing the R90 24Hr 16Cycle Technique is by far the best approach and creates the space to develop a more proactive positive wellbeing mindset.
+[0992][Normal] Page 93
+[0993][Normal] Whatever phase of the day you need to sleep or work in, maintaining your 24 hour rhythm and cycles will help to optimise your time, as good as it gets...
+[0995][Normal] Page 94
+[0997][Normal] Phase 1 Sleeping Cycles
+[0998][Normal] Phase 2 Sleeping Cycles
+[0999][Normal] Phase 3 Sleeping Cycles
+[1000][Normal] Phase 4 Nocturnal Sleeping Cycles
+[1007][Normal] Page 95
+[1009][Normal] -Adapting with Confidence
+[1010][Normal] Being focused on your 16 cycles within every 24-hours and aware of how to optimise your wake hours really helps because every so often when certain extreme factors are in play, you may not even try, need to or have to enter an actual sleeping state. You just activate your pre- and post-extreme activity reset function built into your technique.
+[1012][Normal] When under pressure, remember that an approach of 28 back to back 90-minute sleeping cycles (not even the ideal 35 cycles) combined with 7 CRPs and 42 MRMs, will help you maintain a rhythm and balance. You can reset pre and post the pressure period as required.
+[1014][Normal] -High-Performance Balance
+[1015][Normal] You can develop your own 24-hour high-performance approach by combining CRPs (controlled recovery periods) with MRMs (micro reset moments) within your rolling 16 cycles. You can use these tactics to redefine your habits to reset yourself and your brain, unlocking the NRG you need when you need it most. It also helps you reveal more recovery opportunities, resulting in you actually being more productive and unlocking more time for yourself.
+[1017][Normal] -Besides a Note to Self
+[1018][Normal] Sleeping is not a performance criterion in the true sense because never mind whether you have slept really well, had disturbed sleep or not even slept at all, it will not stop what you need to get done. It is, however, an emotional, feeling performance criterion, and you need to feel confident that if you are trying your best to help optimise your long hours sleeping.
+[1020][Normal] Page 96
+[1021][Normal] What you do from the point of wake determines how well you sleep later...
+[1023][Normal] Page 97
+[1025][Normal] KSPI 4 Session Key Notes
+[1027][Normal] Coach Insight
+[1028][Normal] The key to developing a proactive activity rhythm is to not apply too much pressure on making a full restart with everything you are doing now or are trying to achieve. Simply identifying new practical tactics that can lead to mastering some new habits is all about one thing at a time. Thinking of your sleeping recovery hours not as a single, uninterrupted block, but more aligned with combining your nocturnal recovery hours with multiple micro moments of reset and a midpoint CRP on the go in your phases 1. 2. & 3.
+[1030][Normal] Being aware that you can apply a 24-hour multiphasic recovery approach, a more natural way, provides the confidence that you can put the tactic in play and establish what best works for you, at any point now or the future.
+[1032][Normal] Maybe very obvious to many, it can be as little as grabbing a moment to stand by and gaze out of a window while you rehydrate — daylight energy boost and a mindfulness moment. Six of those little MRM resets per day, and your performance rhythm is restored, never mind optimised sleeping hours later.
+[1034][Normal] Page 98
+[1036][Normal] Your Takeaway Grabs (TAGS)
+[1038][Normal] Start incorporating a CRP more often than not and you'll be amazed at the focus and energy gained. It's not a negative activity (as in doing “nothing”), it's an elite performance tactic! Even low levels of fatigue or NRG slumps can dampen your mood and motivation, making you bring up excuses that camouflage what you should actually be doing.
+[1040][Normal] Identify some practical activities that you like doing and can apply wherever you are and whatever you are doing. Think about 30-minutes in the ideal case, but the principle of this tactic is to at least try to get a short one in, like 20 or even 15 minutes. No CRP pressure, just one this week and maybe two the week after will start to reveal the benefits and lead to maybe one every day as it shifts from a tactic into a habit you enjoy.
+[1042][Normal] Be on the lookout for those MRMs 2/3/4/5 minute time-outs you can almost subconsciously trigger, anytime, anywhere. If you don't have time for a midday or late afternoon CRP right now, MRMs should be easier. Just being more aware of the energy potential they can deliver will help you start grabbing them, even if it is only once a day at first.
+[1044][Normal] Page 99 Blank
+[1046][Normal] Page 100
+[1048][Normal] Time Out Reflections
+[1050][Normal] -When do you typically feel most tired during the day?
+[1052][Normal] -Reflect on your daily schedule and pinpoint your natural energy dips.
+[1054][Normal] That’s it, Session Complete YOU’VE GOT IT
+[1056][Normal] What’s Next: Move on to KSPI 5
+[1057][Normal] We can sleep anywhere, anytime and in so many ways. So how much emphasis we put on our sleeping environment should be something to reflect on.
+[1059][Normal] Page 101 Blank
+[1061][Normal] Page 102
+[1063][Normal] KSPI 5 ENVIRONMENT
+[1064][Normal] Revisiting your sleeping space, where you choose or have to sleep
+[1065][Normal] AWARENESS SESSION
+[1067][Normal] Page 103
+[1069][Normal] What’s worth knowing
+[1070][Normal] Reclaiming Your Sleeping Space
+[1071][Normal] Many of us have turned our bedrooms into work spaces or entertainment hubs, with all manner of sleep-disrupting distractions. But if we want to optimise the hours we allocate to sleeping, we need to get back to basics and transform this space back into a mental and physical recovery sanctuary.
+[1073][Normal] Bringing elements of nature, like natural colours, sounds, plants, images and fragrances into our sleeping space can help you and your brain feel safe and secure.
+[1075][Normal] Natural Alignment
+[1076][Normal] As humans and mammals, we are naturally aligned with our planet, circadian rhythms, the sun, and the natural world around us. We feel the true benefits of this alignment when we spend time outdoors, even if only for a few minutes, let alone days or weeks.
+[1078][Normal] Page 104
+[1080][Normal] Getting our heads down
+[1081][Normal] The place, space or room we choose to sleep in would have been influenced by many factors if we were still active and sleeping outdoors. Under that tree, up that tree, inside that cave, behind that rock — somewhere safe and protected preferred. Daylight and its warmth moving us into diminishing amber light and darkness (apart from the stars) and a cooler temperature is part of our natural 24-hour rhythm.
+[1083][Normal] Of course, not everyone likes camping, but everyone loves the outdoors and how it makes us feel.
+[1085][Normal] Creating Your Sleeping Space
+[1086][Normal] Imagine a cosy cave, a sheltered nook in a forest, or a soft patch of grass under a tree. In nature, we instinctively seek out places that feel safe and sheltered for sleeping. While we may no longer sleep under the stars, we can create that same sense of sanctuary in our bedrooms, or at least reflect on how far away from this ideal your space is.
+[1088][Normal] It could be as easy as putting a plant in your room, or a picture of the outdoors on your wall, or something similar that works for you.
+[1090][Normal] Bringing Nature Inside:
+[1091][Normal] Developing a sense of natural familiarity and security into your sleeping space could be a game changer for you. You could bring the essence of the natural world inside — not the cold, heat, or weather, but the beneficial sensory triggers. You could also recreate the rhythm of light to dark, warm to cool, dark to light and cool to warm.
+[1093][Normal] The sleeping space (room) facing east or west can be a key factor.
+[1095][Normal] Page 105
+[1096][Normal] Elite Athlete Sleeping Space Check-In
+[1097][Normal] You can use this mental check-up tactic not only on your current space but everywhere you have to or need to sleep, like a hotel.
+[1099][Normal] Page 106
+[1101][Normal] Can we put what we need and know works into the room and take anything out and/or disguise what could be a potential barrier? Can we make it and keep it secure, add some key personal familiarisation tools — formative comfort blankets, a teddy, displacing sounds, calming smells, images of loved ones and places you love to go.
+[1103][Normal] Okay, imagine stripping your room back to an empty shell, taking out everything and paint or create a neutral natural colour palette. Now reflect on what you would leave out that isn't essential for you and your brain to go sleeping.
+[1105][Normal] Could you leave some things out, give them a new room to reside in? Maybe not now, however, you are more aware that your sleeping space could be modified even a little bit!
+[1107][Normal] Remember this is about trying to deliver sensory triggers, signalling to your brain that it's safe to enter sleep, our most vulnerable state, and drift off into those early cycles and deepest restorative stages.
+[1109][Normal] Like early exposure to daylight — what you see when
+[1110][Normal] you first wake can really help you reset
+[1112][Normal] This familiarisation tactic is key factor in play at home and away, because at least we know how to adapt our or any sleeping space and remain focused on how the 16-cycle rhythm of our R90 Technique helps to take the pressure off any sleeping space.
+[1114][Normal] A bed is one thing that will no doubt stay in your sleeping room, with a mattress on it.
+[1116][Normal] Page 107
+[1117][Normal] A room only becomes a bedroom when you put a bed in it!
+[1119][Normal] Page 108
+[1121][Normal] Let’s remind ourselves that we are designed to actually sleep on anything, anywhere! If we are sleeping outside on a no doubt harder surface, we get just as comfy as we can with the knowledge that we are more aligned with the natural 24-hour rhythms and likely to sleep well, wake at your ARP, energised and ready to explore the day ahead.
+[1123][Normal] A good first step before you even think of choosing a new mattress is to try to sleep on your non-dominant side, curled up in the natural foetal position.
+[1125][Normal] Your non-dominant side is less sensitive (joints and muscles) and your dominant side is free to protect you, your heart and your genitals (something your subconscious will register) as you enter those deeper restorative sleep stages in your most vulnerable human state.
+[1127][Normal] This would be the natural outside sleeping position
+[1128][Normal] your brain really loves more than if you were sleeping
+[1129][Normal] on your back or front.
+[1131][Normal] Page 109
+[1133][Normal] Creating a sleeping surface using layers that you can replace with fresh ones more often.
+[1135][Normal] Consider building your sleeping surface (mattress) incrementally, using layers that you can build up and replace with fresh layers more often. That way, you can customise your sleeping surface to suit your needs when you need to or have to — just like I do for elite athletes at home, so they can take key parts with them wherever they go.
+[1137][Normal] This is also a key tactic to accommodate individuals who have restrictive physical capabilities in play.
+[1139][Normal] Ideally, but not essential, add some breathable, antibacterial, hypoallergenic, quick low-temperature wash and dry bedding, “Hang it Out” ideally in white or natural sensory colours and skin-soft to the touch. A shallow cooler pillow, one you can keep cool, a duvet, cotton sheets or blankets you can adapt during the seasonal transition, and you'll have your own customised setup. So comfy, fit for your purpose, reducing potential disturbances and at least contributing to making the most of your long sleeping hours ahead.
+[1141][Normal] Page 110
+[1142][Normal] NAPPING is for Snoozers & Losers!
+[1143][Normal] Really! It is our 24/7 personal best success tactic...
+[1145][Normal] Page 111
+[1147][Normal] KSPI 5 Session Key Notes
+[1149][Normal] Coach Insight
+[1150][Normal] As humans we are designed to sleep anywhere, anytime and on anything, so I coach athletes to do just that because they have to. From a hotel to a round the world racing boat and in some pretty extreme circumstances, like the side of a mountain.
+[1152][Normal] Just try your best with your sleeping space, always confident that your sleeping hours will be optimised because of your R90 16-cycle reset mindset, not how fancy your bedroom is set up.
+[1156][Normal] Page 112
+[1158][Normal] Your Takeaway Grabs... (TAGS)
+[1160][Normal] Let's face it, we don't always have total control over where we lay our heads down to sleep. Whether it's a cramped flat, a noisy neighbourhood, an unfamiliar hotel mattress or a camping retreat outside. Just remember, you can sleep anywhere if you have your redefined R90 Technique in play.
+[1162][Normal] Even small changes can make a big difference. Maybe you can't renovate your entire room or control it as you would like! You still have plenty of practical options in play — blackout blinds or eye masks, noise-cancelling devices or ear plugs, sunrise & light therapy lamps and devices, put a plant in it, fresh bed linen more often, a cool pillow and case, a teddy, so many simple practical options; it’s not always about financial investment.
+[1164][Normal] Whether you like the outdoors or not, you will have to agree it has the power to reset us, make us feel more balanced and in control. Reflect that into your life and your sleeping space as much as you can because no products or interventions in isolation will have the desired impact they claim, if you’re not already prepared from your new day startup, your ARP.
+[1167][Normal] Page 113
+[1169][Normal] Think Why...
+[1171][Normal] ... is fresh bed linen for many of us a trigger we will sleep well?
+[1172][Normal] It’s fresh and cooler
+[1174][Normal] ... is the cooler side of our pillow the go-to side?
+[1175][Normal] A hot head means a hot body
+[1177][Normal] ... so many of us hang a leg out, during sleep?
+[1178][Normal] Duvets stop temperature release
+[1180][Normal] ... when we know that we can live in all sorts of extreme temperatures, are we never prepared, sleep panic kicks in, if we even have a brief cold or hot spell?
+[1181][Normal] Reflect on countries that have these extremes and what tactics do they apply.
+[1183][Normal] Page 114
+[1185][Normal] Time-Out Reflections
+[1186][Normal] -Make some notes on your current bedroom setup.
+[1188][Normal] -How does it already support your new redefined R90 sleeping awareness, and what could you do to optimise it?
+[1190][Normal] That’s it, Session Complete YOU’VE GOT IT
+[1192][Normal] What’s Next: Move on to KSPI 6
+[1193][Normal] Sat with our devices, the global world open and available, we can easily become bombarded and influenced by anything and everything. What you choose to let become a new intervention in your life needs to be carefully considered.
+[1195][Normal] Page 115 Blank
+[1197][Normal] Page 116
+[1199][Normal] KSPI 6 INTERVENTIONS
+[1200][Normal] What’s a positive intervention and what’s probably not
+[1201][Normal] AWARENESS SESSION
+[1203][Normal] Page 117
+[1205][Normal] Tackling Our Sleep Enemies Worrying about sleep is its main disruptor!
+[1207][Normal] Picture this...
+[1208][Normal] It's 2 a.m. and you're wide awake, your mind racing with thoughts of the sleep you're not getting. “If I fall asleep right now,” you bargain with yourself, “I can still get a solid five hours before my alarm.” But as the minutes tick by and sleep remains elusive, panic sets in.
+[1210][Normal] “I’m going to be a wreck tomorrow,” you worry...
+[1212][Normal] Sound familiar? For many of us, the biggest thing keeping us awake at night isn't jet lag, a snoring partner, or a crying baby — it's our own minds. We've become so fixated on getting the “perfect” night's sleep that the very thought of not sleeping is enough to keep us awake.
+[1214][Normal] But here's the thing, worrying about sleep is a bit like quicksand. The more you struggle against it, the deeper you sink. The key is to relax and redirect your mind. Remind yourself that rest — even quiet, sleepless rest — is still restorative. Practice meditation or deep breathing to calm your racing thoughts. And if sleep still won't come, don't lay there stewing more than 15 minutes. Get up, do something calming, brew a cup of herbal tea, and trust that sleep will come when you catch the beginning of your next sleep cycle.
+[1216][Normal] Page 118
+[1218][Normal] Take Catherine, a naturally driven high achiever whose mounting sleep debt was taking a heavy toll. By applying the principles of the R90 Technique — understanding her circadian rhythms, adopting a suitable consistent wake time ARP and strategically using her CRPs (Cycle Reset Point) she began to regain control. When waking during the night still plagued her, she turned to sleep restriction, gradually dialling back her time in bed to make every minute count. It's not about getting by on less sleeping hours but making those hours really count.
+[1220][Normal] 24/7 Fatigue
+[1221][Normal] Night and multi shift workers face a similar challenge, their shifting schedules at odds with their natural rhythms. Again, carefully timed light exposure, combined with their 16 rolling cycles, CRPs and MRMs can help develop tactics and habits, to reset and regain a balance, a rhythm that works for them. Of course, jet lag is another classic sleep disruptor, throwing our internal clocks out of sync. While allocating time to reset is the ultimate cure, we can ease the transition by pre-emptively shifting our schedules before travel, seeking out or avoiding light at our destination, and strategically using short-acting sleeping aids.
+[1223][Normal] Light exposure tactics can not only help jet lag, but also travel and 24/7 fatigue!
+[1225][Normal] Does it make sense sleeping together?
+[1227][Normal] When it comes to sharing a sleeping space, even those we love most can be our worst enemies. Snoring partners, squirming newborns — they can all wreak havoc on our sleeping routines. Never mind the fact we don’t choose life partners based on chronotype, so even AMers and PMers live together with different schedules and sleep wake times in play.
+[1229][Normal] Page 119
+[1230][Normal] Size Matters!
+[1231][Normal] We need personal space to curl up in and remain undisturbed... we turn away from each other as we enter sleep!
+[1233][Normal] Page 120
+[1235][Normal] Choosing the right side of the bed (left for lefties, right for righties), a spacious mattress enough surface for both, and even sleeping separately when your schedules are out of sync can all help keep disturbances to a manageable level.
+[1237][Normal] For couples, the key is to balance intimacy with function. Sex before sleep can be a great stress buster, at the same time stimulating, so mix it up a little and try your best to keep your bedroom's primary association with sleeping.
+[1239][Normal] New parents always face a unique sleeping challenge, even though they know what’s coming. The key here is to sync your schedule as much as possible with your infants’ natural rhythms, grabbing restorative CRPs when you can and not beating yourself up when you inevitably fall short of sleeping perfection.
+[1241][Normal] Remember, kids are dominated by a polyphasic sleep wake cycle, so just let your R90 Technique help you reset and regain a workable rhythm as the children develop and grow and get older.
+[1243][Normal] As for teens, their night-owl tendencies aren't just youthful rebellion — they're biological. Puberty really does shift their internal clocks, making early school start times a real killer. While we can't change biology, we can encourage healthier sleeping outcomes by managing technology usage, daylight and inside outside exposure and not forgetting what chronotypes might be in play and developing.
+[1245][Normal] In the end, whether you’re sleeping solo or sharing your space, the key to a good approach is to make sleeping a proactive conversation — for us and those we care about.
+[1247][Normal] Personalised Interventions
+[1248][Normal] Some individuals have unique medical, mental, or physical needs that benefit from specific sleeping interventions, reminding us that we are not all the same, and the many sleeping variables in play. Even in these circumstances it is always advised to reset your approach in order to ensure interventions do not become counterproductive.
+[1250][Normal] Interventions should always be considered carefully
+[1252][Normal] Even without these and many other external disruptors, many of us are sabotaging our sleep from within, with soft and even harder drugs, powerful stimulants, addictive supplements in the pretext they help support our ability to perform at our best. And of course, simply burning those midnight hours with our devices, with our true sleeping enemy insomnia in play.
+[1254][Normal] Caffeine and alcohol for example can play a positive role for some; however, the rule is, either not at all or using your rhythmic 16 cycles to maintain a balanced intake approach with no highs and lows, and no reliant habits forming.
+[1256][Normal] Page 121
+[1258][Normal] Track it... Measure it...
+[1259][Normal] Just be aware of what data and why. While sleep trackers will give you valuable insights, they can also increase levels of anxiety and stress if they don’t match up to the way you feel.
+[1261][Normal] As important as they are — they have no impact on what you need to get done. Reflect on how many things in your life would be considered to be intrusive and non-intrusive and keep them balanced.
+[1263][Normal] Page 122
+[1265][Normal] Inner Health is a Given!
+[1266][Normal] If you’re out of whack on a healthy, balanced lifestyle and diet approach, sleeping can be difficult. No worries, this sometimes happens through choice or when extreme circumstances are in play, and remains a challenge for us all.
+[1268][Normal] Just keep thinking a happy gut is a happy you and sleeping made easier. Doing the smart work of cultivating natural healthy sleeping tactics and habits, which is why the R90 Technique is proven, works and by default makes you more resilient.
+[1271][Normal] Page 123
+[1273][Normal] KSPI 6 Session Key Notes
+[1275][Normal] Coach Insight
+[1276][Normal] While we have instant access to global knowledge, not everything we learn is a suitable solution or positive intervention. After all, your 24-hour rhythm is a delicate dance and if you're constantly trying to lead when you should be taking a step back, you're bound to get out of whack.
+[1278][Normal] So, take a breath and tune in to your body's natural cues, remembering that — sometimes — the smartest tactic you can apply is hit the pause button, grab a CRP, and reset. Technological innovations or new ways to manage areas of your life you did not know about before today can all be beneficial and help you.
+[1280][Normal] As you journey through what’s going to be in play for us all, always be mindful that you are a human being (a mammal) on a planet that rotates around a sun, your natural rhythm is your best intervention. This is something that, at the time of writing this, I believe, and hope will not change.
+[1282][Normal] Page 124
+[1284][Normal] Your Takeaway Grabs...(TAGS)
+[1285][Normal] -Carve out some “you” time and use those CRPs (Controlled Recovery Periods) proactively. Like a review of your nutritional intake and taking twice as long as you would normally take to eat a meal for example, a fasting technique like five on two off, can have a profound effect on gut health and so many aspects of your overall health and of course what you get back from your sleeping hours.
+[1287][Normal] -Let's face it, sometimes life throws us curveballs that we just can't control. Things like big events, delays, injuries, poor health. But here's the thing — trying to fight against these factors is often a losing battle. Instead, get sleeping smart
+[1288][Normal] and identify what’s in play and when and simply adjust your R90 tactics and habits to help you navigate past them.
+[1290][Normal] -I've got a simple rule: Consider sleep interventions wisely and clearly establish why, what and for how long they will be in play. The last thing we want is for some addictive habit behaviour to take control — yet another tracker, an ill-informed influencer, an overstimulating supplement calling the shots. Always search for natural tactics and habits before you jump into the vast isolated intervention space.
+[1292][Normal] Page 125
+[1294][Normal] Time Out Reflections
+[1295][Normal] -Grab a CRP and take some time out to reflect on what you’ve learned from this session, and I suggest, throughout the playbook so far. How might shifting your focus to cultivating a natural rhythm through the R90 Technique change your relationship with sleep?
+[1297][Normal] -Consider both the potential benefits and any challenges you might face.
+[1299][Normal] That’s it, Session Complete YOU’VE GOT IT
+[1301][Normal] What’s Next: Move on to KSPI 7
+[1302][Normal] You have reached the point where you bring all your redefined sleeping awareness, your notes, and thoughts together and create your personal R90 24Hr 16Cycle Playbook.
+[1304][Normal] Page 126
+[1306][Normal] Sleeping can be a waste of your valuable time... but it doesn’t have to be!
+[1307][Normal] Get a camera mounted in your room to film yourself sleeping. Take time out to watch the footage back and become amazed at just how long you allocate to sleeping, hour by hour, doing nothing.
+[1309][Normal] Playing with pillows, tossing and turning, on your front, back and then side, on repeat, among many other natural human functions in action, as our muscles hit the sleep state mode.
+[1311][Normal] This could be a game changer in understanding what you get up to whilst asleep or trying to sleep, because for most of us we have no idea.
+[1313][Normal] Page 127 Blank
+[1315][Normal] Page 128
+[1317][Normal] KSPI 7 Your R90 in Play
+[1318][Normal] Create your personal R90 Playbook.
+[1319][Normal] TECHNIQUE SESSION
+[1321][Normal] Page 129
+[1323][Normal] Your R90 Technique 24Hr 16Cycle Playbook
+[1324][Normal] Your personal profile characteristics
+[1326][Normal] -Your 24/7 Rhythm in Sync
+[1328][Normal] -What’s in Play for you
+[1330][Normal] -Your Tactics Habits Behaviours
+[1332][Normal] -Your 16 Cycles in Rhythm
+[1334][Normal] The R90 Technique Playbook could have been put into so many tech, interactive app-based subscriptions, however, that is not the best way to make it work best for you. I want you to feel that you have more ownership of your 24/7 rhythm, not bound by more rules and routines!
+[1336][Normal] Just being more aware of what’s in play, that can really help you and be less focused on what gets in the way. Your R90 Playbook should be a subconscious toolkit with you all the time 24/7 
+
+Whether you have it in your notepad, on the fridge, in your office or on your device.
+[1338][Normal] In each KSPI session you have key coach insights, takeaway grabs and plenty of areas to reflect on, so hopefully you have made some notes on what could practically work for you and now add them into the playbook templates.
+[1340][Normal] And a key tactic in the early weeks is timeout to reflect on what does or does not work as you make progress.
+[1342][Normal] Page 130
+[1344][Normal] Quick R90 Playbook reflection checklist before you complete steps 1 and 2.
+[1346][Normal] -You are part of a rolling 24-hour circadian rhythm on repeat
+[1348][Normal] -You have 4 phases in every 24 hours
+[1350][Normal] -You have rhythm with your 16 x 90-minute in every 24 hours
+[1352][Normal] -An ARP is your anchor reset point — your sunrise
+[1354][Normal] -A multiphasic mindset is a more natural recovery approach
+[1356][Normal] -Timings & Cycles — what, why and when
+[1358][Normal] -Reset tactics — CRP & MRM habits
+[1360][Normal] -Daylight (Blue) — light under- & over- exposure awareness
+[1362][Normal] -Chronotype awareness — yours and  others
+[1364][Normal] -What are your key cycles in which phase
+[1366][Normal] -What are your (happy) best cycles
+[1368][Normal] -Which cycles need your help
+[1370][Normal] -Being at the top of the stairs prepared to enter a sleeping state
+[1372][Normal] -Helping your brain develop those four, all- important sleep stages
+[1374][Normal] -Those deeper restorative stages in your first three cycles
+[1376][Normal] -Your sleeping rhythm through one block of  90-minute cycles undisturbed
+[1378][Normal] -Do you need multi-schedule adaptability, on the go
+[1380][Normal] -Tactics for any unforeseen extreme periods
+[1382][Normal] -Do you have any mental & physical medical factors in play
+[1384][Normal] -Time zone travel tactics
+[1386][Normal] You can now add your session notes and thoughts into the R90 Playbook templates, however suits you best.
+[1388][Normal] Voice Notes Device Notes Notepad
+[1390][Normal] Page 131
+[1391][Normal] Step 1
+[1392][Normal] Setting an ARP & Defining your Sleeping Cycles
+[1394][Normal] Page 132
+[1396][Normal] Establish your most consistent wake time: Set this as your ARP (anchor reset point), which defines your 24 hours, four phases and sixteen rolling cycles.
+[1398][Normal] R90 ARP Template     R90 ARP 06:30 Template
+[1400][Normal] We are thinking in 90-minute cycles, so keep it simple and pick a time on the hour or half hour. Keep that in play for seven days and find out through experience, if that time works best, or you need to adjust it.
+[1402][Normal] 05:00 or 05:30 — 06:00 or 06:30 — 07:00 or 07:30 — 08:00 or 08:30
+[1404][Normal] Page 133
+[1406][Normal] Defining Your Sleeping Cycles...
+[1407][Normal] Now you can develop a structure for maintaining a rhythmic balance between your mental and physical active cycles and your sleeping cycles.
+[1409][Normal] Reflect on this common example of FIVE 90-minute nocturnal cycles in phases 3 & 4, with a targeted sleep time of 23:00 into an ARP of 06:30. We know which is the best pre-sleeping cycle, 21:30 into 23:00 and the so important first post-sleeping cycle, 06:30 into 08:00.
+[1411][Normal] R90 Five Sleeping Cycles
+[1412][Normal] 23:00 > 00:30 > 02:00 > 03:30 > 05:00 > 06:30
+[1414][Normal] -Now we have our active cycles in phases 1, 2 & 3 and our nocturnal sleeping cycles in phases 3 & 4 and can refer to it as our optimised 5 a day and aim for 35 sleeping cycles and 77 active cycles in every rolling seven days.
+[1416][Normal] Page 134
+[1418][Normal] However, what if you had to, or wanted to, apply a FOUR nocturnal sleeping cycles approach (6 hrs), then you would have a FOUR A DAY technique in play. 28 sleeping cycles and 84 active cycles in your rolling seven days.
+[1420][Normal] Just four cycles would appear to be not enough sleep! However, how many of us who allocate eight hours or more, actually sleep undisturbed and feel we got what we wanted from it?
+[1422][Normal] The key success factor here is we have a 24-hour technique in play: How many hours we allocate to sleeping does not determine how we actually sleep! Our wake activities helping our brain which is in control of our sleep will determine that. How many times we sleep through undisturbed and feel energised to get it done is what matters.
+[1424][Normal] Of course, we have to be mindful that ideally we should allocate 30+ % of our 24 hours to sleeping recovery (8-ish out of 24-ish). However, very few of us can or do achieve this ideal.
+[1426][Normal] R90 Four Sleeping Cycles
+[1427][Normal] 00:30 > 02:00 > 03:30 > 05:00 > 06:30
+[1429][Normal] Page 135
+[1431][Normal] With your R90 Technique in play helping you reset on the go, if you did adopt a four sleeping cycle (6 hours) approach, you would also have one 30-minute midpoint CRP and six or more 5 minute MRMs, which would add up to 7 hours allocated to sleeping and overall recovery.
+[1433][Normal] When you know how to make that work and you’re smashing it, then you could adjust to five nocturnal sleeping cycles which is 8.5 hours.
+[1435][Normal] R90 Five Sleeping Cycles ARP 06:30 plus a 15:30 Cycle 7 CRP
+[1437][Normal] -If we are factoring in the power and value of our MRMs and that midpoint cycle reset period CRP, we can establish what 24 hour technique works best for us. By default, we will actually experience a better overall quality of sleeping recovery.
+[1443][Normal] Page 136
+[1444][Normal] Transitioning through your 16 cycles Is all about rhythm and reset
+[1446][Normal] Page 137
+[1447][Normal] Step 2
+[1448][Normal] Best Cycles, Best Practice CRPs and MRMs Remastered and Sticky...
+[1450][Normal] Page 138
+[1452][Normal] Integrating into your weekly R90 24Hr 16Cycle Playbook as many practical MRMs and CRPs as you can, is a great start. Think inside outside, light exposure and adopt a mindset of ‘timeout is not a waste of your time’!
+[1454][Normal] Think CRPs
+[1455][Normal] Making a midpoint space for you and your brain to reset at the right time in any rolling 24 hours. Napping redefined, designed to optimise performance and the long hours we allocate to sleeping.
+[1457][Normal] Keep your options open, mix it up! Are they enjoyable, beneficial to how you feel, contributing to your overall wellbeing in any 24 hours? Remain observant to adapt these tactics and habits as you go.
+[1459][Normal] What CRP activities could practically work for you, and are any of them already in play?
+[1461][Normal] Page 139
+[1463][Normal] Think MRMs
+[1464][Normal] These are as important, more practical to apply, than a sometimes tricky midpoint CRP, and they will help you and your brain reset on the go.
+[1466][Normal] No worries, just start thinking about MRMs, in every 90-minute cycle ideally, and throughout your active phases (P1, P2 and P3), adjusting your habits, so you develop these moments subconsciously.
+[1468][Normal] What MRM activities could practically work for you, and are any of them already in play?
+[1470][Normal] Post Sleeping Habits & Tactics
+[1471][Normal] Can you develop some new habits to kick-start your 24 hours in cycle 1 in an unrushed way and get into the daylight or recreate it?
+[1473][Normal] Pre-Sleeping Habits & Tactics
+[1474][Normal] They have to be habits that just come naturally for you, as you move closer to the point of entering a sleep state. Warm to cool, light to dark.
+[1476][Normal] Being CRP & MRM Aware…
+[1477][Normal] …will help you identify with activities that work best for you when you are in familiar circumstances, and keep you more alert and observant when in unfamiliar environments.
+[1479][Normal] Page 140
+[1480][Normal] Step 3.
+[1481][Normal] Your R90 Case Study Templates
+ A series of templates designed to help you build your own R90 Playbook. Make notes on them, screen grab, even better print off and make notes, whatever suits you
+[1483][Normal] Page 141
+[1484][Normal] R90 Blank Template
+[1485][Normal] Screengrab, print off a copy, whatever suits you
+This series of templates are designed to help you build an R90 Planner
+[1486][Normal] Page 142
+[1488][Normal] R90 Everyday Playbook
+[1489][Normal] Screen grab, print off a copy, whatever suits you
+Using a common ARP of 06:00am and the most used SIX, FIVE & FOUR sleep cycle tactics
+[1490][Normal] SIX CYCLE TACTIC 21:00 > O6:00 ARP (9 HRS)
+FIVE CYCLE TACTIC 22:30 > O6:00 ARP (7.5 HRS)
+FOUR CYCLE TACTIC 24:00 > O6:00 ARP (6 HRS)
+[1491][Normal] PHASE 2 CRP  C7 or C8 (20/30 minutes)
+[1492][Normal] O6:00 ARP Infograph
+[1494][Normal] Page 143
+[1496][Normal] R90 Everyday Templates
+[1497][Normal] Screen grab, print off a copy, whatever suits you
+Using an ARP of 06:30 and 07:30 am
+[1499][Normal] O6:30 ARP Infograph    O7:30 ARP Infograph
+[1501][Normal] Page 144
+[1503][Normal] R90 Day Night & Multishift Planner Templates
+[1504][Normal] Screen grab, print off a copy, whatever suits you
+
+It’s always the same 24 hours and 4 phases in play. Your success factor is maintaining a rhythm as you transition between night, day shifts and days off, using tactical CRP’s, MRM’s and light exposure inside and outside.
+[1506][Normal] 06:00 ARP 1 Infograph     18:00 ARP 2 Infograph
+[1510][Normal] Page 145
+[1512][Normal] R90 7 Day Forecast Template
+[1513][Normal] Screen grab, print off a copy, whatever suits you
+
+Reflect on your weekly occupational and social responsibilities. Being aware in advance of which days when you might have to adapt from a five to four cycle tactic for example, is a proactive sleeping mindset
+[1515][Normal] Your ideal everyday FIVE Aday 35 nocturnal sleep cycles 42 MRM’s & 7 CRP’s
+[1517][Normal] Your No worries reality actuals 28 nocturnal sleep cycles 35 MRM’s & 5 CRP’s
+[1519][Normal] Page 146
+[1521][Normal] R90 Elite Athlete Playbook 
+Case Study
+Adopting a high achieving lifestyle, is all about identifying the key factors in play and developing a natural human centred, 16 cycle 24-hour rhythm using a set of tactics and mastered habits. On repeat to Reset, Peak and Protect.
+[1523][Normal] Athlete Chronotype - AMer  morning characteristics
+[1524][Normal] ARP   Anchor Reset Point  06.30 am
+ST      Optimal Sleeping Times / Five  Four Three Two Cycles
+[1525][Normal] Optimal Five 90-minute Sleeping Cycles + CRP + MRM’s
+C12 - 23:00  into C16 - 06:30 (7.5 Hours)
+[1526][Normal] Target Recovery Time 8.5 Hours
+[1528][Normal] 7 Day Rolling Target  / 35 Sleeping Cycles / 7 CRPs + 42 MRMs
+[1529][Normal] Adapting Tactic using Four 90-minute Sleeping Cycles + CRP + MRM’s
+C13 - 24:30  into C16 - 06:30 (6 Hours)
+[1530][Normal] Target Recovery Time 7 Hours
+[1532][Normal] 7 Day Rolling Target  / 28 Sleeping Cycles / 7 CRPs + 42 MRMs
+[1534][Normal] 24 Hr Rolling Recovery Optimising Tactics 
+CRP   1 x 20/30  Minute Midpoint Cycle  in Phase 2. / Options C6 - C7 - C8
+[1535][Normal] Micro Sleep / Meditate / Yoga / Walk / Journal / Sensory Activity
+[1537][Normal] MRM 6/7 x 3/5 Minute Micro Resets /  Phases 1. 2. 3. / Cycles C2  into C10
+[1538][Normal] Hydrate, Sit, Reflect by a Window /  Step Outside /  Sensory Habit
+[1540][Normal] Optimal Light Exposure Tactic
+[1542][Normal] ARP Cycle 1.    - Daylight / Lamp / Device 10,000 Lux
+[1543][Normal] Phases 1. & 2. - Inside Outside Average 1,000 Lux
+[1544][Normal] Phase 3.            - Two cycles before the targeted ST - Think 200 Lux – Amber / Red Light
+[1545][Normal] Page 147
+[1547][Normal] R90 Technique Sleep Wake Cycle Planner
+[1548][Normal] Thinking ahead at least for the next seven days, helps you identify those pressure points, how many nocturnal cycles, CRPs and MRMs would be your optimal target.
+[1550][Normal] 7 DAY ROLLING TARGET
+[1551][Normal] 35 Nocturnal Cycles 42 MRM’s 7 CRP’s
+[1552][Normal] 7 DAY RESET TARGET
+[1553][Normal] 28 Nocturnal Cycles 42 MRM’s 7 CRP’s
+
+14 DAY FORECAST
+70 Nocturnal Cycles 84 MRM’s 14 CRP’s
+[1555][Normal] 28 DAY FORECAST
+[1556][Normal] 140 Nocturnal Cycles 168 MRM’s 28 CRP’s
+[1558][Normal] 56 DAY FORECAST
+[1559][Normal] 280 Nocturnal Cycles 336 MRM’s 56 CRP’s
+[1562][Normal] Page 148
+[1564][Normal] That’s it, all done YOU’VE GOT IT
+[1566][Normal] I very much hope you have enjoyed your R90 Playbook sleeping redefined journey with me as your personal coach, and my one last insight for you is…
+[1568][Normal] My R90 Technique is now yours and for you to enjoy the benefits it has to offer. It is most definitely not designed to encourage you to sleep less, quite the opposite! It’s to ensure you don’t feel like you are wasting those precious hours.
+[1570][Normal] Please don’t put the results pressure on because very soon you will be navigating your 24 hours, days, and weeks like an elite athlete. Making tactical tweaks to your habits, mastering some new ones, and feeling like you are always at your PERSONAL BEST.
+[1572][Normal] Sharing always helps others, in so many different ways, so if you loved what you have learnt even a little bit, maybe others will love and appreciate it, too.
+[1574][Normal] - Why not post a review & share.
+- All enquiries, get in touch.
+[1576][Normal] Copyright © Nick Littlehales. All rights reserved 2025
+No portion of this book may be reproduced in any form without written permission from the publisher or author.
+[1577][Normal] Medical Disclaimer: The R90 Playbook its contents, advice and or guidance provided by Nick Littlehales is not a clinical medical program nor intended for the diagnosis or treatment of sleep disorders when a qualified physician or clinic should be consulted.
+[1579][Normal] Page 149  Inside back cover
+[1581][Normal] “I have known Nick for over fifteen years now and whilst he continues to work alongside some of the leading organisations and elite athletes in sport today his unique approach, proven services and products have also had a real impact on my approach to this every day process. I like many of my colleagues and friends, took sleep very much for granted and as a
+[1582][Normal] consequence knew very little about what could be achieved and or lost”
+[1584][Normal] Phil Townsend, Communications Director UEFA, Former Director Manchester United FC
+[1586][Normal] “An absolute pioneer of ‘sleep hygiene’. One of only a few external experts’ players I speak to remember!! (From a Premier League player - high praise)”
+[1588][Normal] Julian Dowe CEO Football 4 Football
+[1590][Normal] “The BEST Books about Sleeping out there! I cannot recommend
+[1591][Normal] Nicks first book titled SLEEP and now his latest edition The R90 Technique Playbook and Nick’s personal services enough. My life has been literally changed, I had not slept well for 33 years, now a fully qualified deep restorative sleeper and love it! There are many books on the market about sleep but most of them serve to only scare us whereas Nick’s books gives you easily digestible insights and takeaways you can apply immediately”
+[1593][Normal] Emma Sabin, Personal Health and Wellbeing Expert – Ibiza
+[1595][Normal] “This playbook is a true game-changer for anyone looking to optimise their sleep and waking hours. The R90 technique, clearly and concisely explained, provides a framework for
+[1596][Normal] understanding and adjusting your sleep patterns for improved well-being. The principles are relevant for everyone, from elite athletes to night shift workers, offering tailored guidance for diverse lifestyles, and provides realistic and actionable steps with practical examples, making it easy to implement into your daily routine. The information is presented in an easy-to-understand manner, making it accessible to individuals with varying levels of
+[1597][Normal] knowledge on sleep science. I have personally applied the R90 Technique and witnessed
+[1598][Normal] significant improvements in my own life and others. This R90 Playbook is a valuable resource for anyone seeking to improve their sleep quality and overall well-being. Its focus on practicality, clarity, and universal applicability makes it a standout guide for
+[1599][Normal] optimising your sleep-wake cycle.”
+[1601][Normal] Paul Mathieson, Former USA Professional Squash Player and Elite Athlete
+[1606][Normal] Page 150  Back cover
+[1608][Normal] SPORTSLEEPCOACH.COM
+[1609][Normal] The R90 Playbook is your cheat sheet. Decades of elite coaching distilled into practical, no-fluff tactics designed to fit your schedule, your rhythm, and your life.
+[1611][Normal] “Designed to fit your personal schedule, individual rhythms, and lifestyle. WHY? Because sleep isn’t a passive activity, something you just ‘fit in’, it’s a proactive 4th health pillar high-performance mindset that keeps you unbeatable” - Nick
+[1613][Normal] Sleep!
+Put an ING on it!
+[1614][Normal] Because we are going sleepING...
+[1616][Normal] End.
