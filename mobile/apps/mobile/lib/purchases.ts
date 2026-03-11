@@ -32,9 +32,8 @@ export const PREMIUM_ENTITLEMENT_ID = 'premium';
 
 /** Product identifiers as configured in RevenueCat. */
 export const PRODUCT_IDS = {
-  monthly:  'monthly',
-  yearly:   'yearly',
-  lifetime: 'lifetime',
+  monthly: 'monthly',
+  yearly:  'yearly',
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
