@@ -1,10 +1,8 @@
 /**
- * login.tsx — Supabase Auth screen (Sign in / Sign up)
+ * login.tsx — Auth screen (Sign in / Sign up) — R90 Navigator redesign.
  *
- * Two modes toggled by the user: "Sign in" and "Create account".
- * On success: navigates to home (or onboarding if new user).
- *
- * Design: minimal, premium — dark background, email + password only.
+ * Design: navy theme, R-Lo mascot hero, Inter typography, accent tabs & inputs.
+ * All auth logic preserved from the original.
  */
 
 import { useState } from 'react';
@@ -14,23 +12,29 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../lib/auth-context';
+import { useTheme } from '../lib/theme-context';
+import { MascotImage } from '../components/ui/MascotImage';
+import { Button } from '../components/ui/Button';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
+  const { theme } = useTheme();
+  const c = theme.colors;
 
-  const [mode,     setMode]     = useState<'signin' | 'signup'>('signin');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
+  const [mode,         setMode]         = useState<'signin' | 'signup'>('signin');
+  const [email,        setEmail]        = useState('');
+  const [password,     setPassword]     = useState('');
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
@@ -39,17 +43,17 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+    setError(null);
     try {
       const result = mode === 'signin'
         ? await login(email.trim(), password)
         : await register(email.trim(), password);
 
       if (!result.ok) {
-        Alert.alert('Error', result.error ?? 'Authentication failed.');
+        setError(result.error ?? 'Authentication failed.');
         return;
       }
 
-      // On signup: go to onboarding. On signin: go to home.
       if (mode === 'signup') {
         router.replace('/onboarding');
       } else {
@@ -61,63 +65,89 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: c.background }]}>
       <KeyboardAvoidingView
-        style={s.container}
+        style={[s.kav, { paddingHorizontal: 28 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Logo / wordmark */}
-        <View style={s.header}>
-          <Text style={s.appName}>R90 Navigator</Text>
-          <Text style={s.tagline}>Sleep performance. Engineered.</Text>
+        {/* Hero — R-Lo + branding (≈40% screen height) */}
+        <View style={s.hero}>
+          <MascotImage emotion="encourageant" size="md" />
+          <Text style={[s.appName, { color: c.accent }]}>R90</Text>
+          <Text style={[s.tagline, { color: c.textSub }]}>Sleep. Recover. Perform.</Text>
         </View>
 
-        {/* Form */}
+        {/* Form (≈60% screen height) */}
         <View style={s.form}>
+          {/* Mode tabs */}
+          <View style={[s.tabs, { backgroundColor: c.surface }]}>
+            {(['signin', 'signup'] as const).map(tab => (
+              <Pressable
+                key={tab}
+                style={[s.tab, mode === tab && [s.tabActive, { backgroundColor: c.surface2 }]]}
+                onPress={() => { setMode(tab); setError(null); }}
+              >
+                <Text style={[s.tabText, { color: mode === tab ? c.accent : c.textMuted }]}>
+                  {tab === 'signin' ? 'Sign in' : 'Create account'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Email input */}
           <TextInput
-            style={s.input}
+            style={[
+              s.input,
+              {
+                backgroundColor: c.surface2,
+                borderColor:     focusedField === 'email' ? c.accent : c.borderSub,
+                color:           c.text,
+              },
+            ]}
             placeholder="Email"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={c.textMuted}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             value={email}
             onChangeText={setEmail}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => setFocusedField(null)}
           />
+
+          {/* Password input */}
           <TextInput
-            style={s.input}
+            style={[
+              s.input,
+              {
+                backgroundColor: c.surface2,
+                borderColor:     focusedField === 'password' ? c.accent : c.borderSub,
+                color:           c.text,
+              },
+            ]}
             placeholder="Password"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={c.textMuted}
             secureTextEntry
             autoCapitalize="none"
             value={password}
             onChangeText={setPassword}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
           />
 
-          <Pressable
-            style={[s.submitBtn, loading && s.submitBtnDisabled]}
+          {/* Submit */}
+          <Button
+            label={mode === 'signin' ? 'Sign in' : 'Create account'}
             onPress={() => { void handleSubmit(); }}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#FFFFFF" />
-              : <Text style={s.submitText}>
-                  {mode === 'signin' ? 'Sign in' : 'Create account'}
-                </Text>
-            }
-          </Pressable>
+            variant="primary"
+            fullWidth
+            loading={loading}
+          />
 
-          {/* Mode toggle */}
-          <Pressable
-            style={s.toggleBtn}
-            onPress={() => setMode(m => m === 'signin' ? 'signup' : 'signin')}
-          >
-            <Text style={s.toggleText}>
-              {mode === 'signin'
-                ? "Don't have an account? Create one"
-                : 'Already have an account? Sign in'}
-            </Text>
-          </Pressable>
+          {/* Error message */}
+          {error ? (
+            <Text style={[s.errorText, { color: c.error }]}>{error}</Text>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -128,63 +158,59 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   safe: {
-    flex:            1,
-    backgroundColor: '#0D0D0D',
+    flex: 1,
   },
-  container: {
-    flex:           1,
+  kav: {
+    flex: 1,
+  },
+  // Hero takes ~40% of vertical space
+  hero: {
+    flex:           2,
+    alignItems:     'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  header: {
-    alignItems:   'center',
-    marginBottom: 48,
+    gap:            6,
   },
   appName: {
-    color:      '#FFFFFF',
-    fontSize:   32,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    fontSize:      48,
+    fontWeight:    '900',
+    letterSpacing: -2,
+    marginTop:     8,
   },
   tagline: {
-    color:     '#6B7280',
-    fontSize:  14,
-    marginTop:  8,
+    fontSize:   16,
+    fontWeight: '500',
   },
+  // Form takes ~60% of vertical space
   form: {
-    gap: 12,
+    flex: 3,
+    gap:  14,
+  },
+  tabs: {
+    flexDirection: 'row',
+    borderRadius:  12,
+    padding:       4,
+    marginBottom:  8,
+  },
+  tab: {
+    flex:            1,
+    paddingVertical: 10,
+    alignItems:      'center',
+    borderRadius:    10,
+  },
+  tabActive: {},
+  tabText: {
+    fontSize:   14,
+    fontWeight: '600',
   },
   input: {
-    backgroundColor: '#1A1A1A',
-    borderWidth:     1,
-    borderColor:     '#2A2A2A',
-    borderRadius:    12,
-    color:           '#FFFFFF',
-    fontSize:        16,
+    borderWidth:       1,
+    borderRadius:      12,
     paddingVertical:   14,
     paddingHorizontal: 16,
+    fontSize:          16,
   },
-  submitBtn: {
-    backgroundColor: '#22C55E',
-    borderRadius:    12,
-    paddingVertical: 16,
-    alignItems:      'center',
-    marginTop:       8,
-  },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitText: {
-    color:      '#FFFFFF',
-    fontSize:   16,
-    fontWeight: '700',
-  },
-  toggleBtn: {
-    alignItems:  'center',
-    paddingVertical: 12,
-  },
-  toggleText: {
-    color:    '#6B7280',
-    fontSize: 14,
+  errorText: {
+    fontSize:  13,
+    textAlign: 'center',
   },
 });

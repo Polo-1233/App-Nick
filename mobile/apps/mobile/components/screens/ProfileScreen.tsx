@@ -1,14 +1,13 @@
 /**
- * Profile screen — R90 premium redesign.
+ * Profile screen — R90 Navigator redesign.
  *
  * Layout (top → bottom):
- *   1. Header — first name + chronotype · wake-time meta
- *   2. WeeklyCycleRing — animated, tappable → BottomSheetStats
- *   3. Horizontal row — PerformanceCard | SubscriptionCard
- *   4. Airloop coaching card
- *   5. Settings list — chevron rows with expandable pickers
- *   6. Support / Privacy rows
- *   7. About + delete-data section
+ *   1. Identity — avatar (initials) · name/email · Free/Premium badge
+ *   2. Readiness Zone — elevated card with zone badge, thresholds
+ *   3. Stats Week — 2×2 grid (cycles / target / avg / best night)
+ *   4. Calendar Sync — GoogleCalendarConnect + CalendarSelector + WriteBackCalendarPicker + CalendarSyncStatus
+ *   5. Settings — ARP Time · Chronotype · Notifications · Theme · Premium · Sign out
+ *   6. About — version · delete data
  */
 
 import { useState, useEffect } from 'react';
@@ -37,16 +36,14 @@ import {
 } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
 import type { ThemeMode } from '../../lib/theme';
+import { useAuth } from '../../lib/auth-context';
 import { ProfileSkeletonScreen } from '../SkeletonLoader';
 import { CalendarSelector } from '../CalendarSelector';
 import { GoogleCalendarConnect } from '../GoogleCalendarConnect';
 import { WriteBackCalendarPicker } from '../WriteBackCalendarPicker';
 import { CalendarSyncStatus } from '../CalendarSyncStatus';
-import { WeeklyCycleRing }   from '../WeeklyCycleRing';
-import { BottomSheetStats }  from '../BottomSheetStats';
-import { PerformanceCard }   from '../PerformanceCard';
-import { SubscriptionCard }  from '../SubscriptionCard';
-import { DEFAULT_SUBSCRIPTION } from '../../lib/subscription';
+import { Card } from '../ui/Card';
+import { Badge } from '../ui/Badge';
 import { HapticsLight } from '../../utils/haptics';
 import {
   loadWindDownEnabled,
@@ -73,6 +70,12 @@ const APPEARANCE_LABEL: Record<ThemeMode, string> = {
   dark:   'Dark',
 };
 
+const ZONE_CONFIG = {
+  green:  { label: 'Ready',    color: '#3DDC97', icon: 'checkmark-circle-outline' as const },
+  yellow: { label: 'Building', color: '#F5A623', icon: 'trending-up-outline' as const },
+  orange: { label: 'Recovery', color: '#F87171', icon: 'moon-outline' as const },
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function minutesToDate(minutes: number): Date {
@@ -85,28 +88,12 @@ function formatMinutes(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-function computeStreak(history: NightRecord[], ideal: number): number {
-  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
-  let streak = 0;
-  for (const n of sorted) {
-    if (n.cyclesCompleted >= ideal) streak++;
-    else break;
-  }
-  return streak;
-}
-
-function weekSummaryMessage(weeklyTotal: number, weeklyTarget: number): string {
-  const remaining = weeklyTarget - weeklyTotal;
-  if (remaining <= 0) return 'Strong week — you\'ve hit your cycle target.';
-  if (remaining <= 4) return `${remaining} more cycles and you\'ll have a strong week.`;
-  return `${remaining} cycles left this week. Keep your anchor time consistent.`;
-}
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
   const { theme, mode: themeMode, setMode: setThemeMode, immersiveMode, setImmersiveMode } = useTheme();
   const { dayPlan, refreshPlan } = useDayPlanContext();
+  const { session, logout } = useAuth();
   const router = useRouter();
 
   const [profile,     setProfile]     = useState<UserProfile | null>(null);
@@ -115,17 +102,14 @@ export default function ProfileScreen() {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError,   setDataError]   = useState<string | null>(null);
 
-  // Bottom sheet
-  const [showStats, setShowStats] = useState(false);
-
   // Settings edit state
-  const [editAnchorDate,      setEditAnchorDate]      = useState(new Date());
-  const [editChronotype,      setEditChronotype]      = useState<Chronotype>('Neither');
-  const [showAnchorPicker,    setShowAnchorPicker]    = useState(false);
-  const [showChronoExpand,    setShowChronoExpand]    = useState(false);
-  const [showAppearanceExpand,setShowAppearanceExpand]= useState(false);
-  const [hasChanges,          setHasChanges]          = useState(false);
-  const [isSaving,            setIsSaving]            = useState(false);
+  const [editAnchorDate,       setEditAnchorDate]       = useState(new Date());
+  const [editChronotype,       setEditChronotype]       = useState<Chronotype>('Neither');
+  const [showAnchorPicker,     setShowAnchorPicker]     = useState(false);
+  const [showChronoExpand,     setShowChronoExpand]     = useState(false);
+  const [showAppearanceExpand, setShowAppearanceExpand] = useState(false);
+  const [hasChanges,           setHasChanges]           = useState(false);
+  const [isSaving,             setIsSaving]             = useState(false);
   const [windDownEnabled,      setWindDownEnabled]      = useState(false);
   const [windDownMusicEnabled, setWindDownMusicEnabled] = useState(false);
 
@@ -240,111 +224,119 @@ export default function ProfileScreen() {
 
   if (dataError || !profile) {
     return (
-      <View style={[s.rootWrapper, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', gap: 20, padding: 32 }]}>
-        <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', gap: 20, padding: 32 }}>
+        <Text style={{ color: theme.colors.textSub, fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
           {dataError ?? 'Profile not available.'}
         </Text>
         <Pressable
-          style={{ backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.20)' }}
+          style={{ backgroundColor: theme.colors.surface, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}
           onPress={() => { void loadData(); }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Try again</Text>
+          <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: '600' }}>Try again</Text>
         </Pressable>
       </View>
     );
   }
 
-  const weeklyTotal    = dayPlan?.readiness.weeklyTotal
-    ?? weekHistory.reduce((s, n) => s + n.cyclesCompleted, 0);
-  const weeklyTarget   = profile.weeklyTarget ?? 35;
-  const zone           = dayPlan?.readiness.zone ?? 'green';
-  const streak         = computeStreak(weekHistory, profile.idealCyclesPerNight);
-  const zoneStatus     = dayPlan?.zoneStatus ?? 'experimental';
-
   const c = theme.colors;
 
+  const weeklyTotal  = dayPlan?.readiness.weeklyTotal
+    ?? weekHistory.reduce((sum, n) => sum + n.cyclesCompleted, 0);
+  const weeklyTarget = profile.weeklyTarget ?? 35;
+  const zone         = dayPlan?.readiness.zone ?? 'green';
+  const zoneStatus   = dayPlan?.zoneStatus ?? 'experimental';
+  const zoneConfig   = ZONE_CONFIG[zone] ?? ZONE_CONFIG.yellow;
+
+  const avgCycles = weekHistory.length > 0
+    ? (weekHistory.reduce((sum, n) => sum + n.cyclesCompleted, 0) / weekHistory.length).toFixed(1)
+    : '—';
+  const bestNight = weekHistory.length > 0
+    ? Math.max(...weekHistory.map(n => n.cyclesCompleted))
+    : 0;
+
+  const userEmail    = session?.user?.email ?? '';
+  const avatarLetter = (firstName?.[0] ?? userEmail[0] ?? 'U').toUpperCase();
+  const displayName  = firstName || userEmail || 'You';
+
   return (
-    <View style={[s.rootWrapper, { backgroundColor: c.background }]}>
-      <SafeAreaView style={[s.container, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
+    <View style={[s.root, { backgroundColor: c.background }]}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top', 'left', 'right']}>
         <ScrollView
           contentContainerStyle={s.scroll}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
-          {/* ── Header ── */}
-          <View style={s.header}>
-            <Text style={[s.title, { color: c.text }]}>{firstName || 'You'}</Text>
-            <View style={s.metaRow}>
-              <Text style={[s.metaText, { color: c.textMuted }]}>{CHRONOTYPE_LABEL[profile.chronotype]}</Text>
-              <Text style={[s.metaDivider, { color: c.border }]}>·</Text>
-              <Text style={[s.metaText, { color: c.textMuted }]}>Wake {formatMinutes(profile.anchorTime)}</Text>
+
+          {/* ── Section 1 — Identity ── */}
+          <View style={s.identitySection}>
+            <View style={[s.avatar, { backgroundColor: c.accent }]}>
+              <Text style={s.avatarText}>{avatarLetter}</Text>
+            </View>
+            <View style={s.identityInfo}>
+              <Text style={[s.identityName, { color: c.text }]}>{displayName}</Text>
+              {userEmail && userEmail !== displayName ? (
+                <Text style={[s.identityEmail, { color: c.textSub }]}>{userEmail}</Text>
+              ) : null}
+              <View style={{ marginTop: 6 }}>
+                <Badge label="Free" color="muted" size="sm" />
+              </View>
             </View>
           </View>
 
-          {/* ── Weekly ring ── */}
-          <View style={s.ringWrap}>
-            <WeeklyCycleRing
-              current={weeklyTotal}
-              target={weeklyTarget}
-              zone={zone}
-              streak={streak}
-              onPress={() => setShowStats(true)}
-            />
-            {zoneStatus === 'experimental' && (
-              <View style={s.experimentalBadge}>
-                <Text style={s.experimentalText}>Readiness zones: pending validation</Text>
-              </View>
-            )}
-          </View>
-
-          {/* ── Performance + Subscription cards ── */}
-          <View style={s.cardsRow}>
-            <PerformanceCard
-              weekHistory={weekHistory}
-              idealCyclesPerNight={profile.idealCyclesPerNight}
-            />
-            <SubscriptionCard
-              subscription={DEFAULT_SUBSCRIPTION}
-              onPress={() => router.push('/subscription')}
-            />
-          </View>
-
-          {/* ── Airloop coaching message ── */}
-          <View style={[s.airloopCard, { backgroundColor: c.surface, borderColor: c.border }]}>
-            <Text style={s.airloopLabel}>AIRLOOP</Text>
-            <Text style={[s.airloopText, { color: c.text }]}>
-              {weekSummaryMessage(weeklyTotal, weeklyTarget)}
-            </Text>
-          </View>
-
-          {/* ── Settings ── */}
+          {/* ── Section 2 — Readiness Zone ── */}
           <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: c.textFaint }]}>SETTINGS</Text>
+            <Text style={[s.sectionTitle, { color: c.textSub }]}>Readiness Zone</Text>
+            <Card variant="elevated">
+              <View style={s.zoneRow}>
+                <Ionicons name={zoneConfig.icon} size={32} color={zoneConfig.color} />
+                <Text style={[s.zoneLabel, { color: zoneConfig.color }]}>{zoneConfig.label}</Text>
+              </View>
+              <Text style={[s.zoneBase, { color: c.textMuted }]}>Based on your last 3 nights</Text>
+              <Text style={[s.zoneThresholds, { color: c.textMuted }]}>
+                {'≥4.5 cycles · Ready · ≥3.0 · Building · <3.0 · Recovery'}
+              </Text>
+              {zoneStatus === 'experimental' ? (
+                <View style={[s.experimentalBadge, { backgroundColor: `${c.textMuted}18`, borderColor: `${c.textMuted}30` }]}>
+                  <Text style={[s.experimentalText, { color: c.textMuted }]}>pending validation</Text>
+                </View>
+              ) : null}
+            </Card>
+          </View>
 
-            <SettingsRowSwitch
-              iconName="moon-outline"
-              label="Wind-down reminders"
-              value={windDownEnabled}
-              onValueChange={(val) => { void handleWindDownToggle(val); }}
-            />
-            <SettingsRowSwitch
-              iconName="musical-notes-outline"
-              label="Wind-down music"
-              value={windDownMusicEnabled}
-              onValueChange={(val) => { void handleWindDownMusicToggle(val); }}
-            />
+          {/* ── Section 3 — Stats Week ── */}
+          <View style={s.statsGrid}>
+            <StatCard label="This Week"   value={String(weeklyTotal)} />
+            <StatCard label="Target"      value={String(weeklyTarget)} />
+            <StatCard label="Avg / night" value={String(avgCycles)} />
+            <StatCard label="Best Night"  value={bestNight > 0 ? String(bestNight) : '—'} />
+          </View>
 
-            {/* Anchor Time */}
+          {/* ── Section 4 — Calendar Sync ── */}
+          <View style={s.section}>
+            <Text style={[s.sectionTitle, { color: c.textSub }]}>Calendar Sync</Text>
+            <Text style={[s.calHint, { color: c.textMuted }]}>
+              Connect your calendar accounts and choose which calendars R90 reads.
+            </Text>
+            <Text style={[s.subLabel, { color: c.textFaint }]}>ACCOUNTS</Text>
+            <GoogleCalendarConnect onConnectionChange={refreshPlan} />
+            <Text style={[s.subLabel, { color: c.textFaint, marginTop: 16 }]}>DEVICE CALENDARS</Text>
+            <CalendarSelector onSelectionChange={refreshPlan} />
+            <Text style={[s.subLabel, { color: c.textFaint, marginTop: 16 }]}>WRITE SLEEP BLOCKS TO</Text>
+            <WriteBackCalendarPicker />
+            <CalendarSyncStatus />
+          </View>
+
+          {/* ── Section 5 — Settings ── */}
+          <View style={s.section}>
+            {/* ARP Time */}
             <SettingsRow
               iconName="time-outline"
-              label="Anchor Time"
-              value={formatMinutes(
-                editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes(),
-              )}
+              label="ARP Time"
+              value={formatMinutes(editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes())}
               onPress={() => setShowAnchorPicker(v => !v)}
               expanded={showAnchorPicker}
             />
-            {showAnchorPicker && (
+            {showAnchorPicker ? (
               <View style={s.pickerWrap}>
                 {Platform.OS === 'ios' ? (
                   <DateTimePicker
@@ -366,7 +358,7 @@ export default function ProfileScreen() {
                   />
                 )}
               </View>
-            )}
+            ) : null}
 
             {/* Chronotype */}
             <SettingsRow
@@ -376,163 +368,148 @@ export default function ProfileScreen() {
               onPress={() => setShowChronoExpand(v => !v)}
               expanded={showChronoExpand}
             />
-            {showChronoExpand && (
+            {showChronoExpand ? (
               <View style={s.expandRow}>
                 {(['AMer', 'Neither', 'PMer'] as const).map(type => {
-                  const selected = editChronotype === type;
+                  const sel = editChronotype === type;
                   return (
                     <Pressable
                       key={type}
                       style={[
                         s.expandBtn,
-                        { backgroundColor: c.surface, borderColor: c.border },
-                        selected && s.expandBtnSelected,
+                        { backgroundColor: sel ? `${c.accent}20` : c.surface, borderColor: sel ? c.accent : c.border },
                       ]}
                       onPress={() => onChronotypeChange(type)}
                     >
-                      <Text style={[
-                        s.expandBtnText,
-                        { color: c.textMuted },
-                        selected && s.expandBtnTextSelected,
-                      ]}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: sel ? c.accent : c.textMuted }}>
                         {CHRONOTYPE_LABEL[type]}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-            )}
+            ) : null}
 
-            {/* Appearance */}
+            {/* Notifications */}
+            <SettingsRowSwitch
+              iconName="notifications-outline"
+              label="Notifications"
+              value={windDownEnabled}
+              onValueChange={(val) => { void handleWindDownToggle(val); }}
+            />
+            <SettingsRowSwitch
+              iconName="musical-notes-outline"
+              label="Wind-down Music"
+              value={windDownMusicEnabled}
+              onValueChange={(val) => { void handleWindDownMusicToggle(val); }}
+            />
+
+            {/* Theme */}
             <SettingsRow
               iconName="contrast-outline"
-              label="Appearance"
+              label="Theme"
               value={APPEARANCE_LABEL[themeMode]}
               onPress={() => setShowAppearanceExpand(v => !v)}
               expanded={showAppearanceExpand}
             />
-            {showAppearanceExpand && (
+            {showAppearanceExpand ? (
               <View style={s.expandRow}>
                 {(['system', 'light', 'dark'] as const).map(m => {
-                  const selected = themeMode === m;
+                  const sel = themeMode === m;
                   return (
                     <Pressable
                       key={m}
                       style={[
                         s.expandBtn,
-                        { backgroundColor: c.surface, borderColor: c.border },
-                        selected && s.expandBtnSelected,
+                        { backgroundColor: sel ? `${c.accent}20` : c.surface, borderColor: sel ? c.accent : c.border },
                       ]}
                       onPress={() => {
                         void setThemeMode(m);
                         setShowAppearanceExpand(false);
                       }}
                     >
-                      <Text style={[
-                        s.expandBtnText,
-                        { color: c.textMuted },
-                        selected && s.expandBtnTextSelected,
-                      ]}>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: sel ? c.accent : c.textMuted }}>
                         {APPEARANCE_LABEL[m]}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-            )}
+            ) : null}
 
             {/* Immersive Mode — Android only */}
-            {Platform.OS === 'android' && (
+            {Platform.OS === 'android' ? (
               <SettingsRowSwitch
                 iconName="scan-outline"
                 label="Immersive Mode"
                 value={immersiveMode}
                 onValueChange={(val) => { void setImmersiveMode(val); }}
               />
-            )}
+            ) : null}
 
+            {/* Premium */}
             <SettingsRow
-              iconName="download-outline"
-              label="Export Data"
-              onPress={() => Alert.alert('Export', 'Data export coming soon.')}
+              iconName="star-outline"
+              label="Premium"
+              onPress={() => router.push('/subscription')}
             />
-          </View>
 
-          {/* ── Calendars ── */}
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: c.textFaint }]}>CALENDARS</Text>
-            <Text style={[s.calendarHint, { color: c.textMuted }]}>
-              Connect your calendar accounts and choose which calendars R90 Navigator reads.
-            </Text>
+            {/* Sign out */}
+            <SettingsRow
+              iconName="log-out-outline"
+              label="Sign out"
+              danger
+              onPress={() => {
+                Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Sign out', style: 'destructive', onPress: () => { void logout(); } },
+                ]);
+              }}
+            />
 
-            {/* Connected accounts */}
-            <Text style={[s.calendarSubLabel, { color: c.textFaint }]}>ACCOUNTS</Text>
-            <GoogleCalendarConnect onConnectionChange={refreshPlan} />
-
-            {/* Device calendars */}
-            <Text style={[s.calendarSubLabel, { color: c.textFaint, marginTop: 16 }]}>DEVICE CALENDARS</Text>
-            <CalendarSelector onSelectionChange={refreshPlan} />
-
-            {/* Write-back target */}
-            <Text style={[s.calendarSubLabel, { color: c.textFaint, marginTop: 16 }]}>WRITE SLEEP BLOCKS TO</Text>
-            <WriteBackCalendarPicker />
-
-            {/* Sync status */}
-            <CalendarSyncStatus />
-
-            {hasChanges && (
+            {/* Save changes */}
+            {hasChanges ? (
               <Pressable
-                style={[s.saveBtn, isSaving && s.saveBtnDisabled]}
-                onPress={handleSaveSettings}
+                style={[s.saveBtn, { backgroundColor: c.accent }, isSaving && { opacity: 0.6 }]}
+                onPress={() => { void handleSaveSettings(); }}
                 disabled={isSaving}
               >
-                <Text style={s.saveBtnText}>
+                <Text style={[s.saveBtnText, { color: c.background }]}>
                   {isSaving ? 'Saving…' : 'Save Changes'}
                 </Text>
               </Pressable>
-            )}
-          </View>
-
-          {/* ── Support / Legal ── */}
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: c.textFaint }]}>SUPPORT</Text>
-            <SettingsRow
-              iconName="help-circle-outline"
-              label="Help & Feedback"
-              onPress={() => Alert.alert('Support', 'support@r90app.com')}
-            />
-            <SettingsRow
-              iconName="lock-closed-outline"
-              label="Privacy Policy"
-              onPress={() =>
-                Alert.alert('Privacy', 'Full policy available at r90app.com/privacy.')
-              }
-            />
+            ) : null}
           </View>
 
           {/* ── About ── */}
-          <View style={[s.section, { marginTop: 8, marginBottom: 60 }]}>
+          <View style={[s.section, { marginBottom: 60 }]}>
             <View style={[s.aboutRow, { borderBottomColor: c.borderSub }]}>
-              <Text style={[s.aboutLabel, { color: c.textMuted }]}>Version</Text>
-              <Text style={[s.aboutValue, { color: c.textMuted }]}>{APP_VERSION}</Text>
+              <Text style={{ fontSize: 14, color: c.textMuted }}>Version</Text>
+              <Text style={{ fontSize: 14, color: c.textMuted }}>{APP_VERSION}</Text>
             </View>
-            <Pressable style={s.deleteBtn} onPress={handleDeleteData}>
-              <Text style={s.deleteBtnText}>Delete all my data</Text>
+            <Pressable
+              style={[s.deleteBtn, { backgroundColor: `${c.error}10`, borderColor: `${c.error}30` }]}
+              onPress={handleDeleteData}
+            >
+              <Text style={{ color: c.error, fontSize: 14, fontWeight: '600' }}>Delete all my data</Text>
             </Pressable>
           </View>
+
         </ScrollView>
       </SafeAreaView>
+    </View>
+  );
+}
 
-      {/* ── Bottom sheet stats ── */}
-      <BottomSheetStats
-        visible={showStats}
-        weekHistory={weekHistory}
-        weeklyTotal={weeklyTotal}
-        weeklyTarget={weeklyTarget}
-        zone={zone}
-        idealCyclesPerNight={profile.idealCyclesPerNight}
-        onClose={() => setShowStats(false)}
-      />
+// ── StatCard ──────────────────────────────────────────────────────────────────
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  const { theme } = useTheme();
+  const c = theme.colors;
+  return (
+    <View style={[s.statCard, { backgroundColor: c.surface }]}>
+      <Text style={[s.statValue, { color: c.accent }]}>{value}</Text>
+      <Text style={[s.statLabel, { color: c.textMuted }]}>{label}</Text>
     </View>
   );
 }
@@ -547,30 +524,24 @@ interface RowProps {
   value?:    string;
   onPress?:  () => void;
   expanded?: boolean;
+  danger?:   boolean;
 }
 
-function SettingsRow({ iconName, label, value, onPress, expanded }: RowProps) {
+function SettingsRow({ iconName, label, value, onPress, expanded, danger }: RowProps) {
   const { theme } = useTheme();
   const c = theme.colors;
-
   return (
     <Pressable
-      style={({ pressed }) => [
-        s.settingsRow,
-        { borderBottomColor: c.borderSub },
-        pressed && s.settingsRowPressed,
-      ]}
+      style={({ pressed }) => [s.settingsRow, { borderBottomColor: c.borderSub }, pressed && { opacity: 0.6 }]}
       onPress={onPress}
       hitSlop={4}
     >
-      <View style={s.settingsIconWrap}>
-        <Ionicons name={iconName} size={20} color={c.textMuted} />
+      <View style={s.iconWrap}>
+        <Ionicons name={iconName} size={20} color={danger ? c.error : c.textMuted} />
       </View>
-
-      <Text style={[s.settingsLabel, { color: c.text }]}>{label}</Text>
-
-      <View style={s.settingsRight}>
-        {value ? <Text style={[s.settingsValue, { color: c.textMuted }]}>{value}</Text> : null}
+      <Text style={[s.rowLabel, { color: danger ? c.error : c.text }]}>{label}</Text>
+      <View style={s.rowRight}>
+        {value ? <Text style={[s.rowValue, { color: c.textMuted }]}>{value}</Text> : null}
         <Ionicons
           name={expanded ? 'chevron-down' : 'chevron-forward'}
           size={16}
@@ -593,17 +564,16 @@ interface SwitchRowProps {
 function SettingsRowSwitch({ iconName, label, value, onValueChange }: SwitchRowProps) {
   const { theme } = useTheme();
   const c = theme.colors;
-
   return (
     <View style={[s.settingsRow, { borderBottomColor: c.borderSub }]}>
-      <View style={s.settingsIconWrap}>
+      <View style={s.iconWrap}>
         <Ionicons name={iconName} size={20} color={c.textMuted} />
       </View>
-      <Text style={[s.settingsLabel, { color: c.text }]}>{label}</Text>
+      <Text style={[s.rowLabel, { color: c.text }]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: c.border, true: '#22C55E' }}
+        trackColor={{ false: c.border, true: c.accent }}
         thumbColor="#FFFFFF"
       />
     </View>
@@ -613,99 +583,120 @@ function SettingsRowSwitch({ iconName, label, value, onValueChange }: SwitchRowP
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  rootWrapper: {
-    flex: 1,
-    // backgroundColor injected from theme
-  },
-  container: {
-    flex: 1,
-    // backgroundColor injected from theme
-  },
+  root: { flex: 1 },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop:        8,
+    paddingTop:        16,
     paddingBottom:     20,
   },
 
-  // ── Header ──
-  header: {
-    marginBottom: 28,
-    marginTop:    4,
-  },
-  title: {
-    fontSize:      34,
-    fontWeight:    '700',
-    letterSpacing: -0.5,
-    marginBottom:  6,
-    // color injected from theme
-  },
-  metaRow: {
+  // ── Identity ──
+  identitySection: {
     flexDirection: 'row',
     alignItems:    'center',
-    gap:           6,
+    gap:           16,
+    marginBottom:  28,
   },
-  metaText:    { fontSize: 13, fontWeight: '500' },
-  metaDivider: { fontSize: 13 },
-
-  // ── Ring ──
-  ringWrap: {
-    alignItems:   'center',
-    marginBottom: 28,
+  avatar: {
+    width:          64,
+    height:         64,
+    borderRadius:   32,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
-  experimentalBadge: {
-    marginTop:       10,
-    paddingHorizontal: 12,
-    paddingVertical:   5,
-    borderRadius:    20,
-    backgroundColor: 'rgba(234,179,8,0.12)',
-    borderWidth:     1,
-    borderColor:     'rgba(234,179,8,0.30)',
+  avatarText: {
+    fontSize:   28,
+    fontWeight: '700',
+    color:      '#0B1220',
   },
-  experimentalText: {
-    color:         '#EAB308',
-    fontSize:      11,
-    fontWeight:    '500',
-    letterSpacing: 0.2,
+  identityInfo: {
+    flex: 1,
+    gap:  2,
   },
-
-  // ── Cards row ──
-  cardsRow: {
-    flexDirection: 'row',
-    gap:           12,
-    marginBottom:  12,
+  identityName: {
+    fontSize:   18,
+    fontWeight: '600',
   },
-
-  // ── Airloop card ──
-  airloopCard: {
-    borderRadius: 18,
-    padding:      20,
-    marginBottom: 36,
-    borderWidth:  1,
-    // backgroundColor, borderColor injected from theme
-  },
-  airloopLabel: {
-    color:         '#60A5FA',  // Airloop brand blue — constant
-    fontSize:      10,
-    fontWeight:    '700',
-    letterSpacing: 1.8,
-    marginBottom:  10,
-  },
-  airloopText: {
-    fontSize:   15,
-    lineHeight: 23,
-    // color injected from theme
+  identityEmail: {
+    fontSize:   13,
+    fontWeight: '400',
   },
 
   // ── Section ──
   section: {
-    marginBottom: 36,
+    marginBottom: 28,
   },
-  sectionLabel: {
+  sectionTitle: {
+    fontSize:     15,
+    fontWeight:   '600',
+    marginBottom: 12,
+  },
+
+  // ── Readiness ──
+  zoneRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+    marginBottom:  8,
+  },
+  zoneLabel: {
+    fontSize:   24,
+    fontWeight: '700',
+  },
+  zoneBase: {
+    fontSize:     12,
+    marginBottom: 8,
+  },
+  zoneThresholds: {
+    fontSize:   11,
+    lineHeight: 16,
+  },
+  experimentalBadge: {
+    alignSelf:         'flex-end',
+    marginTop:          8,
+    paddingHorizontal:  8,
+    paddingVertical:    3,
+    borderRadius:      10,
+    borderWidth:        1,
+  },
+  experimentalText: {
+    fontSize:   10,
+    fontWeight: '500',
+  },
+
+  // ── Stats Grid ──
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           12,
+    marginBottom:  28,
+  },
+  statCard: {
+    width:        '47%',
+    borderRadius: 16,
+    padding:      16,
+    gap:           4,
+  },
+  statValue: {
+    fontSize:   24,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 12,
+  },
+
+  // ── Calendar ──
+  calHint: {
+    fontSize:     13,
+    lineHeight:   20,
+    marginBottom: 12,
+  },
+  subLabel: {
     fontSize:      10,
     fontWeight:    '700',
-    letterSpacing: 1.8,
+    letterSpacing: 1.5,
     marginBottom:  4,
-    // color injected from theme
+    marginTop:     4,
   },
 
   // ── Settings rows ──
@@ -714,34 +705,28 @@ const s = StyleSheet.create({
     alignItems:        'center',
     paddingVertical:   15,
     borderBottomWidth: 1,
-    // borderBottomColor injected from theme
   },
-  settingsRowPressed: {
-    opacity: 0.6,
-  },
-  settingsIconWrap: {
+  iconWrap: {
     width:          34,
     alignItems:     'center',
     justifyContent: 'center',
     marginRight:    4,
   },
-  settingsLabel: {
+  rowLabel: {
     flex:       1,
     fontSize:   15,
     fontWeight: '500',
-    // color injected from theme
   },
-  settingsRight: {
+  rowRight: {
     flexDirection: 'row',
     alignItems:    'center',
     gap:           6,
   },
-  settingsValue: {
+  rowValue: {
     fontSize: 14,
-    // color injected from theme
   },
 
-  // ── Expand (Chronotype / Appearance) ──
+  // ── Expand pickers ──
   expandRow: {
     flexDirection: 'row',
     gap:           8,
@@ -754,22 +739,9 @@ const s = StyleSheet.create({
     borderRadius:    10,
     borderWidth:     1,
     alignItems:      'center',
-    // backgroundColor, borderColor injected from theme
-  },
-  expandBtnSelected: {
-    backgroundColor: '#052E16',
-    borderColor:     '#22C55E',
-  },
-  expandBtnText: {
-    fontSize:   13,
-    fontWeight: '600',
-    // color injected from theme
-  },
-  expandBtnTextSelected: {
-    color: '#22C55E',
   },
 
-  // ── Picker ──
+  // ── Time picker ──
   pickerWrap: {
     marginBottom: 4,
   },
@@ -778,33 +750,14 @@ const s = StyleSheet.create({
     borderRadius:    12,
   },
 
-  // ── Calendar hint ──
-  calendarHint: {
-    fontSize:     13,
-    lineHeight:   20,
-    marginBottom: 12,
-  },
-  calendarSubLabel: {
-    fontSize:      10,
-    fontWeight:    '700',
-    letterSpacing: 1.5,
-    marginBottom:  4,
-    marginTop:     4,
-  },
-
   // ── Save button ──
   saveBtn: {
-    backgroundColor: '#22C55E',
-    padding:         14,
-    borderRadius:    10,
-    marginTop:       20,
-    alignItems:      'center',
-  },
-  saveBtnDisabled: {
-    backgroundColor: '#1A3A1A',
+    padding:      14,
+    borderRadius: 10,
+    marginTop:    20,
+    alignItems:   'center',
   },
   saveBtnText: {
-    color:      '#000000',
     fontSize:   15,
     fontWeight: '700',
   },
@@ -816,27 +769,11 @@ const s = StyleSheet.create({
     paddingVertical:   12,
     borderBottomWidth: 1,
     marginBottom:      16,
-    // borderBottomColor injected from theme
-  },
-  aboutLabel: {
-    fontSize: 14,
-    // color injected from theme
-  },
-  aboutValue: {
-    fontSize: 14,
-    // color injected from theme
   },
   deleteBtn: {
-    backgroundColor: '#0A0000',
-    padding:         14,
-    borderRadius:    10,
-    alignItems:      'center',
-    borderWidth:     1,
-    borderColor:     '#2A0000',
-  },
-  deleteBtnText: {
-    color:      '#EF4444',
-    fontSize:   14,
-    fontWeight: '600',
+    padding:      14,
+    borderRadius: 10,
+    alignItems:   'center',
+    borderWidth:  1,
   },
 });

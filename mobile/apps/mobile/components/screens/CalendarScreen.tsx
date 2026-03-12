@@ -28,6 +28,7 @@ import {
 } from 'react';
 import {
   View,
+  Text,
   Pressable,
   StyleSheet,
   Platform,
@@ -52,6 +53,7 @@ import { usePremium } from '../../lib/use-premium';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
 import { CalendarSkeletonScreen } from '../SkeletonLoader';
+import { MascotImage } from '../ui/MascotImage';
 import { BottomAdviceBanner } from '../BottomAdviceBanner';
 import { PremiumGate } from '../PremiumGate';
 import { EventSheet } from '../calendar/EventSheet';
@@ -250,7 +252,18 @@ export default function CalendarScreen() {
 
   // ── Loading guard ────────────────────────────────────────────────────────────
 
-  if (loading || !dayPlan) return <CalendarSkeletonScreen />;
+  if (loading) return <CalendarSkeletonScreen />;
+
+  if (!dayPlan) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 }}>
+        <MascotImage emotion="rassurante" size="md" />
+        <Text style={{ color: theme.colors.textSub, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
+          No plan for today. Log a night to get started.
+        </Text>
+      </View>
+    );
+  }
 
   // ── FAB position ─────────────────────────────────────────────────────────────
   // CalendarScreen fills the space above the tab bar (the pager handles that).
@@ -315,7 +328,7 @@ export default function CalendarScreen() {
         pointerEvents="box-none"
       >
         <Pressable
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: theme.colors.accent, shadowColor: theme.colors.accent }]}
           onPress={() => setShowAddEvent(true)}
           accessibilityRole="button"
           accessibilityLabel="Add event"
@@ -383,16 +396,15 @@ const styles = StyleSheet.create({
     // bottom injected dynamically (above banner)
   },
   fab: {
-    width:           FAB_SIZE,
-    height:          FAB_SIZE,
-    borderRadius:    FAB_SIZE / 2,
-    backgroundColor: '#22C55E',
-    alignItems:      'center',
-    justifyContent:  'center',
+    width:          FAB_SIZE,
+    height:         FAB_SIZE,
+    borderRadius:   FAB_SIZE / 2,
+    // backgroundColor + shadowColor injected inline from theme.colors.accent
+    alignItems:     'center',
+    justifyContent: 'center',
     // Android elevation
     elevation: 8,
     // iOS shadow
-    shadowColor:   '#22C55E',
     shadowOffset:  { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius:  12,
