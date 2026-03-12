@@ -1,308 +1,335 @@
 /**
- * AirloopChat
+ * AirloopChat — Streaming coaching chat for R90 Navigator
  *
- * Global slide-up chat panel. Accessible from all tabs via the FAB.
- * Chat = interface, Engine = logic, Airloop = interpretation.
+ * Full rewrite: free-text input + GPT-4o streaming via SSE.
  *
- * V1 constraints:
- * - Pre-built prompts only. No free-text input.
- * - Session-only history (not persisted to AsyncStorage).
- * - Every response computed by airloop-chat-handler.ts (finite switch).
+ * Architecture:
+ *   User types → POST /chat (nick_brain) → GPT-4o → SSE stream → renders live
+ *
+ * Features:
+ *   - Free-text input with send button
+ *   - Streaming response (text appears progressively)
+ *   - Typing indicator during stream
+ *   - Conversation history (session-scoped)
+ *   - Suggested prompts on first open
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
-  Modal,
   View,
   Text,
-  ScrollView,
+  TextInput,
   Pressable,
+  FlatList,
   StyleSheet,
-  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Modal,
+  SafeAreaView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ChatBubble } from "./ChatBubble";
-import type { ChatMessage } from "./ChatBubble";
-import {
-  CHAT_PROMPTS,
-  handleChatPrompt,
-  type PromptId,
-} from "../lib/airloop-chat-handler";
-import { useDayPlanContext } from "../lib/day-plan-context";
-import { usePremium } from "../lib/use-premium";
-import { loadProfile } from "../lib/storage";
-import { PremiumGate } from "./PremiumGate";
-import type { UserProfile } from "@r90/types";
+import { Ionicons } from "@expo/vector-icons";
+import { useChat, type ChatMessage } from "../lib/use-chat";
+
+// ─── Suggested prompts (shown when history is empty) ─────────────────────────
+
+const SUGGESTED = [
+  "How many cycles did I get this week?",
+  "What should I do before bed tonight?",
+  "Explain what CRP means",
+  "Why does my wake time matter so much?",
+];
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   visible: boolean;
   onClose: () => void;
 }
 
-let messageCounter = 0;
-function nextId() {
-  return String(++messageCounter);
-}
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function AirloopChat({ visible, onClose }: Props) {
-  const { dayPlan, refreshPlan } = useDayPlanContext();
-  const { checkGate, recordUsage } = usePremium();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [showPremiumGate, setShowPremiumGate] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const { messages, isStreaming, sendMessage, clearHistory } = useChat();
+  const [input,    setInput]    = useState("");
+  const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  // Load profile when chat opens (needed for "What if I sleep late?")
-  useEffect(() => {
-    if (!visible) return;
-    loadProfile().then((p) => {
-      if (p) setProfile(p);
-    });
-  }, [visible]);
-
-  // Slide animation
-  useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: visible ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-scroll to bottom when new message added
+  // Scroll to bottom when new content arrives
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+      }, 50);
     }
-  }, [messages.length]);
+  }, [messages]);
 
-  function handlePromptTap(promptId: PromptId, label: string) {
-    if (!dayPlan) return;
-
-    // Gate "recalculate" after 1 free use
-    if (promptId === "recalculate" && checkGate("recalc")) {
-      setShowPremiumGate(true);
-      return;
-    }
-
-    // Add user prompt bubble
-    const userMsg: ChatMessage = {
-      id: nextId(),
-      type: "user",
-      text: label,
-    };
-
-    // Compute Airloop response synchronously (engine calls, no async)
-    const result = handleChatPrompt(promptId, dayPlan, profile);
-
-    const airloopMsg: ChatMessage = {
-      id: nextId(),
-      type: "airloop",
-      text: result.text,
-    };
-
-    setMessages((prev) => [...prev, userMsg, airloopMsg]);
-
-    // Record usage + trigger plan refresh when recalculating
-    if (result.shouldRefresh) {
-      recordUsage("recalc");
-      setTimeout(() => refreshPlan(), 200);
-    }
+  function handleSend() {
+    const text = input.trim();
+    if (!text || isStreaming) return;
+    setInput("");
+    void sendMessage(text);
   }
 
-  function handleClose() {
-    onClose();
-    // Clear chat history on close — session only, per design
-    setMessages([]);
+  function handleSuggestion(text: string) {
+    void sendMessage(text);
   }
-
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [600, 0],
-  });
 
   return (
     <Modal
       visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={handleClose}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
-      {/* Dimmed overlay */}
-      <Pressable style={styles.overlay} onPress={handleClose} />
-
-      {/* Slide-up panel */}
-      <Animated.View
-        style={[styles.panel, { transform: [{ translateY }] }]}
-      >
-        <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-          {/* Handle bar */}
-          <View style={styles.handleContainer}>
-            <View style={styles.handle} />
-          </View>
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Airloop</Text>
-            <Pressable onPress={handleClose} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>Close</Text>
-            </Pressable>
-          </View>
-
-          {/* Message history */}
-          <ScrollView
-            ref={scrollRef}
-            style={styles.messages}
-            contentContainerStyle={styles.messagesContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.length === 0 && (
-              <Text style={styles.emptyHint}>
-                Tap a prompt below to ask Airloop.
-              </Text>
-            )}
-            {messages.map((msg) => (
-              <ChatBubble key={msg.id} message={msg} />
-            ))}
-          </ScrollView>
-
-          {/* Prompt buttons */}
-          <View style={styles.promptsContainer}>
-            <Text style={styles.promptsLabel}>ASK</Text>
-            <View style={styles.prompts}>
-              {CHAT_PROMPTS.map((prompt) => (
-                <Pressable
-                  key={prompt.id}
-                  style={({ pressed }) => [
-                    styles.promptBtn,
-                    pressed && styles.promptBtnPressed,
-                  ]}
-                  onPress={() => handlePromptTap(prompt.id, prompt.label)}
-                  disabled={!dayPlan}
-                >
-                  <Text style={styles.promptBtnText}>{prompt.label}</Text>
-                </Pressable>
-              ))}
+      <SafeAreaView style={s.safe}>
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.headerLeft}>
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>A</Text>
+            </View>
+            <View>
+              <Text style={s.headerTitle}>Airloop</Text>
+              <Text style={s.headerSub}>R90 Coach · GPT-4o</Text>
             </View>
           </View>
-        </SafeAreaView>
-      </Animated.View>
+          <View style={s.headerRight}>
+            {messages.length > 0 && (
+              <Pressable style={s.clearBtn} onPress={clearHistory}>
+                <Text style={s.clearBtnText}>Clear</Text>
+              </Pressable>
+            )}
+            <Pressable style={s.closeBtn} onPress={onClose}>
+              <Ionicons name="close" size={22} color="rgba(255,255,255,0.6)" />
+            </Pressable>
+          </View>
+        </View>
 
-      <PremiumGate
-        visible={showPremiumGate}
-        featureName="Plan Recalculation"
-        onClose={() => setShowPremiumGate(false)}
-      />
+        {/* Messages */}
+        <KeyboardAvoidingView
+          style={s.flex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          {messages.length === 0 ? (
+            /* Empty state — suggested prompts */
+            <View style={s.emptyContainer}>
+              <Text style={s.emptyTitle}>Ask Airloop anything about your sleep.</Text>
+              <View style={s.suggestions}>
+                {SUGGESTED.map(prompt => (
+                  <Pressable
+                    key={prompt}
+                    style={s.suggestion}
+                    onPress={() => handleSuggestion(prompt)}
+                  >
+                    <Text style={s.suggestionText}>{prompt}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={m => m.id}
+              contentContainerStyle={s.listContent}
+              renderItem={({ item }) => <ChatBubble message={item} />}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+
+          {/* Streaming indicator */}
+          {isStreaming && messages[messages.length - 1]?.content === "" && (
+            <View style={s.typingRow}>
+              <ActivityIndicator size="small" color="#22C55E" />
+              <Text style={s.typingText}>Airloop is thinking…</Text>
+            </View>
+          )}
+
+          {/* Input bar */}
+          <View style={s.inputBar}>
+            <TextInput
+              style={s.input}
+              placeholder="Message Airloop…"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              value={input}
+              onChangeText={setInput}
+              onSubmitEditing={handleSend}
+              returnKeyType="send"
+              multiline
+              maxLength={500}
+              editable={!isStreaming}
+            />
+            <Pressable
+              style={[s.sendBtn, (!input.trim() || isStreaming) && s.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!input.trim() || isStreaming}
+            >
+              {isStreaming
+                ? <ActivityIndicator size="small" color="#000" />
+                : <Ionicons name="arrow-up" size={18} color="#000" />
+              }
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  panel: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    // White, slightly translucent — premium glass feel
-    backgroundColor: "rgba(255,255,255,0.93)",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
-    minHeight: 420,
-    maxHeight: "80%",
-  },
-  safeArea: {
-    flex: 1,
-  },
-  handleContainer: {
-    alignItems: "center",
-    paddingTop: 10,
-    paddingBottom: 4,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(0,0,0,0.15)",
-  },
+// ─── Chat bubble ──────────────────────────────────────────────────────────────
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  const isError = message.status === "error";
+
+  return (
+    <View style={[s.bubbleRow, isUser && s.bubbleRowUser]}>
+      {!isUser && (
+        <View style={s.bubbleAvatar}>
+          <Text style={s.bubbleAvatarText}>A</Text>
+        </View>
+      )}
+      <View style={[
+        s.bubble,
+        isUser  && s.bubbleUser,
+        isError && s.bubbleError,
+      ]}>
+        <Text style={[s.bubbleText, isUser && s.bubbleTextUser]}>
+          {message.content || " "}
+        </Text>
+        {message.status === "streaming" && message.content.length > 0 && (
+          <Text style={s.cursor}>▋</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  safe:   { flex: 1, backgroundColor: "#0D0D0D" },
+  flex:   { flex: 1 },
+
+  // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-  },
-  headerTitle: {
-    color: "#111111",
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  closeBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  closeBtnText: {
-    color: "#60A5FA",
-    fontSize: 15,
-  },
-  messages: {
-    flex: 1,
-  },
-  messagesContent: {
-    padding: 16,
-    flexGrow: 1,
-    justifyContent: "flex-end",
-  },
-  emptyHint: {
-    color: "#AAAAAA",
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  promptsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
-    paddingTop: 12,
+    flexDirection:     "row",
+    alignItems:        "center",
+    justifyContent:    "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingVertical:   14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.08)",
   },
-  promptsLabel: {
-    color: "#BBBBBB",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 8,
+  headerLeft:  { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  avatar: {
+    width:           36,
+    height:          36,
+    borderRadius:    18,
+    backgroundColor: "#22C55E",
+    alignItems:      "center",
+    justifyContent:  "center",
   },
-  prompts: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  avatarText:   { color: "#000", fontSize: 16, fontWeight: "700" },
+  headerTitle:  { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  headerSub:    { color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 1 },
+  clearBtn:     { paddingHorizontal: 10, paddingVertical: 6 },
+  clearBtnText: { color: "rgba(255,255,255,0.4)", fontSize: 13 },
+  closeBtn:     { padding: 4 },
+
+  // Empty state
+  emptyContainer: { flex: 1, padding: 20, justifyContent: "center" },
+  emptyTitle: {
+    color:        "rgba(255,255,255,0.5)",
+    fontSize:     15,
+    textAlign:    "center",
+    marginBottom: 24,
   },
-  promptBtn: {
-    backgroundColor: "rgba(0,0,0,0.05)",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
+  suggestions:    { gap: 10 },
+  suggestion: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius:    12,
+    padding:         14,
+    borderWidth:     1,
+    borderColor:     "rgba(255,255,255,0.08)",
+  },
+  suggestionText: { color: "#FFFFFF", fontSize: 14, lineHeight: 20 },
+
+  // Messages
+  listContent: { padding: 16, paddingBottom: 8, gap: 12 },
+  bubbleRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, maxWidth: "85%" },
+  bubbleRowUser: { alignSelf: "flex-end", flexDirection: "row-reverse" },
+
+  bubbleAvatar: {
+    width:           28,
+    height:          28,
+    borderRadius:    14,
+    backgroundColor: "#22C55E",
+    alignItems:      "center",
+    justifyContent:  "center",
+    flexShrink:      0,
+  },
+  bubbleAvatarText: { color: "#000", fontSize: 12, fontWeight: "700" },
+
+  bubble: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius:    18,
+    borderBottomLeftRadius: 4,
+    paddingVertical:   10,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexShrink: 1,
   },
-  promptBtnPressed: {
-    backgroundColor: "rgba(96,165,250,0.15)",
-    borderColor: "#60A5FA",
+  bubbleUser: {
+    backgroundColor:      "#22C55E",
+    borderBottomLeftRadius:  18,
+    borderBottomRightRadius: 4,
   },
-  promptBtnText: {
-    color: "#1A1A1A",
-    fontSize: 13,
-    fontWeight: "500",
+  bubbleError: { backgroundColor: "rgba(239,68,68,0.15)" },
+  bubbleText:     { color: "rgba(255,255,255,0.9)", fontSize: 15, lineHeight: 22 },
+  bubbleTextUser: { color: "#000000" },
+  cursor: { color: "#22C55E", fontSize: 14 },
+
+  // Typing
+  typingRow: {
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           8,
+    paddingHorizontal: 20,
+    paddingVertical:    8,
   },
+  typingText: { color: "rgba(255,255,255,0.4)", fontSize: 13 },
+
+  // Input bar
+  inputBar: {
+    flexDirection:     "row",
+    alignItems:        "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical:   10,
+    gap:               8,
+    borderTopWidth:    StyleSheet.hairlineWidth,
+    borderTopColor:    "rgba(255,255,255,0.08)",
+  },
+  input: {
+    flex:              1,
+    backgroundColor:   "rgba(255,255,255,0.07)",
+    borderRadius:      20,
+    paddingHorizontal: 16,
+    paddingVertical:   10,
+    color:             "#FFFFFF",
+    fontSize:          15,
+    maxHeight:         120,
+    borderWidth:       1,
+    borderColor:       "rgba(255,255,255,0.1)",
+  },
+  sendBtn: {
+    width:           38,
+    height:          38,
+    borderRadius:    19,
+    backgroundColor: "#22C55E",
+    alignItems:      "center",
+    justifyContent:  "center",
+  },
+  sendBtnDisabled: { opacity: 0.35 },
 });

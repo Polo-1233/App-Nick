@@ -40,6 +40,7 @@ import {
   updateEnvironmentHandler,
   recommendationActionHandler,
 } from "./handlers/profile-handlers.js";
+import { chatHandler } from "./handlers/chat-handler.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ const routes: AnyRoute[] = [
   { method: "POST", path: "/profile", handler: updateProfileHandler },
   { method: "POST", path: "/profile/environment", handler: updateEnvironmentHandler },
   { method: "POST", path: "/actions/recommendation", handler: recommendationActionHandler },
+  { method: "POST", path: "/chat",                   handler: chatHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
