@@ -1,15 +1,19 @@
 /**
- * use-chat.ts — Streaming chat hook for Airloop
+ * use-chat.ts — Streaming chat hook for Airloop (React Native compatible)
  *
- * Manages:
- *   - Message history (persisted in memory during session)
- *   - Streaming SSE from POST /chat
- *   - Loading / streaming / error states
+ * Uses XMLHttpRequest + onprogress for SSE streaming.
+ * React Native's fetch doesn't support ReadableStream, but XHR does.
+ *
+ * SSE format from server:
+ *   data: {"delta":"chunk"}\n\n
+ *   data: [DONE]\n\n
+ *   data: {"error":"message"}\n\n
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { getAccessToken } from "./supabase";
-import { BASE_URL } from "./api";
+
+const BASE_URL = (process.env.EXPO_PUBLIC_NICK_BRAIN_API_URL ?? "http://localhost:3000").trim();
 
 export interface ChatMessage {
   id:      string;
@@ -19,123 +23,157 @@ export interface ChatMessage {
 }
 
 export interface UseChatResult {
-  messages:   ChatMessage[];
-  isStreaming: boolean;
-  sendMessage: (text: string) => Promise<void>;
-  clearHistory: () => void;
+  messages:     ChatMessage[];
+  isStreaming:   boolean;
+  sendMessage:   (text: string) => Promise<void>;
+  clearHistory:  () => void;
 }
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function useChat(): UseChatResult {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const abortRef = useRef<AbortController | null>(null);
+function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[]; done: boolean; error?: string; consumed: number } {
+  const slice   = raw.slice(alreadyParsed);
+  const lines   = slice.split("\n");
+  const deltas: string[] = [];
+  let done      = false;
+  let error: string | undefined;
+  let consumed  = alreadyParsed;
 
-  // Abort any in-progress stream on unmount
-  useEffect(() => {
-    return () => { abortRef.current?.abort(); };
-  }, []);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { consumed += line.length + 1; continue; }
+    if (!trimmed.startsWith("data:")) { consumed += line.length + 1; continue; }
+
+    const data = trimmed.slice(5).trim();
+    if (data === "[DONE]") { done = true; consumed += line.length + 1; break; }
+
+    try {
+      const parsed = JSON.parse(data) as { delta?: string; error?: string };
+      if (parsed.error) { error = parsed.error; consumed += line.length + 1; break; }
+      if (parsed.delta) { deltas.push(parsed.delta); }
+    } catch { /* skip */ }
+    consumed += line.length + 1;
+  }
+
+  return { deltas, done, error, consumed };
+}
+
+export function useChat(): UseChatResult {
+  const [messages,    setMessages]    = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const xhrRef     = useRef<XMLHttpRequest | null>(null);
+  const parsedRef  = useRef(0); // bytes already processed in XHR response
 
   const sendMessage = useCallback(async (text: string) => {
-    const isCurrentlyStreaming = messages.at(-1)?.status === "streaming";
-    if (!text.trim() || isCurrentlyStreaming) return;
+    if (!text.trim() || isStreaming) return;
 
-    // Abort any in-progress stream
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+    // Abort any previous request
+    xhrRef.current?.abort();
+    parsedRef.current = 0;
 
-    // Add user message
-    const userMsg: ChatMessage = { id: uid(), role: "user", content: text, status: "done" };
-    const assistantId = uid();
-    const assistantMsg: ChatMessage = { id: assistantId, role: "assistant", content: "", status: "streaming" };
-
-    // Build history from current messages before appending new ones
-    const history = messages
-      .filter(m => m.status === "done")
-      .slice(-10)
-      .map(m => ({ role: m.role, content: m.content }));
+    const userMsg: ChatMessage       = { id: uid(), role: "user",      content: text, status: "done" };
+    const assistantId                = uid();
+    const assistantMsg: ChatMessage  = { id: assistantId, role: "assistant", content: "", status: "streaming" };
 
     setMessages(prev => [...prev, userMsg, assistantMsg]);
+    setIsStreaming(true);
+
+    let accumulated = "";
 
     try {
       const token = await getAccessToken();
+      const history = messages
+        .filter(m => m.status === "done")
+        .slice(-10)
+        .map(m => ({ role: m.role, content: m.content }));
 
-      const res = await fetch(`${BASE_URL}/chat`, {
-        method:  "POST",
-        headers: {
-          "Content-Type":  "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
-        body:   JSON.stringify({ message: text, history }),
-        signal: controller.signal,
-      });
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
 
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+        xhr.open("POST", `${BASE_URL}/chat`, true);
+        xhr.setRequestHeader("Content-Type",  "application/json");
+        xhr.setRequestHeader("Authorization", token ? `Bearer ${token}` : "");
+        xhr.setRequestHeader("Accept",        "text/event-stream");
 
-      // Read SSE stream
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer    = "";
-      let accumulated = "";
+        xhr.onprogress = () => {
+          const raw    = xhr.responseText;
+          const result = parseSSEChunks(raw, parsedRef.current);
+          parsedRef.current = result.consumed;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+          if (result.deltas.length > 0) {
+            accumulated += result.deltas.join("");
+            const snapshot = accumulated;
+            setMessages(prev => prev.map(m =>
+              m.id === assistantId ? { ...m, content: snapshot } : m
+            ));
+          }
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
+          if (result.error) {
+            setMessages(prev => prev.map(m =>
+              m.id === assistantId ? { ...m, content: result.error!, status: "error" as const } : m
+            ));
+            reject(new Error(result.error));
+          }
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const data = trimmed.slice(5).trim();
-
-          if (data === "[DONE]") {
+          if (result.done) {
             setMessages(prev => prev.map(m =>
               m.id === assistantId ? { ...m, status: "done" as const } : m
             ));
+            resolve();
+          }
+        };
+
+        xhr.onload = () => {
+          // Catch case where [DONE] was in the last chunk but onprogress already fired
+          if (xhr.status !== 200) {
+            let errMsg = `HTTP ${xhr.status}`;
+            try {
+              const body = JSON.parse(xhr.responseText) as { error?: string };
+              if (body.error) errMsg = body.error;
+            } catch { /* ignore */ }
+            setMessages(prev => prev.map(m =>
+              m.id === assistantId ? { ...m, content: errMsg, status: "error" as const } : m
+            ));
+            reject(new Error(errMsg));
             return;
           }
+          // Ensure final state is "done"
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId && m.status === "streaming"
+              ? { ...m, status: "done" as const }
+              : m
+          ));
+          resolve();
+        };
 
-          try {
-            const parsed = JSON.parse(data) as { delta?: string; error?: string };
-            if (parsed.error) throw new Error(parsed.error);
-            if (parsed.delta) {
-              accumulated += parsed.delta;
-              const snapshot = accumulated;
-              setMessages(prev => prev.map(m =>
-                m.id === assistantId ? { ...m, content: snapshot } : m
-              ));
-            }
-          } catch {
-            // Skip malformed chunks
-          }
-        }
+        xhr.onerror = () => {
+          const errMsg = "Network error — backend unreachable";
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId ? { ...m, content: errMsg, status: "error" as const } : m
+          ));
+          reject(new Error(errMsg));
+        };
+
+        xhr.onabort = () => resolve();
+
+        xhr.send(JSON.stringify({ message: text, history }));
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message !== "abort") {
+        // Error already set in messages above
       }
-
-      // Stream ended without [DONE]
-      setMessages(prev => prev.map(m =>
-        m.id === assistantId ? { ...m, status: "done" as const } : m
-      ));
-    } catch (e: unknown) {
-      if (e instanceof Error && e.name === "AbortError") return;
-      const errMsg = e instanceof Error ? e.message : "Something went wrong";
-      setMessages(prev => prev.map(m =>
-        m.id === assistantId
-          ? { ...m, content: errMsg, status: "error" as const }
-          : m
-      ));
+    } finally {
+      setIsStreaming(false);
     }
-  }, [messages]);
+  }, [messages, isStreaming]);
 
-  const clearHistory = useCallback(() => setMessages([]), []);
-
-  // Derive streaming state from messages instead of tracking separately
-  const isStreaming = messages.at(-1)?.status === "streaming";
+  const clearHistory = useCallback(() => {
+    xhrRef.current?.abort();
+    setMessages([]);
+  }, []);
 
   return { messages, isStreaming, sendMessage, clearHistory };
 }
