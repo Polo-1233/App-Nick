@@ -9,7 +9,7 @@
  * Features:
  *   - Free-text input with send button
  *   - Streaming response (text appears progressively)
- *   - Typing indicator during stream
+ *   - Animated cursor during streaming
  *   - Conversation history (session-scoped)
  *   - Suggested prompts on first open
  */
@@ -24,12 +24,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Modal,
-  SafeAreaView,
+  Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useChat, type ChatMessage } from "../lib/use-chat";
+import { useTheme } from "../lib/theme-context";
 
 // ─── Suggested prompts (shown when history is empty) ─────────────────────────
 
@@ -47,14 +48,36 @@ interface Props {
   onClose: () => void;
 }
 
+// ─── Animated cursor ──────────────────────────────────────────────────────────
+
+function BlinkingCursor({ color }: { color: string }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return (
+    <Animated.Text style={{ color, fontSize: 14, opacity }}>▋</Animated.Text>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AirloopChat({ visible, onClose }: Props) {
   const { messages, isStreaming, sendMessage, clearHistory } = useChat();
-  const [input,    setInput]    = useState("");
+  const { theme } = useTheme();
+  const c = theme.colors;
+  const [input, setInput] = useState("");
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  // Scroll to bottom when new content arrives
   useEffect(() => {
     if (messages.length === 0) return;
     const t = setTimeout(() => {
@@ -74,6 +97,8 @@ export function AirloopChat({ visible, onClose }: Props) {
     void sendMessage(text);
   }
 
+  const canSend = input.trim().length > 0 && !isStreaming;
+
   return (
     <Modal
       visible={visible}
@@ -81,26 +106,32 @@ export function AirloopChat({ visible, onClose }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={s.safe}>
+      <SafeAreaView style={[s.safe, { backgroundColor: c.background }]}>
+
         {/* Header */}
-        <View style={s.header}>
+        <View style={[s.header, { backgroundColor: c.surface, borderBottomColor: c.borderSub }]}>
           <View style={s.headerLeft}>
-            <View style={s.avatar}>
-              <Text style={s.avatarText}>A</Text>
+            <View style={[s.avatar, { backgroundColor: `${c.accent}33` }]}>
+              <Text style={[s.avatarText, { color: c.accent }]}>A</Text>
             </View>
             <View>
-              <Text style={s.headerTitle}>Airloop</Text>
-              <Text style={s.headerSub}>R90 Coach · GPT-4o</Text>
+              <Text style={[s.headerTitle, { color: c.text }]}>Airloop</Text>
+              <Text style={[s.headerSub, { color: c.textMuted }]}>
+                R90 Coach · Powered by GPT-4o
+              </Text>
             </View>
           </View>
           <View style={s.headerRight}>
             {messages.length > 0 && (
               <Pressable style={s.clearBtn} onPress={clearHistory}>
-                <Text style={s.clearBtnText}>Clear</Text>
+                <Text style={[s.clearBtnText, { color: c.textMuted }]}>Clear</Text>
               </Pressable>
             )}
-            <Pressable style={s.closeBtn} onPress={onClose}>
-              <Ionicons name="close" size={22} color="rgba(255,255,255,0.6)" />
+            <Pressable
+              style={[s.closeBtn, { backgroundColor: c.surface2 }]}
+              onPress={onClose}
+            >
+              <Ionicons name="close" size={20} color={c.textSub} />
             </Pressable>
           </View>
         </View>
@@ -112,17 +143,19 @@ export function AirloopChat({ visible, onClose }: Props) {
           keyboardVerticalOffset={0}
         >
           {messages.length === 0 ? (
-            /* Empty state — suggested prompts */
             <View style={s.emptyContainer}>
-              <Text style={s.emptyTitle}>Ask Airloop anything about your sleep.</Text>
+              <Text style={[s.emptyTitle, { color: c.textSub }]}>
+                Ask Airloop anything about your sleep.
+              </Text>
               <View style={s.suggestions}>
                 {SUGGESTED.map(prompt => (
                   <Pressable
                     key={prompt}
-                    style={s.suggestion}
+                    style={[s.suggestion, { backgroundColor: c.surface, borderColor: c.border }]}
                     onPress={() => handleSuggestion(prompt)}
                   >
-                    <Text style={s.suggestionText}>{prompt}</Text>
+                    <Ionicons name="chatbubble-outline" size={15} color={c.textMuted} />
+                    <Text style={[s.suggestionText, { color: c.text }]}>{prompt}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -138,20 +171,12 @@ export function AirloopChat({ visible, onClose }: Props) {
             />
           )}
 
-          {/* Streaming indicator */}
-          {isStreaming && messages[messages.length - 1]?.content === "" && (
-            <View style={s.typingRow}>
-              <ActivityIndicator size="small" color="#22C55E" />
-              <Text style={s.typingText}>Airloop is thinking…</Text>
-            </View>
-          )}
-
           {/* Input bar */}
-          <View style={s.inputBar}>
+          <View style={[s.inputBar, { backgroundColor: c.surface, borderTopColor: c.borderSub }]}>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: c.surface2, color: c.text, borderColor: c.border }]}
               placeholder="Message Airloop…"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={c.textMuted}
               value={input}
               onChangeText={setInput}
               onSubmitEditing={handleSend}
@@ -161,14 +186,18 @@ export function AirloopChat({ visible, onClose }: Props) {
               editable={!isStreaming}
             />
             <Pressable
-              style={[s.sendBtn, (!input.trim() || isStreaming) && s.sendBtnDisabled]}
+              style={[
+                s.sendBtn,
+                { backgroundColor: canSend ? c.accent : c.surface2 },
+              ]}
               onPress={handleSend}
-              disabled={!input.trim() || isStreaming}
+              disabled={!canSend}
             >
-              {isStreaming
-                ? <ActivityIndicator size="small" color="#000" />
-                : <Ionicons name="arrow-up" size={18} color="#000" />
-              }
+              <Ionicons
+                name="arrow-up"
+                size={18}
+                color={canSend ? '#000000' : c.textMuted}
+              />
             </Pressable>
           </View>
         </KeyboardAvoidingView>
@@ -180,27 +209,34 @@ export function AirloopChat({ visible, onClose }: Props) {
 // ─── Chat bubble ──────────────────────────────────────────────────────────────
 
 function ChatBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user";
+  const { theme } = useTheme();
+  const c = theme.colors;
+  const isUser  = message.role === "user";
   const isError = message.status === "error";
+  const isStreaming = message.status === "streaming" && message.content.length > 0;
 
   return (
     <View style={[s.bubbleRow, isUser && s.bubbleRowUser]}>
       {!isUser && (
-        <View style={s.bubbleAvatar}>
-          <Text style={s.bubbleAvatarText}>A</Text>
+        <View style={[s.bubbleAvatar, { backgroundColor: `${c.accent}33` }]}>
+          <Text style={[s.bubbleAvatarText, { color: c.accent }]}>A</Text>
         </View>
       )}
       <View style={[
         s.bubble,
-        isUser  && s.bubbleUser,
-        isError && s.bubbleError,
+        { backgroundColor: c.surface2 },
+        isUser  && { backgroundColor: c.accent, borderBottomRightRadius: 4, borderBottomLeftRadius: 18 },
+        isError && { backgroundColor: 'rgba(248,113,113,0.15)', borderWidth: 1, borderColor: c.error },
       ]}>
-        <Text style={[s.bubbleText, isUser && s.bubbleTextUser]}>
+        <Text style={[
+          s.bubbleText,
+          { color: c.text },
+          isUser && { color: '#000000' },
+          isError && { color: c.error },
+        ]}>
           {message.content || " "}
         </Text>
-        {message.status === "streaming" && message.content.length > 0 && (
-          <Text style={s.cursor}>▋</Text>
-        )}
+        {isStreaming && <BlinkingCursor color={c.accent} />}
       </View>
     </View>
   );
@@ -209,8 +245,8 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: "#0D0D0D" },
-  flex:   { flex: 1 },
+  safe: { flex: 1 },
+  flex: { flex: 1 },
 
   // Header
   header: {
@@ -220,86 +256,68 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical:   14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
   },
   headerLeft:  { flexDirection: "row", alignItems: "center", gap: 10 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   avatar: {
-    width:           36,
-    height:          36,
-    borderRadius:    18,
-    backgroundColor: "#22C55E",
-    alignItems:      "center",
-    justifyContent:  "center",
+    width:          36,
+    height:         36,
+    borderRadius:   18,
+    alignItems:     "center",
+    justifyContent: "center",
   },
-  avatarText:   { color: "#000", fontSize: 16, fontWeight: "700" },
-  headerTitle:  { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
-  headerSub:    { color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 1 },
+  avatarText:   { fontSize: 16, fontWeight: "700" },
+  headerTitle:  { fontSize: 15, fontWeight: "700" },
+  headerSub:    { fontSize: 11, marginTop: 1 },
   clearBtn:     { paddingHorizontal: 10, paddingVertical: 6 },
-  clearBtnText: { color: "rgba(255,255,255,0.4)", fontSize: 13 },
-  closeBtn:     { padding: 4 },
+  clearBtnText: { fontSize: 13 },
+  closeBtn:     { padding: 6, borderRadius: 20 },
 
   // Empty state
   emptyContainer: { flex: 1, padding: 20, justifyContent: "center" },
   emptyTitle: {
-    color:        "rgba(255,255,255,0.5)",
     fontSize:     15,
     textAlign:    "center",
     marginBottom: 24,
   },
-  suggestions:    { gap: 10 },
+  suggestions: { gap: 10 },
   suggestion: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius:    12,
-    padding:         14,
-    borderWidth:     1,
-    borderColor:     "rgba(255,255,255,0.08)",
+    borderRadius:  12,
+    padding:       14,
+    borderWidth:   1,
+    flexDirection: "row",
+    alignItems:    "center",
+    gap:           10,
   },
-  suggestionText: { color: "#FFFFFF", fontSize: 14, lineHeight: 20 },
+  suggestionText: { fontSize: 14, lineHeight: 20, flex: 1 },
 
   // Messages
-  listContent: { padding: 16, paddingBottom: 8, gap: 12 },
-  bubbleRow:   { flexDirection: "row", alignItems: "flex-end", gap: 8, maxWidth: "85%" },
+  listContent:   { padding: 16, paddingBottom: 8, gap: 12 },
+  bubbleRow:     { flexDirection: "row", alignItems: "flex-end", gap: 8, maxWidth: "85%" },
   bubbleRowUser: { alignSelf: "flex-end", flexDirection: "row-reverse" },
 
   bubbleAvatar: {
     width:           28,
     height:          28,
     borderRadius:    14,
-    backgroundColor: "#22C55E",
     alignItems:      "center",
     justifyContent:  "center",
     flexShrink:      0,
   },
-  bubbleAvatarText: { color: "#000", fontSize: 12, fontWeight: "700" },
+  bubbleAvatarText: { fontSize: 12, fontWeight: "700" },
 
   bubble: {
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius:    18,
+    borderRadius:           18,
     borderBottomLeftRadius: 4,
-    paddingVertical:   10,
-    paddingHorizontal: 14,
-    flexShrink: 1,
+    paddingVertical:        10,
+    paddingHorizontal:      14,
+    flexShrink:             1,
+    flexDirection:          "row",
+    flexWrap:               "wrap",
+    alignItems:             "flex-end",
+    gap:                    2,
   },
-  bubbleUser: {
-    backgroundColor:      "#22C55E",
-    borderBottomLeftRadius:  18,
-    borderBottomRightRadius: 4,
-  },
-  bubbleError: { backgroundColor: "rgba(239,68,68,0.15)" },
-  bubbleText:     { color: "rgba(255,255,255,0.9)", fontSize: 15, lineHeight: 22 },
-  bubbleTextUser: { color: "#000000" },
-  cursor: { color: "#22C55E", fontSize: 14 },
-
-  // Typing
-  typingRow: {
-    flexDirection: "row",
-    alignItems:    "center",
-    gap:           8,
-    paddingHorizontal: 20,
-    paddingVertical:    8,
-  },
-  typingText: { color: "rgba(255,255,255,0.4)", fontSize: 13 },
+  bubbleText: { fontSize: 15, lineHeight: 22 },
 
   // Input bar
   inputBar: {
@@ -309,27 +327,21 @@ const s = StyleSheet.create({
     paddingVertical:   10,
     gap:               8,
     borderTopWidth:    StyleSheet.hairlineWidth,
-    borderTopColor:    "rgba(255,255,255,0.08)",
   },
   input: {
     flex:              1,
-    backgroundColor:   "rgba(255,255,255,0.07)",
     borderRadius:      20,
     paddingHorizontal: 16,
     paddingVertical:   10,
-    color:             "#FFFFFF",
     fontSize:          15,
     maxHeight:         120,
     borderWidth:       1,
-    borderColor:       "rgba(255,255,255,0.1)",
   },
   sendBtn: {
     width:           38,
     height:          38,
     borderRadius:    19,
-    backgroundColor: "#22C55E",
     alignItems:      "center",
     justifyContent:  "center",
   },
-  sendBtnDisabled: { opacity: 0.35 },
 });

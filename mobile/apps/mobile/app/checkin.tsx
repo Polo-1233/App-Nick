@@ -5,21 +5,32 @@
  */
 import { useState, useEffect, useRef } from "react";
 import {
-  View, Text, Switch, Pressable, ScrollView,
-  StyleSheet, ActivityIndicator, Alert, SafeAreaView,
+  View, Text, Pressable, ScrollView,
+  StyleSheet, ActivityIndicator, Alert,
+  Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { getCheckInPayload, submitCheckIn, type CheckInQuestion } from "../lib/api";
+import { useTheme } from "../lib/theme-context";
+import { MascotImage } from "../components/ui/MascotImage";
+import { Button } from "../components/ui/Button";
 
 export default function CheckInScreen() {
   const router = useRouter();
-  const [questions, setQuestions] = useState<CheckInQuestion[]>([]);
-  const [answers,   setAnswers]   = useState<Record<string, unknown>>({});
-  const [loading,   setLoading]   = useState(true);
-  const [saving,    setSaving]    = useState(false);
-  const [done,      setDone]      = useState(false);
-  const [date,      setDate]      = useState("");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { theme } = useTheme();
+  const c = theme.colors;
+
+  const [questions,     setQuestions]     = useState<CheckInQuestion[]>([]);
+  const [answers,       setAnswers]       = useState<Record<string, unknown>>({});
+  const [loading,       setLoading]       = useState(true);
+  const [saving,        setSaving]        = useState(false);
+  const [done,          setDone]          = useState(false);
+  const [date,          setDate]          = useState("");
+  const [currentIndex,  setCurrentIndex]  = useState(0);
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!done) return;
@@ -56,87 +67,275 @@ export default function CheckInScreen() {
     setAnswers(prev => ({ ...prev, [id]: value }));
   }
 
+  function goToQuestion(newIndex: number) {
+    const direction = newIndex > currentIndex ? 1 : -1;
+    Animated.timing(slideAnim, {
+      toValue: -direction * 60,
+      duration: 130,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentIndex(newIndex);
+      slideAnim.setValue(direction * 60);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 130,
+        useNativeDriver: true,
+      }).start();
+    });
+  }
+
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator color="#22C55E" size="large" />
+      <View style={[s.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator color={c.accent} size="large" />
       </View>
     );
   }
 
+  // ── Done ──────────────────────────────────────────────────────────────────
   if (done) {
     return (
-      <View style={s.center}>
-        <Text style={s.doneText}>✓ Check-in saved</Text>
+      <View style={[s.center, { backgroundColor: c.background }]}>
+        <MascotImage emotion="celebration" size="lg" />
+        <Text style={[s.doneText, { color: c.text }]}>Check-in saved ✓</Text>
       </View>
     );
   }
 
+  const currentQuestion = questions[currentIndex];
+  const isLast = currentIndex === questions.length - 1;
+  const isFirst = currentIndex === 0;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <Text style={s.title}>Daily Check-In</Text>
+    <SafeAreaView style={[s.safe, { backgroundColor: c.background }]}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* R-Lo */}
+        <View style={s.mascotRow}>
+          <MascotImage emotion="Reflexion" size="md" />
+        </View>
 
-        {questions.map(q => (
-          <View key={q.id} style={s.questionRow}>
-            <Text style={s.questionLabel}>{q.label_key.replace(/_/g, " ")}</Text>
+        {/* Title */}
+        <Text style={[s.title, { color: c.text }]}>Daily Check-In</Text>
 
-            {q.type === "boolean" && (
-              <Switch
-                value={Boolean(answers[q.id])}
-                onValueChange={v => setAnswer(q.id, v)}
-                trackColor={{ false: "#2A2A2A", true: "#22C55E" }}
+        {/* Progress indicator */}
+        {questions.length > 1 && (
+          <View style={s.progressRow}>
+            {questions.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  s.progressDot,
+                  {
+                    backgroundColor: i === currentIndex ? c.accent
+                      : i < currentIndex ? c.accentSecondary
+                      : c.surface2,
+                  },
+                ]}
               />
-            )}
+            ))}
+          </View>
+        )}
 
-            {q.type === "scale" && (
-              <View style={s.scaleRow}>
-                {[1, 2, 3, 4, 5].map(n => (
-                  <Pressable
-                    key={n}
-                    style={[s.scaleBtn, answers[q.id] === n && s.scaleBtnActive]}
-                    onPress={() => setAnswer(q.id, n)}
-                  >
-                    <Text style={[s.scaleBtnText, answers[q.id] === n && s.scaleBtnTextActive]}>
-                      {n}
-                    </Text>
-                  </Pressable>
-                ))}
+        {/* Question card */}
+        {currentQuestion && (
+          <Animated.View
+            style={[
+              s.questionCard,
+              { backgroundColor: c.surface, transform: [{ translateX: slideAnim }] },
+            ]}
+          >
+            <Text style={[s.questionLabel, { color: c.textSub }]}>
+              Question {currentIndex + 1} of {questions.length}
+            </Text>
+            <Text style={[s.questionText, { color: c.text }]}>
+              {currentQuestion.label_key.replace(/_/g, " ")}
+            </Text>
+
+            {/* Boolean answers */}
+            {currentQuestion.type === "boolean" && (
+              <View style={s.answerRow}>
+                {(["Yes", "No"] as const).map(option => {
+                  const val = option === "Yes";
+                  const selected = answers[currentQuestion.id] === val;
+                  return (
+                    <Pressable
+                      key={option}
+                      style={[
+                        s.answerCard,
+                        {
+                          backgroundColor: selected ? `${c.accent}26` : c.surface2,
+                          borderColor:     selected ? c.accent : c.border,
+                          flex: 1,
+                        },
+                      ]}
+                      onPress={() => {
+                        setAnswer(currentQuestion.id, val);
+                        if (!isLast) setTimeout(() => goToQuestion(currentIndex + 1), 200);
+                      }}
+                    >
+                      <Text style={[
+                        s.answerText,
+                        { color: selected ? c.accent : c.text },
+                      ]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             )}
-          </View>
-        ))}
 
-        <Pressable
-          style={[s.submitBtn, saving && s.submitBtnDisabled]}
-          onPress={() => { void handleSubmit(); }}
-          disabled={saving}
-        >
-          {saving
-            ? <ActivityIndicator color="#000" />
-            : <Text style={s.submitText}>Submit</Text>
-          }
-        </Pressable>
+            {/* Scale answers */}
+            {currentQuestion.type === "scale" && (
+              <View style={s.answerRow}>
+                {[1, 2, 3, 4, 5].map(n => {
+                  const selected = answers[currentQuestion.id] === n;
+                  return (
+                    <Pressable
+                      key={n}
+                      style={[
+                        s.answerCard,
+                        {
+                          backgroundColor: selected ? `${c.accent}26` : c.surface2,
+                          borderColor:     selected ? c.accent : c.border,
+                          flex: 1,
+                        },
+                      ]}
+                      onPress={() => {
+                        setAnswer(currentQuestion.id, n);
+                        if (!isLast) setTimeout(() => goToQuestion(currentIndex + 1), 200);
+                      }}
+                    >
+                      <Text style={[
+                        s.answerText,
+                        { color: selected ? c.accent : c.text },
+                      ]}>
+                        {n}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </Animated.View>
+        )}
+
+        {/* Navigation */}
+        {questions.length > 1 && (
+          <View style={s.navRow}>
+            <Pressable
+              style={[s.navBtn, { opacity: isFirst ? 0.3 : 1, backgroundColor: c.surface2 }]}
+              onPress={() => !isFirst && goToQuestion(currentIndex - 1)}
+              disabled={isFirst}
+            >
+              <Text style={[s.navBtnText, { color: c.text }]}>←</Text>
+            </Pressable>
+            <Pressable
+              style={[s.navBtn, { opacity: isLast ? 0.3 : 1, backgroundColor: c.surface2 }]}
+              onPress={() => !isLast && goToQuestion(currentIndex + 1)}
+              disabled={isLast}
+            >
+              <Text style={[s.navBtnText, { color: c.text }]}>→</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Submit */}
+        <View style={s.submitBlock}>
+          <Button
+            label="Submit"
+            onPress={() => { void handleSubmit(); }}
+            variant="primary"
+            fullWidth
+            loading={saving}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe:            { flex: 1, backgroundColor: "#0D0D0D" },
-  scroll:          { flex: 1 },
-  content:         { padding: 24, paddingBottom: 48, gap: 20 },
-  center:          { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0D0D0D" },
-  title:           { color: "#FFFFFF", fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  doneText:        { color: "#22C55E", fontSize: 22, fontWeight: "600" },
-  questionRow:     { gap: 10 },
-  questionLabel:   { color: "#FFFFFF", fontSize: 15, fontWeight: "500", textTransform: "capitalize" },
-  scaleRow:        { flexDirection: "row", gap: 8 },
-  scaleBtn:        { width: 44, height: 44, borderRadius: 22, backgroundColor: "#1A1A1A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#2A2A2A" },
-  scaleBtnActive:  { backgroundColor: "#22C55E", borderColor: "#22C55E" },
-  scaleBtnText:    { color: "#9CA3AF", fontWeight: "600" },
-  scaleBtnTextActive: { color: "#000000" },
-  submitBtn:       { backgroundColor: "#22C55E", borderRadius: 12, paddingVertical: 16, alignItems: "center", marginTop: 16 },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitText:      { color: "#000000", fontSize: 16, fontWeight: "700" },
+  safe:       { flex: 1 },
+  scroll:     { flex: 1 },
+  content:    { padding: 24, paddingBottom: 48 },
+  center:     { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
+
+  mascotRow:  { alignItems: "center", marginBottom: 12 },
+  title:      { fontSize: 24, fontWeight: "700", fontFamily: "Inter_700Bold", marginBottom: 16 },
+  doneText:   { fontSize: 22, fontWeight: "600" },
+
+  progressRow: {
+    flexDirection: "row",
+    gap:           6,
+    marginBottom:  20,
+  },
+  progressDot: {
+    flex:         1,
+    height:       3,
+    borderRadius: 2,
+  },
+
+  questionCard: {
+    borderRadius:  16,
+    padding:       20,
+    marginBottom:  16,
+    gap:           12,
+  },
+  questionLabel: {
+    fontSize:   12,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  questionText: {
+    fontSize:   18,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 26,
+    textTransform: "capitalize",
+  },
+
+  answerRow: {
+    flexDirection: "row",
+    gap:           10,
+    marginTop:     4,
+  },
+  answerCard: {
+    borderRadius:  12,
+    paddingVertical: 16,
+    alignItems:    "center",
+    borderWidth:   1.5,
+  },
+  answerText: {
+    fontSize:   16,
+    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  navRow: {
+    flexDirection:  "row",
+    justifyContent: "space-between",
+    gap:            12,
+    marginBottom:   16,
+  },
+  navBtn: {
+    flex:           1,
+    paddingVertical: 12,
+    borderRadius:   12,
+    alignItems:     "center",
+  },
+  navBtnText: {
+    fontSize:   18,
+    fontWeight: "600",
+  },
+
+  submitBlock: {
+    marginTop: 8,
+  },
 });
