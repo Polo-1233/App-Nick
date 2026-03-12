@@ -8,7 +8,7 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 const config = getDefaultConfig(projectRoot);
 
 // Support monorepo: surveiller packages/ et node_modules racine
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [...(config.watchFolders ?? []), monorepoRoot];
 
 // Résoudre les modules depuis la racine ET depuis l'app
 config.resolver.nodeModulesPaths = [
