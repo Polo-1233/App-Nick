@@ -4,6 +4,7 @@ import { AppState, Keyboard, Platform, View, Text, Pressable, StyleSheet } from 
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
@@ -185,6 +186,13 @@ function RootLayoutInner() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'Inter-Regular':  require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium':   require('../assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold':     require('../assets/fonts/Inter-Bold.ttf'),
+  });
+
   // Configure RevenueCat inside a component so any native module error is
   // catchable by RootErrorBoundary and doesn't crash the process outright.
   useEffect(() => {

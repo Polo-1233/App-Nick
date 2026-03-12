@@ -34,7 +34,13 @@ export interface ThemeColors {
   tabBarIcon:   string;  // base icon tint
 
   // ── Brand ─────────────────────────────────────────────────────────────────
-  accent:      string;   // #22C55E — same in both themes
+  accent:          string;   // primary brand accent
+  accentSecondary: string;   // secondary brand accent (blue)
+
+  // ── Semantic ──────────────────────────────────────────────────────────────
+  success: string;
+  warning: string;
+  error:   string;
 
   // ── System ────────────────────────────────────────────────────────────────
   statusBarStyle: 'light' | 'dark';
@@ -50,21 +56,25 @@ export interface Theme {
 export const darkTheme: Theme = {
   dark: true,
   colors: {
-    background:     '#0A0A0A',
-    surface:        '#111111',
-    surface2:       '#1A1A1A',
-    text:           '#FFFFFF',
-    textSub:        '#9CA3AF',
-    textMuted:      '#6B7280',
-    textFaint:      '#3A3A3A',
-    border:         '#1A1A1A',
-    borderSub:      '#161616',
-    tabBarBg:       '#0A0A0A',
-    tabBarBorder:   '#1A1A1A',
-    tabBarBubble:   'rgba(255,255,255,0.12)',
-    tabBarIcon:     '#FFFFFF',
-    accent:         '#22C55E',
-    statusBarStyle: 'light',
+    background:      '#0B1220',
+    surface:         '#1A2436',
+    surface2:        '#243046',
+    text:            '#E6EDF7',
+    textSub:         '#9FB0C5',
+    textMuted:       '#6B7F99',
+    textFaint:       '#2A3A50',
+    border:          '#243046',
+    borderSub:       '#1E2D42',
+    tabBarBg:        '#0B1220',
+    tabBarBorder:    '#1A2436',
+    tabBarBubble:    'rgba(245,166,35,0.15)',
+    tabBarIcon:      '#E6EDF7',
+    accent:          '#F5A623',
+    accentSecondary: '#4DA3FF',
+    success:         '#3DDC97',
+    warning:         '#F5A623',
+    error:           '#F87171',
+    statusBarStyle:  'light',
   },
 };
 
@@ -86,8 +96,12 @@ export const lightTheme: Theme = {
     tabBarBorder:   '#E5E7EB',
     tabBarBubble:   'rgba(0,0,0,0.08)',
     tabBarIcon:     '#374151',
-    accent:         '#22C55E',
-    statusBarStyle: 'dark',
+    accent:          '#22C55E',
+    accentSecondary: '#2563EB',
+    success:         '#16A34A',
+    warning:         '#D97706',
+    error:           '#DC2626',
+    statusBarStyle:  'dark',
   },
 };
 
