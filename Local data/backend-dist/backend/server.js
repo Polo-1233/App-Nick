@@ -1,19 +1,19 @@
 /**
- * R90 Backend — HTTP Server
+ * R90 Backend - HTTP Server
  *
- * Plain Node.js http server. No framework — MVP clarity.
+ * Plain Node.js http server. No framework - MVP clarity.
  *
  * Routes:
- *   GET  /health                       → 200 OK
- *   POST /logs/sleep                   → submit_sleep_log
- *   POST /logs/daily                   → submit_daily_log
- *   POST /logs/checkin                 → submit_check_in
- *   GET  /screen/home                  → get_home_screen_payload
- *   GET  /screen/day-plan[?date=]      → get_day_plan_payload
- *   GET  /screen/checkin               → get_check_in_payload
- *   POST /profile                      → update_user_profile
- *   POST /profile/environment          → update_environment
- *   POST /actions/recommendation       → recommendation_action
+ *   GET  /health                       -> 200 OK
+ *   POST /logs/sleep                   -> submit_sleep_log
+ *   POST /logs/daily                   -> submit_daily_log
+ *   POST /logs/checkin                 -> submit_check_in
+ *   GET  /screen/home                  -> get_home_screen_payload
+ *   GET  /screen/day-plan[?date=]      -> get_day_plan_payload
+ *   GET  /screen/checkin               -> get_check_in_payload
+ *   POST /profile                      -> update_user_profile
+ *   POST /profile/environment          -> update_environment
+ *   POST /actions/recommendation       -> recommendation_action
  *
  * All routes except /health require a valid Supabase JWT
  * in the Authorization: Bearer <token> header.
@@ -24,9 +24,10 @@ import { authenticate, authenticateSignup } from "./middleware/auth.js";
 import { submitSleepLogHandler, submitDailyLogHandler, submitCheckInHandler, } from "./handlers/log-handlers.js";
 import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./handlers/payload-handlers.js";
 import { createUserHandler, updateProfileHandler, updateEnvironmentHandler, recommendationActionHandler, } from "./handlers/profile-handlers.js";
+import { chatHandler } from "./handlers/chat-handler.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
-    // Signup — uses authenticateSignup (no existing users row required)
+    // Signup - uses authenticateSignup (no existing users row required)
     { method: "POST", path: "/users", handler: createUserHandler, signup: true },
     // Standard authenticated routes
     { method: "POST", path: "/logs/sleep", handler: submitSleepLogHandler },
@@ -38,6 +39,7 @@ const routes = [
     { method: "POST", path: "/profile", handler: updateProfileHandler },
     { method: "POST", path: "/profile/environment", handler: updateEnvironmentHandler },
     { method: "POST", path: "/actions/recommendation", handler: recommendationActionHandler },
+    { method: "POST", path: "/chat", handler: chatHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */
@@ -45,7 +47,9 @@ export async function readBody(req) {
     return new Promise(resolve => {
         let raw = "";
         req.setEncoding("utf-8");
-        req.on("data", (chunk) => { raw += chunk; });
+        req.on("data", (chunk) => {
+            raw += chunk;
+        });
         req.on("end", () => {
             if (!raw.trim()) {
                 resolve(null);
@@ -104,7 +108,7 @@ async function handleRequest(req, res) {
     }
     try {
         if (route.signup) {
-            // POST /users — validate JWT but don't require an existing users row
+            // POST /users - validate JWT but don't require an existing users row
             const authResult = await authenticateSignup(req);
             if (!authResult.ok) {
                 console.warn(`[auth] ${method} ${path} rejected: ${authResult.reason}`);
@@ -114,7 +118,7 @@ async function handleRequest(req, res) {
             await route.handler(req, res, authResult.ctx, query);
         }
         else {
-            // Standard routes — require existing users row
+            // Standard routes - require existing users row
             const authResult = await authenticate(req);
             if (!authResult.ok) {
                 console.warn(`[auth] ${method} ${path} rejected: ${authResult.reason}`);
@@ -149,12 +153,13 @@ function loadDotEnv() {
         }
     }
     catch {
-        // .env not present — environment variables must be set externally
+        // .env not present - environment variables must be set externally
     }
 }
 // ─── Startup ──────────────────────────────────────────────────────────────────
 loadDotEnv();
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
+const HOST = "0.0.0.0";
 const server = http.createServer((req, res) => {
     handleRequest(req, res).catch(err => {
         console.error("[server] fatal handler error:", err);
@@ -162,8 +167,8 @@ const server = http.createServer((req, res) => {
             sendError(res, 500, "Internal server error", "FATAL");
     });
 });
-server.listen(PORT, () => {
-    console.log(`\nR90 backend listening on http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+    console.log(`\nR90 backend listening on http://${HOST}:${PORT}`);
     console.log("Routes:");
     for (const r of routes) {
         console.log(`  ${r.method.padEnd(4)} ${r.path}`);
