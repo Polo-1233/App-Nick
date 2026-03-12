@@ -23,12 +23,15 @@ import { getAccessToken } from './supabase';
 const LOCALHOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const DEV_BASE_URL = `http://${LOCALHOST}:3000`;
 
+// Production URL — hardcoded fallback so the app works even if .env isn't loaded
+const PROD_URL = "https://app-nick-production.up.railway.app";
+
 const ENV_BASE_URL = process.env.EXPO_PUBLIC_NICK_BRAIN_API_URL?.trim();
 
 export const BASE_URL =
   ENV_BASE_URL && ENV_BASE_URL.length > 0
     ? ENV_BASE_URL.replace(/\/+$/, '')
-    : DEV_BASE_URL;
+    : __DEV__ ? DEV_BASE_URL : PROD_URL;
 
 // ─── Core HTTP helper ─────────────────────────────────────────────────────────
 

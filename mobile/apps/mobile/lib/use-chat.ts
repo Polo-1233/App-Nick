@@ -13,7 +13,9 @@
 import { useState, useCallback, useRef } from "react";
 import { getAccessToken } from "./supabase";
 
-const BASE_URL = (process.env.EXPO_PUBLIC_NICK_BRAIN_API_URL ?? "http://localhost:3000").trim();
+const PROD_URL = "https://app-nick-production.up.railway.app";
+const BASE_URL = (process.env.EXPO_PUBLIC_NICK_BRAIN_API_URL?.trim())
+  || (__DEV__ ? "http://localhost:3000" : PROD_URL);
 
 export interface ChatMessage {
   id:      string;
