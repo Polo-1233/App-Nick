@@ -7,11 +7,9 @@
  *   - Loading / streaming / error states
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { getAccessToken } from "./supabase";
-
-const BASE_URL = process.env.EXPO_PUBLIC_NICK_BRAIN_API_URL?.trim()
-  ?? "http://localhost:3000";
+import { BASE_URL } from "./api";
 
 export interface ChatMessage {
   id:      string;
@@ -32,12 +30,17 @@ function uid(): string {
 }
 
 export function useChat(): UseChatResult {
-  const [messages,    setMessages]    = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Abort any in-progress stream on unmount
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
+
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || isStreaming) return;
+    const isCurrentlyStreaming = messages.at(-1)?.status === "streaming";
+    if (!text.trim() || isCurrentlyStreaming) return;
 
     // Abort any in-progress stream
     abortRef.current?.abort();
@@ -49,15 +52,16 @@ export function useChat(): UseChatResult {
     const assistantId = uid();
     const assistantMsg: ChatMessage = { id: assistantId, role: "assistant", content: "", status: "streaming" };
 
+    // Build history from current messages before appending new ones
+    const history = messages
+      .filter(m => m.status === "done")
+      .slice(-10)
+      .map(m => ({ role: m.role, content: m.content }));
+
     setMessages(prev => [...prev, userMsg, assistantMsg]);
-    setIsStreaming(true);
 
     try {
       const token = await getAccessToken();
-      const history = messages
-        .filter(m => m.status === "done")
-        .slice(-10)
-        .map(m => ({ role: m.role, content: m.content }));
 
       const res = await fetch(`${BASE_URL}/chat`, {
         method:  "POST",
@@ -94,7 +98,6 @@ export function useChat(): UseChatResult {
             setMessages(prev => prev.map(m =>
               m.id === assistantId ? { ...m, status: "done" as const } : m
             ));
-            setIsStreaming(false);
             return;
           }
 
@@ -126,12 +129,13 @@ export function useChat(): UseChatResult {
           ? { ...m, content: errMsg, status: "error" as const }
           : m
       ));
-    } finally {
-      setIsStreaming(false);
     }
-  }, [messages, isStreaming]);
+  }, [messages]);
 
   const clearHistory = useCallback(() => setMessages([]), []);
+
+  // Derive streaming state from messages instead of tracking separately
+  const isStreaming = messages.at(-1)?.status === "streaming";
 
   return { messages, isStreaming, sendMessage, clearHistory };
 }

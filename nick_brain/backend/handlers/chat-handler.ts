@@ -14,18 +14,19 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { URLSearchParams } from "node:url";
 import type { AuthContext } from "../middleware/auth.js";
 import type { ChatInput } from "../services/chat-service.js";
 import { streamChatResponse } from "../services/chat-service.js";
-import { sendError } from "../server.js";
+import { readBody, sendError } from "../server.js";
 
 export async function chatHandler(
   req: IncomingMessage,
   res: ServerResponse,
   auth: AuthContext,
+  _query: URLSearchParams,
 ): Promise<void> {
-  // Parse body manually (readBody from server.ts is not SSE-compatible)
-  const body = await readBody(req);
+  const body = await readBody<ChatInput>(req);
   if (!body || typeof body.message !== "string" || !body.message.trim()) {
     sendError(res, 400, "message is required", "MISSING_MESSAGE");
     return;
@@ -37,17 +38,4 @@ export async function chatHandler(
   };
 
   await streamChatResponse(auth.client, auth.userId, input, res);
-}
-
-async function readBody(req: IncomingMessage): Promise<ChatInput | null> {
-  return new Promise(resolve => {
-    let raw = "";
-    req.setEncoding("utf-8");
-    req.on("data", (chunk: string) => { raw += chunk; });
-    req.on("end", () => {
-      try { resolve(JSON.parse(raw) as ChatInput); }
-      catch { resolve(null); }
-    });
-    req.on("error", () => resolve(null));
-  });
 }

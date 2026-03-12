@@ -76,7 +76,7 @@ async function buildContextSummary(
       `Today: ${ctx.today}`,
       `ARP (anchor wake time): ${ctx.profile.arp_time ?? "not set"}`,
       `Chronotype: ${ctx.profile.chronotype}`,
-      `Cycle target per night: ${ctx.profile.chronotype === "AMer" ? 5 : 5}`,
+      `Cycle target per night: 5`,
       `Onboarding complete: ${ctx.profile.onboarding_completed}`,
     ];
 

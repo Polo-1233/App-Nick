@@ -1,0 +1,46 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .easignore — Files excluded from EAS Build upload
+#
+# EAS uploads everything tracked by git. This file excludes content that is
+# not needed to build the mobile app, keeping the upload small and fast.
+#
+# Rule of thumb: if it's not mobile app source or mobile assets, exclude it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Research / IP data (largest offender: ~800 MB) ───────────────────────────
+Local data/
+
+# ── Backend & engine (server-side code, not needed for mobile build) ──────────
+nick_brain/
+
+# ── Documentation & brand assets ─────────────────────────────────────────────
+docs/
+
+# ── Infrastructure (Terraform, Docker, etc.) ─────────────────────────────────
+infra/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+**/dist/
+**/build/
+**/*-dist/
+**/*.tsbuildinfo
+
+# ── Environment files (secrets must never be uploaded) ───────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Development tooling ───────────────────────────────────────────────────────
+.cursor/
+.claude/
+.vscode/
+.idea/
+
+# ── OS artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*

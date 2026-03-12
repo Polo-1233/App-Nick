@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "8d99b9b7-5569-4d58-b32e-ca066e4d4009"
+      }
+    },
+    "android": {
+      "package": "com.superpolo1233.r90digitalnavigator"
+    }
+  }
+}

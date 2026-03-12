@@ -3,7 +3,7 @@
  * Fetches dynamic questions from GET /screen/checkin
  * Submits answers to POST /logs/checkin
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View, Text, Switch, Pressable, ScrollView,
   StyleSheet, ActivityIndicator, Alert, SafeAreaView,
@@ -19,6 +19,15 @@ export default function CheckInScreen() {
   const [saving,    setSaving]    = useState(false);
   const [done,      setDone]      = useState(false);
   const [date,      setDate]      = useState("");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!done) return;
+    timerRef.current = setTimeout(() => router.back(), 1500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [done, router]);
 
   useEffect(() => {
     getCheckInPayload().then(result => {
@@ -38,7 +47,6 @@ export default function CheckInScreen() {
     setSaving(false);
     if (result.ok) {
       setDone(true);
-      setTimeout(() => router.back(), 1500);
     } else {
       Alert.alert("Error", result.error ?? "Could not submit check-in.");
     }

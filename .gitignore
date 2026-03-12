@@ -17,8 +17,6 @@ node_modules/
 # ─────────────────────────────────────────────
 dist/
 build/
-nick_brain/backend-dist/
-nick_brain/engine-dist/
 *.tsbuildinfo
 
 # ─────────────────────────────────────────────
@@ -55,3 +53,4 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+Local data/

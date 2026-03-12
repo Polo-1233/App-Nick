@@ -56,11 +56,11 @@ export function AirloopChat({ visible, onClose }: Props) {
 
   // Scroll to bottom when new content arrives
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-      }, 50);
-    }
+    if (messages.length === 0) return;
+    const t = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(t);
   }, [messages]);
 
   function handleSend() {
