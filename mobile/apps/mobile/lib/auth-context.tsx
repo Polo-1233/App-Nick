@@ -78,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await signIn(email, password);
     if (result.ok && result.session) {
       setSession(result.session);
+      // Ensure backend users row exists (idempotent — safe to call on every login)
+      void bootstrapUser();
       // Identify user in RevenueCat so purchase history follows across devices
       void identifyUser(result.session.user.id);
     }
