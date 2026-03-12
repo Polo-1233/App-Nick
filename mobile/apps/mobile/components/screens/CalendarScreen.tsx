@@ -161,15 +161,50 @@ export default function CalendarScreen() {
 
   // ── Block data ──────────────────────────────────────────────────────────────
 
+  // Convert backend cycle timeline to TimeBlocks for display
+  const backendBlocks = useMemo((): TimeBlock[] => {
+    if (!backendPlan) return [];
+    const hhmm = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return (h ?? 0) * 60 + (m ?? 0);
+    };
+    const blocks: TimeBlock[] = [];
+    const tl = backendPlan.cycle_timeline;
+    for (let i = 0; i < tl.length; i++) {
+      const entry = tl[i]!;
+      const nextEntry = tl[i + 1];
+      const startMin = hhmm(entry.time);
+      const endMin   = nextEntry ? hhmm(nextEntry.time) : (startMin + 90) % 1440;
+      if (entry.type === 'sleep_onset') {
+        blocks.push({ start: startMin, end: hhmm(backendPlan.crp_window.open), type: 'sleep_cycle', label: entry.label });
+      } else if (entry.is_crp_window) {
+        blocks.push({ start: startMin, end: endMin, type: 'crp', label: 'CRP window' });
+      } else if (entry.type === 'arp') {
+        blocks.push({ start: startMin, end: endMin, type: 'wake', label: 'ARP — Wake' });
+      } else if (entry.type === 'mrm') {
+        blocks.push({ start: startMin, end: endMin, type: 'down_period', label: `MRM C${entry.cycle}` });
+      } else if (entry.type === 'phase_boundary') {
+        blocks.push({ start: startMin, end: endMin, type: 'free', label: `Phase ${entry.phase}` });
+      }
+    }
+    // Pre-sleep block
+    const sleepOnset = hhmm(backendPlan.sleep_onset['5cycle']);
+    const preSleep   = ((sleepOnset - 90) + 1440) % 1440;
+    blocks.push({ start: preSleep, end: sleepOnset, type: 'pre_sleep', label: 'Pre-sleep' });
+    return blocks;
+  }, [backendPlan]);
+
   const getBlocksForDate = useCallback(
     (date: Date): { blocks: TimeBlock[]; conflicts: Conflict[] } => {
       if (toDateStr(date) === todayStr && dayPlan) {
-        return { blocks: dayPlan.blocks, conflicts: dayPlan.conflicts };
+        // Prefer backend blocks when available (richer 16-cycle timeline)
+        const blocks = backendBlocks.length > 0 ? backendBlocks : dayPlan.blocks;
+        return { blocks, conflicts: dayPlan.conflicts };
       }
       if (profile) return { blocks: phantomBlocks(profile), conflicts: [] };
       return { blocks: [], conflicts: [] };
     },
-    [dayPlan, profile, todayStr],
+    [dayPlan, backendBlocks, profile, todayStr],
   );
 
   // ── Event handlers ──────────────────────────────────────────────────────────

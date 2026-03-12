@@ -4,6 +4,7 @@ import { Slot } from "expo-router";
 import { DayPlanProvider } from "../../lib/day-plan-context";
 import { ChatProvider } from "../../lib/chat-context";
 import { AirloopChat } from "../../components/AirloopChat";
+import { OfflineBanner } from "../../components/OfflineBanner";
 
 /**
  * Tab group layout — wraps the pager (index.tsx) with shared providers
@@ -29,6 +30,9 @@ export default function TabsLayout() {
             visible={chatVisible}
             onClose={() => setChatVisible(false)}
           />
+
+          {/* Offline banner — shows when backend is unreachable */}
+          <OfflineBanner />
         </View>
       </ChatProvider>
     </DayPlanProvider>

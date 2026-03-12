@@ -221,6 +221,15 @@ export default function HomeScreen() {
               >
                 <Text style={styles.alarmPillText}>🌙  Late event</Text>
               </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [styles.alarmPill, styles.pillFlex, pressed && styles.alarmPillPressed]}
+                onPress={() => router.push("/checkin")}
+                accessibilityRole="button"
+                accessibilityLabel="Daily check-in"
+              >
+                <Text style={styles.alarmPillText}>✅  Check-in</Text>
+              </Pressable>
             </View>
           )}
 
