@@ -1,12 +1,13 @@
 /**
- * Onboarding — 5-screen personalization flow.
+ * Onboarding — 6-screen personalization flow (horizontal pager).
  *
- * Screens (vertical paging, scrollEnabled=false):
- *   0 — Why R90        (ecran1.png)  Intro: cycles, not hours
- *   1 — First name     (ecran1.png)
- *   2 — Wake-up time   (ecran2.png)
- *   3 — Chronotype     (ecran3.png)  AMer / Neither / PMer
- *   4 — Cycles target  (ecran4.png)  4 or 5 cycles per night
+ * Slides:
+ *   0 — Welcome        R-Lo mascot (Enthousisate), R90 title, tagline
+ *   1 — How it works   Sleep cycles science
+ *   2 — Chronotype     AMer / Neither / PMer selection
+ *   3 — Cycles target  4 or 5 cycles per night
+ *   4 — ARP            Wake-up time (Anchor Rise Point)
+ *   5 — Final          Celebration, pulsing CTA
  *
  * On Finish: saves UserProfile + OnboardingData, then routes to Home.
  */
@@ -17,17 +18,15 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  TextInput,
-  ScrollView,
-  ImageBackground,
   Alert,
   Platform,
   Keyboard,
   useWindowDimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { formatTime } from '@r90/core';
 import { saveProfile, saveOnboardingData } from '../lib/storage';
@@ -40,10 +39,12 @@ import {
 } from '../lib/permissions';
 import { PermissionModal, type PermStep } from '../components/PermissionModal';
 import { AcquisitionSourceSheet } from '../components/AcquisitionSourceSheet';
+import { MascotImage } from '../components/ui/MascotImage';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { Button } from '../components/ui/Button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-/** Minimal interface for an expo-av Sound instance (avoids static import). */
 interface AVSound {
   playAsync(): Promise<void>;
   stopAsync(): Promise<void>;
@@ -51,308 +52,104 @@ interface AVSound {
   setVolumeAsync(volume: number): Promise<void>;
 }
 
-// ─── Assets ──────────────────────────────────────────────────────────────────
-
-const BG_IMAGES = [
-  require('../assets/images/ecran1.png'), // intro
-  require('../assets/images/ecran1.png'), // first name
-  require('../assets/images/ecran2.png'), // wake time
-  require('../assets/images/ecran3.png'), // chronotype
-  require('../assets/images/ecran4.png'), // cycles
-];
-
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 5;
+const TOTAL_PAGES = 6;
 
-const QUESTIONS = [
-  '', // intro screen has no question label
-  "What's your first name?",
-  'What time do you usually wake up?',
-  'When do you naturally feel at your best?',
-  'How many sleep cycles do you want to target each night?',
+const ACCENT     = '#F5A623';
+const BG         = '#0B1220';
+const SURFACE    = '#1A2436';
+const BORDER     = '#243046';
+const TEXT       = '#E6EDF7';
+const TEXT_SUB   = '#9FB0C5';
+const TEXT_MUTED = '#6B7F99';
+
+const CHRONOTYPE_CARDS = [
+  { id: 'AMer',    icon: 'sunny'        as const, label: 'Early Bird', sublabel: 'Before 7am' },
+  { id: 'Neither', icon: 'partly-sunny' as const, label: 'In Between', sublabel: '7am – 9am'  },
+  { id: 'PMer',    icon: 'moon'         as const, label: 'Night Owl',  sublabel: 'After 9am'  },
 ];
 
-const CHRONOTYPE_OPTIONS = [
-  {
-    id: 'AMer',
-    label: 'Morning',
-    sublabel: 'Best before midday — early riser',
-  },
-  {
-    id: 'Neither',
-    label: 'Neutral',
-    sublabel: 'No strong preference either way',
-  },
-  {
-    id: 'PMer',
-    label: 'Evening',
-    sublabel: 'Best in the afternoon or evening',
-  },
+const CYCLE_CARDS = [
+  { id: '4', cycles: '4 Cycles', hours: '6 hours',   desc: 'Good for busy schedules', badge: 'Minimum',     recommended: false },
+  { id: '5', cycles: '5 Cycles', hours: '7.5 hours', desc: 'Optimal for most',         badge: 'Recommended', recommended: true  },
 ];
-
-const CYCLE_OPTIONS = [
-  {
-    id: '5',
-    label: '5 cycles',
-    sublabel: '7h 30min — full recovery target',
-  },
-  {
-    id: '4',
-    label: '4 cycles',
-    sublabel: '6h 00min — acceptable minimum',
-  },
-];
-
-// ─── ProgressBar ─────────────────────────────────────────────────────────────
-
-function ProgressBar({ current, total }: { current: number; total: number }) {
-  const pct = Math.round((current / total) * 100);
-  return (
-    <View style={pb.track}>
-      <View style={[pb.fill, { width: `${pct}%` }]} />
-    </View>
-  );
-}
-
-const pb = StyleSheet.create({
-  track: {
-    flex: 1,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-  },
-});
-
-// ─── OnboardingHeader ─────────────────────────────────────────────────────────
-
-function OnboardingHeader({
-  pageIndex,
-  total,
-  onBack,
-}: {
-  pageIndex: number;
-  total: number;
-  onBack: () => void;
-}) {
-  const backDisabled = pageIndex === 0;
-  return (
-    <View style={oh.row}>
-      <Pressable
-        style={[oh.backBtn, backDisabled && oh.backHidden]}
-        onPress={onBack}
-        disabled={backDisabled}
-        hitSlop={12}
-      >
-        <Feather name="arrow-left" size={22} color="#FFFFFF" />
-      </Pressable>
-      <ProgressBar current={pageIndex + 1} total={total} />
-      {/* Spacer mirrors back button width so progress bar is centred */}
-      <View style={oh.spacer} />
-    </View>
-  );
-}
-
-const oh = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backHidden: {
-    opacity: 0,
-  },
-  spacer: {
-    width: 38,
-  },
-});
-
-// ─── OptionGrid ───────────────────────────────────────────────────────────────
-
-function OptionGrid({
-  options,
-  selected,
-  onSelect,
-}: {
-  options: { id: string; label: string; sublabel?: string }[];
-  selected: string;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <View style={og.grid}>
-      {options.map((opt) => {
-        const active = selected === opt.id;
-        return (
-          <Pressable
-            key={opt.id}
-            style={[og.option, active && og.optionActive]}
-            onPress={() => onSelect(opt.id)}
-          >
-            <Text style={[og.label, active && og.labelActive]}>{opt.label}</Text>
-            {opt.sublabel ? (
-              <Text style={[og.sublabel, active && og.sublabelActive]}>{opt.sublabel}</Text>
-            ) : null}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-const og = StyleSheet.create({
-  grid: { gap: 10 },
-  option: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  optionActive: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderColor: '#FFFFFF',
-  },
-  label: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  labelActive: {
-    color: '#0A0A0A',
-  },
-  sublabel: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  sublabelActive: {
-    color: 'rgba(10,10,10,0.55)',
-  },
-  // Intro screen
-  introBlock: {
-    gap: 18,
-  },
-  introHeading: {
-    color:         '#FFFFFF',
-    fontSize:      32,
-    fontWeight:    '700',
-    letterSpacing: -0.5,
-    lineHeight:    40,
-    marginBottom:  8,
-  },
-  introBody: {
-    color:      'rgba(255,255,255,0.72)',
-    fontSize:   16,
-    lineHeight: 26,
-  },
-});
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { height: windowHeight } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView>(null);
+  const { width: windowWidth } = useWindowDimensions();
 
-  const [page, setPage] = useState(0);
-  const [firstName, setFirstName] = useState('');
-  const [wakeDate, setWakeDate] = useState(() => {
+  const [page,              setPage]              = useState(0);
+  const [wakeDate,          setWakeDate]          = useState(() => {
     const d = new Date();
     d.setHours(6, 30, 0, 0);
     return d;
   });
   const [showAndroidPicker, setShowAndroidPicker] = useState(false);
-  const [chronotype, setChronotype] = useState('');
-  const [cyclesTarget, setCyclesTarget] = useState('');
-  const [saving, setSaving] = useState(false);
-  // null = modal hidden; 'calendar'/'notifications' = which step is showing
-  const [permStep,         setPermStep]         = useState<PermStep | null>(null);
-  const [showAcquisition,  setShowAcquisition]  = useState(false);
+  const [chronotype,        setChronotype]        = useState('');
+  const [cyclesTarget,      setCyclesTarget]      = useState('');
+  const [saving,            setSaving]            = useState(false);
+  const [permStep,          setPermStep]          = useState<PermStep | null>(null);
+  const [showAcquisition,   setShowAcquisition]   = useState(false);
 
-  // Guards against double-tapping Next/Back mid-animation
   const isNavigating = useRef(false);
+  const translateX   = useRef(new Animated.Value(0)).current;
+  const pulseAnim    = useRef(new Animated.Value(1)).current;
+  const soundRef     = useRef<AVSound | null>(null);
+  const fadeRef      = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Background music (onboarding only) ────────────────────────────────────
-  const soundRef   = useRef<AVSound | null>(null);
-  const fadeRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Pulse animation on the final CTA ──────────────────────────────────────
+  useEffect(() => {
+    if (page === TOTAL_PAGES - 1) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.03, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.0,  duration: 800, useNativeDriver: true }),
+        ]),
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [page, pulseAnim]);
 
+  // ── Background music ────────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
     async function startMusic() {
       try {
-        // Dynamic import: avoids requireNativeModule('ExponentAV') at module load
-        // time, which throws synchronously when the native module is absent (e.g.
-        // running in Expo Go or before a dev-client rebuild after adding expo-av).
         const { Audio } = await import('expo-av');
-
-        // Respect silent mode: playsInSilentModeIOS defaults to false — correct.
-        // staysActiveInBackground false: music stops if app backgrounds.
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS:    false,
-          staysActiveInBackground: false,
-        });
-
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: false, staysActiveInBackground: false });
         const { sound } = await Audio.Sound.createAsync(
           require('../assets/music/music1.mp3'),
           { isLooping: true, volume: 0, shouldPlay: true },
         );
-
-        if (!mounted) {
-          // Component unmounted before async completed — clean up immediately
-          sound.unloadAsync();
-          return;
-        }
-
+        if (!mounted) { sound.unloadAsync(); return; }
         soundRef.current = sound as unknown as AVSound;
-
-        // Fade in: 0 → 0.35 over 1 500 ms in 30 steps
-        const TARGET   = 0.35;
-        const STEPS    = 30;
-        const INTERVAL = 1500 / STEPS;
-        let   step     = 0;
-
+        const TARGET = 0.35;
+        const STEPS  = 30;
+        const INT    = 1500 / STEPS;
+        let   step   = 0;
         fadeRef.current = setInterval(() => {
           step++;
           sound.setVolumeAsync(Math.min((step / STEPS) * TARGET, TARGET));
-          if (step >= STEPS) {
-            clearInterval(fadeRef.current!);
-            fadeRef.current = null;
-          }
-        }, INTERVAL);
-      } catch {
-        // Audio failure must never break onboarding — silently ignore
-      }
+          if (step >= STEPS) { clearInterval(fadeRef.current!); fadeRef.current = null; }
+        }, INT);
+      } catch { /* Audio failure must not break onboarding */ }
     }
 
     startMusic();
 
     return () => {
       mounted = false;
-      if (fadeRef.current) {
-        clearInterval(fadeRef.current);
-        fadeRef.current = null;
-      }
+      if (fadeRef.current) { clearInterval(fadeRef.current); fadeRef.current = null; }
       const s = soundRef.current;
       soundRef.current = null;
-      // stop then unload sequentially; swallow all errors
       (async () => {
-        try { await s?.stopAsync(); } catch { /* ignore */ }
+        try { await s?.stopAsync();   } catch { /* ignore */ }
         try { await s?.unloadAsync(); } catch { /* ignore */ }
       })();
     };
@@ -364,30 +161,25 @@ export default function OnboardingScreen() {
     if (isNavigating.current) return;
     isNavigating.current = true;
     Keyboard.dismiss();
-    // animated:true gives the smooth native "slide" feel on both platforms.
-    // pagingEnabled snaps user-initiated scroll (insurance); programmatic
-    // scroll lands exactly on index * windowHeight.
-    scrollRef.current?.scrollTo({ y: index * windowHeight, animated: true });
+    Animated.timing(translateX, {
+      toValue:         -index * windowWidth,
+      duration:        320,
+      useNativeDriver: true,
+    }).start(() => { isNavigating.current = false; });
     setPage(index);
     setShowAndroidPicker(false);
-    // ~350 ms matches the native scroll deceleration on iOS + Android
-    setTimeout(() => { isNavigating.current = false; }, 350);
-  }, [windowHeight]);
+  }, [translateX, windowWidth]);
 
   function handleBack() {
     if (page > 0) goToPage(page - 1);
   }
 
   function validate(): boolean {
-    if (page === 1 && firstName.trim().length === 0) {
-      Alert.alert('', 'Please enter your first name.');
-      return false;
-    }
-    if (page === 3 && !chronotype) {
+    if (page === 2 && !chronotype) {
       Alert.alert('', 'Please choose when you feel at your best.');
       return false;
     }
-    if (page === 4 && !cyclesTarget) {
+    if (page === 3 && !cyclesTarget) {
       Alert.alert('', 'Please choose your cycles target.');
       return false;
     }
@@ -408,32 +200,27 @@ export default function OnboardingScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      const idealCycles = cyclesTarget === '4' ? 4 : 5;
+      const idealCycles  = cyclesTarget === '4' ? 4 : 5;
       const weeklyTarget = idealCycles * 7;
 
-      // 1 — Save locally (keeps the app working offline / as fallback)
       await saveProfile({
-        anchorTime: wakeMinutes,
-        chronotype: (chronotype as 'AMer' | 'PMer' | 'Neither') || 'Neither',
+        anchorTime:          wakeMinutes,
+        chronotype:          (chronotype as 'AMer' | 'PMer' | 'Neither') || 'Neither',
         idealCyclesPerNight: idealCycles,
         weeklyTarget,
       });
       await saveOnboardingData({
-        firstName:      firstName.trim(),
+        firstName:       '',
         wakeTimeMinutes: wakeMinutes,
-        priority:   chronotype,    // stores chronotype
-        constraint: cyclesTarget,  // stores cycles target
+        priority:        chronotype,
+        constraint:      cyclesTarget,
       });
 
-      // 2 — Bootstrap backend user (idempotent — safe to call every onboarding)
       await bootstrapUser();
 
-      // 3 — Send profile to backend: ARP time + chronotype + cycle target
-      const arpHH = String(Math.floor(wakeMinutes / 60)).padStart(2, '0');
-      const arpMM = String(wakeMinutes % 60).padStart(2, '0');
-      // ARP must be on a 30-min boundary — round to nearest
-      const roundedMM = wakeMinutes % 60 >= 15 ? '30' : '00';
-      const arpTime   = `${arpHH}:${roundedMM}`;
+      const arpHH       = String(Math.floor(wakeMinutes / 60)).padStart(2, '0');
+      const roundedMM   = wakeMinutes % 60 >= 15 ? '30' : '00';
+      const arpTime     = `${arpHH}:${roundedMM}`;
 
       const backendChronotype =
         chronotype === 'AMer'    ? 'AMer' :
@@ -441,12 +228,12 @@ export default function OnboardingScreen() {
         chronotype === 'Neither' ? 'In-betweener' : 'Unknown';
 
       await updateProfile({
-        arp_time:              arpTime,
-        arp_committed:         true,
-        chronotype:            backendChronotype,
-        cycle_target:          idealCycles,
-        onboarding_step:       4,
-        onboarding_completed:  true,
+        arp_time:             arpTime,
+        arp_committed:        true,
+        chronotype:           backendChronotype,
+        cycle_target:         idealCycles,
+        onboarding_step:      5,
+        onboarding_completed: true,
       });
 
       setSaving(false);
@@ -457,8 +244,6 @@ export default function OnboardingScreen() {
       Alert.alert('Setup failed', 'Could not save your profile. Please try again.');
     }
   }
-
-  // ── Permission modal handlers ──────────────────────────────────────────────
 
   async function handlePermAllow() {
     if (permStep === 'calendar') {
@@ -476,169 +261,239 @@ export default function OnboardingScreen() {
     if (permStep === 'calendar') {
       setPermStep('notifications');
     } else {
-      markPermissionPromptShown(); // fire-and-forget
+      markPermissionPromptShown();
       setPermStep(null);
       setShowAcquisition(true);
     }
   }
 
+  const isNextDisabled =
+    (page === 2 && !chronotype) ||
+    (page === 3 && !cyclesTarget) ||
+    saving;
+
+  const nextLabel =
+    page === 0              ? 'Get Started' :
+    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Start my R90 journey') :
+    'Next';
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <View style={s.root}>
-      <ScrollView
-        ref={scrollRef}
-        scrollEnabled={false}
-        pagingEnabled
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-        style={s.scroll}
-      >
-        {BG_IMAGES.map((image, i) => (
-          <ImageBackground
-            key={i}
-            source={image}
-            style={[s.page, { height: windowHeight }]}
-            resizeMode="cover"
+      <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
+
+        {/* ── Header: back + animated progress bar ── */}
+        <View style={s.header}>
+          <Pressable
+            style={[s.backBtn, page === 0 && s.backHidden]}
+            onPress={handleBack}
+            disabled={page === 0}
+            hitSlop={12}
           >
-            {/* Darkening overlay for text readability */}
-            <View style={s.overlay} />
+            <Ionicons name="arrow-back" size={20} color={TEXT} />
+          </Pressable>
+          <View style={s.progressWrap}>
+            <ProgressBar value={(page + 1) / TOTAL_PAGES} color={ACCENT} height={3} />
+          </View>
+          {/* Spacer mirrors back button for centering */}
+          <View style={s.backBtn} />
+        </View>
 
-            <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-              <View style={s.inner}>
-                {/* ── Header ── */}
-                <View style={s.header}>
-                  <OnboardingHeader
-                    pageIndex={i}
-                    total={TOTAL_PAGES}
-                    onBack={handleBack}
-                  />
+        {/* ── Slides pager ── */}
+        <View style={s.pagerClip}>
+          <Animated.View
+            style={[
+              s.pager,
+              { width: windowWidth * TOTAL_PAGES, transform: [{ translateX }] },
+            ]}
+          >
+
+            {/* ── Slide 0: Welcome ──────────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideCenter}>
+                <MascotImage emotion="Enthousisate" size="xl" />
+                <Text style={s.r90Title}>R90</Text>
+                <Text style={s.tagline}>Sleep. Recover. Perform.</Text>
+                <Text style={s.taglineSub}>The methodology trusted by elite athletes.</Text>
+              </View>
+            </View>
+
+            {/* ── Slide 1: How it works ─────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideInner}>
+                <View style={s.iconWrap}>
+                  <Ionicons name="moon-outline" size={80} color={ACCENT} />
                 </View>
-
-                {/* ── Question + input — sits directly under the progress bar ── */}
-                <View style={s.topContent}>
-                  <Text style={s.question}>{QUESTIONS[i]}</Text>
-
-                  {/* Screen 0: Why R90 intro */}
-                  {i === 0 && (
-                    <View style={og.introBlock}>
-                      <Text style={og.introHeading}>Sleep in cycles,{'\n'}not hours.</Text>
-                      <Text style={og.introBody}>
-                        The R90 method, developed by Nick Littlehales, sleep coach to elite athletes, structures recovery around 90-minute cycles.
-                      </Text>
-                      <Text style={og.introBody}>
-                        A full night is 5 cycles — 7h 30min. What matters is when you wake up, not when you go to bed.
-                      </Text>
-                      <Text style={og.introBody}>
-                        This app builds your personalised schedule around a fixed wake time. No streaks. No scores. Just cycles.
-                      </Text>
+                <Text style={s.slideTitle}>Sleep in 90-min cycles</Text>
+                <Text style={s.slideBody}>
+                  R90 is built around the science of sleep cycles. Every night is made up of 90-minute blocks. The goal: 5 quality cycles.
+                </Text>
+                <View style={s.bulletList}>
+                  {['90-min cycles', '5 cycles target', 'Track your progress'].map((b) => (
+                    <View key={b} style={s.bulletRow}>
+                      <View style={s.bulletDot} />
+                      <Text style={s.bulletText}>{b}</Text>
                     </View>
-                  )}
+                  ))}
+                </View>
+              </View>
+            </View>
 
-                  {/* Screen 1: first name */}
-                  {i === 1 && (
-                    <TextInput
-                      style={s.textInput}
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      placeholder="Your name"
-                      placeholderTextColor="rgba(255,255,255,0.4)"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      returnKeyType="done"
-                      onSubmitEditing={handleNext}
+            {/* ── Slide 2: Chronotype ───────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideInner}>
+                <Text style={[s.slideTitle, { fontSize: 24 }]}>
+                  When do you naturally{'\n'}wake up?
+                </Text>
+                <Text style={s.slideSub}>Be honest — no right answer.</Text>
+                <View style={s.mascotRow}>
+                  <MascotImage emotion="Reflexion" size="md" />
+                </View>
+                <View style={s.cardList}>
+                  {CHRONOTYPE_CARDS.map((card) => {
+                    const active = chronotype === card.id;
+                    return (
+                      <Pressable
+                        key={card.id}
+                        style={[s.selectCard, active && s.selectCardActive]}
+                        onPress={() => setChronotype(card.id)}
+                      >
+                        <View style={s.selectCardLeft}>
+                          <Ionicons
+                            name={card.icon}
+                            size={22}
+                            color={active ? ACCENT : TEXT_SUB}
+                          />
+                          <Text style={[s.selectCardLabel, active && s.selectCardLabelActive]}>
+                            {card.label}
+                          </Text>
+                        </View>
+                        <Text style={[s.selectCardSub, active && s.selectCardSubActive]}>
+                          {card.sublabel}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
+            {/* ── Slide 3: Cycles target ────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideInner}>
+                <Text style={[s.slideTitle, { fontSize: 24 }]}>
+                  How many cycles{'\n'}per night?
+                </Text>
+                <View style={s.cycleRow}>
+                  {CYCLE_CARDS.map((card) => {
+                    const active = cyclesTarget === card.id;
+                    return (
+                      <Pressable
+                        key={card.id}
+                        style={[s.cycleCard, active && s.cycleCardActive]}
+                        onPress={() => setCyclesTarget(card.id)}
+                      >
+                        <View style={s.cycleBadgeWrap}>
+                          <View style={[s.cycleBadge, card.recommended && s.cycleBadgeAccent]}>
+                            <Text style={[s.cycleBadgeText, card.recommended && s.cycleBadgeTextAccent]}>
+                              {card.badge}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={[s.cycleTitle, active && s.cycleTitleActive]}>
+                          {card.cycles}
+                        </Text>
+                        <Text style={s.cycleHours}>{card.hours}</Text>
+                        <Text style={s.cycleDesc}>{card.desc}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
+            {/* ── Slide 4: ARP ──────────────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideInner}>
+                <Text style={[s.slideTitle, { fontSize: 24 }]}>Set your wake-up time</Text>
+                <Text style={s.slideSub}>
+                  Your Anchor Rise Point — the foundation of your R90 plan.
+                </Text>
+                <View style={s.mascotRow}>
+                  <MascotImage emotion="encourageant" size="sm" />
+                </View>
+                <View style={s.pickerWrap}>
+                  {Platform.OS === 'ios' ? (
+                    <DateTimePicker
+                      value={wakeDate}
+                      mode="time"
+                      display="spinner"
+                      onChange={(_, d) => { if (d) setWakeDate(d); }}
+                      style={s.iosPicker}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      {...({ textColor: TEXT } as any)}
                     />
-                  )}
-
-                  {/* Screen 2: wake time */}
-                  {i === 2 && (
-                    <View style={s.pickerWrap}>
-                      {Platform.OS === 'ios' ? (
+                  ) : (
+                    <>
+                      <Pressable
+                        style={s.androidTimeBtn}
+                        onPress={() => setShowAndroidPicker(true)}
+                      >
+                        <Text style={s.androidTimeText}>{formatTime(wakeMinutes)}</Text>
+                      </Pressable>
+                      {showAndroidPicker && (
                         <DateTimePicker
                           value={wakeDate}
                           mode="time"
-                          display="spinner"
-                          onChange={(_, d) => { if (d) setWakeDate(d); }}
-                          style={s.iosPicker}
-                          // textColor is iOS-only, not in community typedefs
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          {...({ textColor: '#FFFFFF' } as any)}
+                          display="default"
+                          onChange={(_, d) => {
+                            setShowAndroidPicker(false);
+                            if (d) setWakeDate(d);
+                          }}
                         />
-                      ) : (
-                        <>
-                          <Pressable
-                            style={s.androidTimeBtn}
-                            onPress={() => setShowAndroidPicker(true)}
-                          >
-                            <Text style={s.androidTimeText}>
-                              {formatTime(wakeMinutes)}
-                            </Text>
-                          </Pressable>
-                          {showAndroidPicker && (
-                            <DateTimePicker
-                              value={wakeDate}
-                              mode="time"
-                              display="default"
-                              onChange={(_, d) => {
-                                setShowAndroidPicker(false);
-                                if (d) setWakeDate(d);
-                              }}
-                            />
-                          )}
-                        </>
                       )}
-                    </View>
+                    </>
                   )}
-
-                  {/* Screen 3: chronotype */}
-                  {i === 3 && (
-                    <OptionGrid
-                      options={CHRONOTYPE_OPTIONS}
-                      selected={chronotype}
-                      onSelect={setChronotype}
-                    />
-                  )}
-
-                  {/* Screen 4: cycles target */}
-                  {i === 4 && (
-                    <OptionGrid
-                      options={CYCLE_OPTIONS}
-                      selected={cyclesTarget}
-                      onSelect={setCyclesTarget}
-                    />
-                  )}
-                </View>
-
-                {/* ── Open space — background image / mascot visible here ── */}
-                <View style={s.openSpace} />
-
-                {/* ── Footer ── */}
-                <View style={s.footer}>
-                  <Pressable
-                    style={[s.nextBtn, saving && s.nextBtnDisabled]}
-                    onPress={handleNext}
-                    disabled={saving}
-                  >
-                    <Text style={s.nextBtnText}>
-                      {i === TOTAL_PAGES - 1
-                        ? saving ? 'Setting up…' : 'Finish'
-                        : 'Next'}
-                    </Text>
-                  </Pressable>
                 </View>
               </View>
-            </SafeAreaView>
-          </ImageBackground>
-        ))}
-      </ScrollView>
+            </View>
 
-      {/* Permission modal — shown after onboarding data is saved */}
+            {/* ── Slide 5: Final ────────────────────────────────────────── */}
+            <View style={[s.slide, { width: windowWidth }]}>
+              <View style={s.slideCenter}>
+                <MascotImage emotion="celebration" size="xl" />
+                <Text style={s.finalTitle}>You're ready!</Text>
+                <Text style={s.finalSub}>Your R90 plan is set. Let's start tracking.</Text>
+              </View>
+            </View>
+
+          </Animated.View>
+        </View>
+
+        {/* ── Footer: CTA button (pulse on slide 5) ── */}
+        <View style={s.footer}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <Button
+              label={nextLabel}
+              onPress={handleNext}
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={isNextDisabled}
+              loading={saving}
+            />
+          </Animated.View>
+        </View>
+
+      </SafeAreaView>
+
       <PermissionModal
         visible={permStep !== null}
         step={permStep ?? 'calendar'}
         onAllow={handlePermAllow}
         onSkip={handlePermSkip}
       />
-
-      {/* Acquisition source sheet — shown after permissions flow, before Home */}
       <AcquisitionSourceSheet
         visible={showAcquisition}
         onDone={() => router.replace('/')}
@@ -650,103 +505,184 @@ export default function OnboardingScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0A0A0A',
-  },
-  scroll: {
-    flex: 1,
-  },
-  page: {
-    // height set inline via useWindowDimensions
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.32)',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  inner: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-  // Header row
+  root:       { flex: 1, backgroundColor: BG },
+  safeArea:   { flex: 1 },
+
+  // Header
   header: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    paddingHorizontal: 20,
+    paddingTop:      8,
+    paddingBottom:   16,
+    gap:             12,
+  },
+  backBtn: {
+    width:           36,
+    height:          36,
+    borderRadius:    18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent:  'center',
+    alignItems:      'center',
+  },
+  backHidden:   { opacity: 0 },
+  progressWrap: { flex: 1 },
+
+  // Pager
+  pagerClip: { flex: 1, overflow: 'hidden' },
+  pager:     { flex: 1, flexDirection: 'row' },
+  slide:     { flex: 1, paddingHorizontal: 24 },
+
+  // Centered layout (slides 0, 5)
+  slideCenter: {
+    flex:           1,
+    justifyContent: 'center',
+    alignItems:     'center',
+    gap:            16,
+    paddingBottom:  8,
+  },
+
+  // Top-aligned layout (slides 1–4)
+  slideInner: {
+    flex:    1,
     paddingTop: 8,
-    paddingBottom: 24,
+    gap:     18,
   },
-  // Question + input — top-aligned directly under the progress bar.
-  // Does NOT fill remaining space; open space below it shows the background.
-  topContent: {
-    gap: 24,
-    paddingBottom: 8,
+
+  // Slide 0 — Welcome
+  r90Title: {
+    fontSize:     52,
+    fontFamily:   'Inter-Bold',
+    fontWeight:   '700',
+    color:        ACCENT,
+    letterSpacing: -1,
   },
-  // Fills the space between the input area and the footer, keeping the
-  // background / mascot visible in the centre of the screen.
-  openSpace: {
-    flex: 1,
+  tagline: {
+    fontSize:   18,
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    color:      TEXT_SUB,
+    textAlign:  'center',
   },
-  question: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-    lineHeight: 36,
+  taglineSub: {
+    fontSize:  14,
+    color:     TEXT_MUTED,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
   },
-  // Screen 1 — text input
-  textInput: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '600',
-    borderBottomWidth: 2,
-    borderBottomColor: 'rgba(255,255,255,0.55)',
-    paddingVertical: 12,
-    paddingHorizontal: 0,
-  },
-  // Screen 2 — time picker container
-  pickerWrap: {
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  iosPicker: {
-    height: 160,
-  },
-  androidTimeBtn: {
-    paddingVertical: 22,
-    alignItems: 'center',
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  androidTimeText: {
-    color: '#FFFFFF',
-    fontSize: 38,
+
+  // Slide 1 — How it works
+  iconWrap:   { alignSelf: 'center', marginBottom: 4 },
+  slideTitle: {
+    fontSize:   28,
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
+    color:      TEXT,
+    lineHeight: 36,
+  },
+  slideSub: {
+    fontSize:   15,
+    color:      TEXT_SUB,
+    lineHeight: 22,
+    marginTop:  -4,
+  },
+  slideBody: {
+    fontSize:   16,
+    color:      TEXT_SUB,
+    lineHeight: 26,
+  },
+  bulletList: { gap: 10 },
+  bulletRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bulletDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT },
+  bulletText: { fontSize: 15, fontWeight: '500', color: TEXT },
+
+  // Slide 2 — Chronotype
+  mascotRow: { alignItems: 'center' },
+  cardList:  { gap: 10 },
+  selectCard: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    backgroundColor: SURFACE,
+    borderRadius:    14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderWidth:     1.5,
+    borderColor:     BORDER,
+  },
+  selectCardActive: {
+    borderColor:     ACCENT,
+    backgroundColor: 'rgba(245,166,35,0.08)',
+  },
+  selectCardLeft:        { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  selectCardLabel:       { fontSize: 16, fontWeight: '600', color: TEXT },
+  selectCardLabelActive: { color: ACCENT },
+  selectCardSub:         { fontSize: 13, color: TEXT_MUTED },
+  selectCardSubActive:   { color: TEXT_SUB },
+
+  // Slide 3 — Cycles
+  cycleRow: { flexDirection: 'row', gap: 12, flex: 1 },
+  cycleCard: {
+    flex:            1,
+    backgroundColor: SURFACE,
+    borderRadius:    16,
+    padding:         16,
+    borderWidth:     1.5,
+    borderColor:     BORDER,
+    gap:             6,
+  },
+  cycleCardActive:    { borderColor: ACCENT, backgroundColor: 'rgba(245,166,35,0.08)' },
+  cycleBadgeWrap:     { marginBottom: 2 },
+  cycleBadge: {
+    alignSelf:        'flex-start',
+    backgroundColor:  'rgba(255,255,255,0.08)',
+    borderRadius:     8,
+    paddingHorizontal: 8,
+    paddingVertical:  3,
+  },
+  cycleBadgeAccent:    { backgroundColor: 'rgba(245,166,35,0.15)' },
+  cycleBadgeText:      { fontSize: 11, fontWeight: '600', color: TEXT_MUTED },
+  cycleBadgeTextAccent: { color: ACCENT },
+  cycleTitle:          { fontSize: 20, fontWeight: '700', color: TEXT },
+  cycleTitleActive:    { color: ACCENT },
+  cycleHours:          { fontSize: 14, fontWeight: '500', color: TEXT_SUB },
+  cycleDesc:           { fontSize: 12, color: TEXT_MUTED, lineHeight: 18 },
+
+  // Slide 4 — ARP
+  pickerWrap: {
+    backgroundColor: 'rgba(26,36,54,0.9)',
+    borderRadius:    16,
+    overflow:        'hidden',
+    borderWidth:     1,
+    borderColor:     BORDER,
+  },
+  iosPicker:       { height: 160 },
+  androidTimeBtn:  { paddingVertical: 22, alignItems: 'center' },
+  androidTimeText: {
+    color:         TEXT,
+    fontSize:      38,
+    fontWeight:    '700',
     letterSpacing: 2,
   },
+
+  // Slide 5 — Final
+  finalTitle: {
+    fontSize:   32,
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    color:      ACCENT,
+    textAlign:  'center',
+  },
+  finalSub: {
+    fontSize:   16,
+    color:      TEXT_SUB,
+    textAlign:  'center',
+    lineHeight: 24,
+  },
+
   // Footer
   footer: {
-    paddingBottom: 8,
-  },
-  nextBtn: {
-    backgroundColor: '#22C55E',
-    borderRadius: 14,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  nextBtnDisabled: {
-    backgroundColor: '#15803D',
-    opacity: 0.7,
-  },
-  nextBtnText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
+    paddingHorizontal: 24,
+    paddingTop:        12,
+    paddingBottom:     4,
   },
 });
