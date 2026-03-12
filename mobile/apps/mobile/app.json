@@ -36,7 +36,6 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      "react-native-purchases",
       [
         "expo-navigation-bar",
         {
