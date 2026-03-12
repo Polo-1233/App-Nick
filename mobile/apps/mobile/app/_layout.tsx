@@ -16,9 +16,6 @@ import { AuthProvider, useAuth } from '../lib/auth-context';
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// ─── Configure RevenueCat at module load ─────────────────────────────────────
-configurePurchases();
-
 // ─── Error Boundary ───────────────────────────────────────────────────────────
 
 interface EBState { hasError: boolean }
@@ -188,6 +185,16 @@ function RootLayoutInner() {
 }
 
 export default function RootLayout() {
+  // Configure RevenueCat inside a component so any native module error is
+  // catchable by RootErrorBoundary and doesn't crash the process outright.
+  useEffect(() => {
+    try {
+      configurePurchases();
+    } catch (e) {
+      console.error('[RootLayout] configurePurchases failed:', e);
+    }
+  }, []);
+
   return (
     <GestureHandlerRootView style={ghrv.root}>
       <ThemeProvider>
