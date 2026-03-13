@@ -18,6 +18,7 @@ import {
   Pressable,
   Animated,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MascotImage } from './ui/MascotImage';
@@ -32,6 +33,7 @@ import {
 } from '../lib/storage';
 import { requestCalendar } from '../lib/permissions';
 import { updateProfile } from '../lib/api';
+import { signIn, signUp } from '../lib/supabase';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ function parseHHMM(str: string, fallback: number): number {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PlanStep  = 10 | 11 | 12;
+type PlanStep  = 10 | 11 | 11.5 | 12;
 type CalPhase  = 'typing' | 'awaiting' | 'reacting' | 'done';
 
 interface PlanData {
@@ -352,6 +354,114 @@ interface CalendarStepProps {
   onComplete: () => void;
 }
 
+// ─── Step 11.5 — Login / Create account ──────────────────────────────────────
+
+function LoginStep({ onComplete }: { onComplete: () => void }) {
+  const c = { text: '#E6EDF7', textSub: '#9FB0C5', textMuted: '#6B7F99', accent: '#F5A623', surface2: '#243046', error: '#F87171' };
+  const [mode,     setMode]     = useState<'signin' | 'signup'>('signup');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  async function handleSubmit() {
+    if (!email.trim() || !password.trim()) { setErrorMsg('Please fill in all fields.'); return; }
+    setLoading(true); setErrorMsg('');
+    try {
+      const result = mode === 'signup'
+        ? await signUp(email.trim(), password.trim())
+        : await signIn(email.trim(), password.trim());
+      if (!result.ok) { setErrorMsg(result.error ?? 'Authentication failed.'); setLoading(false); return; }
+      onComplete();
+    } catch {
+      setErrorMsg('Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <View style={ls.root}>
+      <MascotImage emotion="encourageant" size="sm" />
+      <View style={ls.header}>
+        <Text style={[ls.title, { color: c.text }]}>
+          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+        </Text>
+        <Text style={[ls.sub, { color: c.textSub }]}>
+          {mode === 'signup'
+            ? 'Your R90 plan is ready. Save it to your account.'
+            : 'Sign in to continue with your plan.'}
+        </Text>
+      </View>
+
+      {/* Tab toggle */}
+      <View style={[ls.tabs, { backgroundColor: '#1A2436' }]}>
+        {(['signup', 'signin'] as const).map(m => (
+          <Pressable
+            key={m}
+            style={[ls.tab, mode === m && { backgroundColor: '#243046' }]}
+            onPress={() => { setMode(m); setErrorMsg(''); }}
+          >
+            <Text style={[ls.tabText, { color: mode === m ? c.accent : c.textMuted }]}>
+              {m === 'signup' ? 'Create account' : 'Sign in'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Inputs */}
+      <View style={ls.inputs}>
+        <TextInput
+          style={[ls.input, { backgroundColor: c.surface2, color: c.text }]}
+          placeholder="Email"
+          placeholderTextColor={c.textMuted}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          editable={!loading}
+        />
+        <TextInput
+          style={[ls.input, { backgroundColor: c.surface2, color: c.text }]}
+          placeholder="Password"
+          placeholderTextColor={c.textMuted}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+          editable={!loading}
+        />
+      </View>
+
+      {errorMsg ? <Text style={[ls.error, { color: c.error }]}>{errorMsg}</Text> : null}
+
+      <Button
+        variant="primary"
+        size="lg"
+        label={loading ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
+        onPress={() => { void handleSubmit(); }}
+        loading={loading}
+        fullWidth
+      />
+    </View>
+  );
+}
+
+const ls = StyleSheet.create({
+  root:   { flex: 1, paddingHorizontal: 28, justifyContent: 'center', gap: 20 },
+  header: { gap: 6 },
+  title:  { fontSize: 24, fontWeight: '700', textAlign: 'center' },
+  sub:    { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  tabs:   { flexDirection: 'row', borderRadius: 12, padding: 4 },
+  tab:    { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  tabText:{ fontSize: 14, fontWeight: '600' },
+  inputs: { gap: 12 },
+  input:  { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
+  error:  { fontSize: 13, textAlign: 'center' },
+});
+
+// ─── Step 12 — Calendar ───────────────────────────────────────────────────────
+
 function CalendarStep({ plan, onComplete }: CalendarStepProps) {
   const [phase,    setPhase]    = useState<CalPhase>('typing');
   const [messages, setMessages] = useState<CalMsg[]>([]);
@@ -601,19 +711,27 @@ export function OnboardingPlanOverlay({ onComplete }: Props) {
 
     loadPlan();
 
-    // Auto-advance to step 11 after 1.2 s
+    // Auto-advance to step 11 after 6 s — let the user feel the plan is being built
     const t = setTimeout(() => {
       Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
         .start(() => {
           setStep(11);
           Animated.timing(contentAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
         });
-    }, 1200);
+    }, 6000);
     return () => clearTimeout(t);
   }, [contentAnim]);
 
   // ── Step 11 → 12 cross-fade ───────────────────────────────────────────────
-  const handleContinueToCalendar = useCallback(() => {
+  const handleContinueToLogin = useCallback(() => {
+    Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
+      .start(() => {
+        setStep(11.5);
+        Animated.timing(contentAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
+      });
+  }, [contentAnim]);
+
+  const handleLoginComplete = useCallback(() => {
     Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
       .start(() => {
         setStep(12);
@@ -635,7 +753,13 @@ export function OnboardingPlanOverlay({ onComplete }: Props) {
 
         {step === 11 && (
           <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
-            <PlanRevealStep plan={plan} onContinue={handleContinueToCalendar} />
+            <PlanRevealStep plan={plan} onContinue={handleContinueToLogin} />
+          </SafeAreaView>
+        )}
+
+        {step === 11.5 && (
+          <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
+            <LoginStep onComplete={handleLoginComplete} />
           </SafeAreaView>
         )}
 

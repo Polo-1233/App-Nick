@@ -5,6 +5,7 @@ import { DayPlanProvider } from "../../lib/day-plan-context";
 import { ChatProvider } from "../../lib/chat-context";
 import { AirloopChat } from "../../components/AirloopChat";
 import { OfflineBanner } from "../../components/OfflineBanner";
+import { RLoToastProvider } from "../../components/RLoToast";
 import { OnboardingChatOverlay } from "../../components/OnboardingChatOverlay";
 import { OnboardingPlanOverlay } from "../../components/OnboardingPlanOverlay";
 import {
@@ -78,6 +79,9 @@ export default function TabsLayout() {
 
           {/* Offline banner — shows when backend is unreachable */}
           <OfflineBanner />
+
+          {/* R-Lo toast — global in-app notifications from R-Lo */}
+          <RLoToastProvider />
         </View>
       </ChatProvider>
     </DayPlanProvider>

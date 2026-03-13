@@ -16,6 +16,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { showRLoToast } from './RLoToast';
 import {
   getGoogleConnectionState,
   connectGoogleCalendar,
@@ -56,10 +57,7 @@ export function GoogleCalendarConnect({ onConnectionChange }: Props) {
         await load();
         onConnectionChange?.();
       } else if (result.error !== 'cancelled') {
-        Alert.alert(
-          'Connection failed',
-          result.error ?? 'Could not connect to Google Calendar. Please try again.',
-        );
+        showRLoToast("I couldn't connect to your calendar. Please try again.");
       }
     } finally {
       setWorking(false);
