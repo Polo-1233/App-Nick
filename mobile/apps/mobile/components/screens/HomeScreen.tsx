@@ -33,7 +33,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeSkeletonScreen } from "../SkeletonLoader";
-import { ConflictSheet } from "../ConflictSheet";
+
 import { useDayPlanContext } from "../../lib/day-plan-context";
 import { loadProfile, hasCompletedIntro } from "../../lib/storage";
 import { usePremium } from "../../lib/use-premium";
@@ -130,7 +130,7 @@ export default function HomeScreen() {
   const { messages, isStreaming, sendMessage }  = useChat();
 
   const [input,         setInput]         = useState("");
-  const [showConflicts, setShowConflicts] = useState(false);
+
   const [profile,       setProfile]       = useState<UserProfile | null>(null);
 
   const listRef         = useRef<FlatList<ChatMessage>>(null);
@@ -164,12 +164,7 @@ export default function HomeScreen() {
     loadProfile().then(setProfile);
   }, []);
 
-  // ── Surface conflict sheet when day plan has conflicts ────────────────────
-  useEffect(() => {
-    if (dayPlan && dayPlan.conflicts.length > 0) {
-      setShowConflicts(true);
-    }
-  }, [dayPlan]);
+
 
   // ── Auto-scroll when messages update ──────────────────────────────────────
   useEffect(() => {
@@ -311,14 +306,7 @@ export default function HomeScreen() {
 
       </KeyboardAvoidingView>
 
-      {/* ── Conflict sheet ─────────────────────────────────────────────────── */}
-      <ConflictSheet
-        visible={showConflicts}
-        conflicts={dayPlan?.conflicts ?? []}
-        onClose={() => setShowConflicts(false)}
-        onAcknowledge={() => setShowConflicts(false)}
-      />
-
+      
     </SafeAreaView>
   );
 }
