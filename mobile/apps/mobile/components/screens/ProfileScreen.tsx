@@ -269,6 +269,45 @@ export default function ProfileScreen() {
           nestedScrollEnabled
         >
 
+          {/* ── Premium Banner — top of screen, always visible ── */}
+          <Pressable
+            onPress={() => router.push('/subscription')}
+            style={[
+              s.premiumBanner,
+              isPremium
+                ? { backgroundColor: `${c.accent}18`, borderColor: `${c.accent}50` }
+                : { backgroundColor: '#1A2436', borderColor: `${c.accent}40` },
+            ]}
+          >
+            <View style={s.premiumBannerLeft}>
+              <View style={[s.premiumIconCircle, { backgroundColor: `${c.accent}20` }]}>
+                <Ionicons
+                  name={isPremium ? 'star' : 'star-outline'}
+                  size={20}
+                  color={c.accent}
+                />
+              </View>
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={[s.premiumBannerTitle, { color: c.text }]}>
+                  {isPremium ? 'R90 Premium — Active' : 'Upgrade to R90 Premium'}
+                </Text>
+                <Text style={[s.premiumBannerSub, { color: c.textSub }]}>
+                  {isPremium
+                    ? 'Full access to insights & coaching'
+                    : 'Advanced insights, AI coaching & more'}
+                </Text>
+              </View>
+            </View>
+            {!isPremium && (
+              <View style={[s.premiumBannerCta, { backgroundColor: c.accent }]}>
+                <Text style={s.premiumBannerCtaText}>Upgrade</Text>
+              </View>
+            )}
+            {isPremium && (
+              <Ionicons name="checkmark-circle" size={22} color={c.accent} />
+            )}
+          </Pressable>
+
           {/* ── Section 1 — Identity ── */}
           <View style={s.identitySection}>
             <View style={[s.avatar, { backgroundColor: c.accent }]}>
@@ -284,38 +323,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-
-          {/* ── Premium Banner ── */}
-          <Pressable
-            onPress={() => router.push('/subscription')}
-            style={[
-              s.premiumBanner,
-              isPremium
-                ? { backgroundColor: `${c.accent}18`, borderColor: `${c.accent}40` }
-                : { backgroundColor: `${c.accent}10`, borderColor: `${c.accent}30` },
-            ]}
-          >
-            <View style={s.premiumBannerLeft}>
-              <Ionicons
-                name={isPremium ? 'star' : 'star-outline'}
-                size={22}
-                color={c.accent}
-              />
-              <View style={{ marginLeft: 12 }}>
-                <Text style={[s.premiumBannerTitle, { color: c.text }]}>
-                  {isPremium ? 'R90 Premium' : 'Upgrade to Premium'}
-                </Text>
-                <Text style={[s.premiumBannerSub, { color: c.textSub }]}>
-                  {isPremium ? 'Active — thank you 🙌' : 'Unlock advanced insights & coaching'}
-                </Text>
-              </View>
-            </View>
-            {!isPremium && (
-              <View style={[s.premiumBannerCta, { backgroundColor: c.accent }]}>
-                <Text style={s.premiumBannerCtaText}>Upgrade</Text>
-              </View>
-            )}
-          </Pressable>
 
           {/* ── Section 2 — Readiness Zone ── */}
           <View style={s.section}>
@@ -670,6 +677,13 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems:    'center',
     flex:          1,
+  },
+  premiumIconCircle: {
+    width:          40,
+    height:         40,
+    borderRadius:   20,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
   premiumBannerTitle: {
     fontSize:   15,
