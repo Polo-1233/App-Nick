@@ -257,7 +257,7 @@ export default function OnboardingScreen() {
 
   const nextLabel =
     page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Begin with R-Lo') :
-    page === 3               ? "Let's begin" :
+    page === 3               ? 'Begin with R-Lo' :
     'Continue';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -427,21 +427,18 @@ export default function OnboardingScreen() {
 
             </View>
 
-            {/* ── Slide 3: Meet R-Lo ────────────────────────────────────── */}
+            {/* ── Slide 3: Meet R-Lo — Duolingo style ──────────────────── */}
             <View style={[s.slide3, { width: windowWidth }]}>
               <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
 
-                {/* Title */}
-                <Text style={s.slide3Title}>Meet R-Lo</Text>
-
-                {/* Mascot with turquoise ambient glow */}
+                {/* Mascot — large, centered, gently breathing */}
                 <View style={s.slide3MascotArea}>
                   <Animated.View
                     style={[
                       s.slide3Glow,
                       {
-                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }),
-                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.14] }) }],
+                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.20, 0.06] }),
+                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.16] }) }],
                       },
                     ]}
                   />
@@ -454,10 +451,16 @@ export default function OnboardingScreen() {
                   </Animated.View>
                 </View>
 
-                {/* Body */}
-                <View style={s.slide3BodyGroup}>
-                  <Text style={s.slide3Body}>{"Your personal\nsleep coach."}</Text>
-                  <Text style={s.slide3Body}>{"I'll help you align\nyour day with your biology."}</Text>
+                {/* Speech bubble — Duolingo style */}
+                <View style={s.slide3BubbleWrap}>
+                  {/* Triangle pointer pointing up toward mascot */}
+                  <View style={s.slide3BubbleTip} />
+                  <View style={s.slide3Bubble}>
+                    <Text style={s.slide3BubbleName}>R-Lo</Text>
+                    <Text style={s.slide3BubbleText}>
+                      {"Hi! I'm your personal sleep coach.\nI'll help you align your day\nwith your biology."}
+                    </Text>
+                  </View>
                 </View>
 
               </Animated.View>
@@ -752,47 +755,69 @@ const s = StyleSheet.create({
     borderRadius:    1,
   },
 
-  // ── Slide 3 — Meet R-Lo ───────────────────────────────────────────────────
+  // ── Slide 3 — Meet R-Lo (Duolingo style) ─────────────────────────────────
   slide3: {
     flex:              1,
     paddingHorizontal: 32,
     alignItems:        'center',
   },
   slide3Content: {
-    flex:       1,
-    width:      '100%',
-    alignItems: 'center',
+    flex:           1,
+    width:          '100%',
+    alignItems:     'center',
     justifyContent: 'center',
-    gap:        24,
-  },
-  slide3Title: {
-    fontSize:      34,
-    fontFamily:    'Inter-Bold',
-    fontWeight:    '700',
-    color:         TEXT,
-    textAlign:     'center',
-    letterSpacing: -0.5,
+    gap:            0,
   },
   slide3MascotArea: {
     alignItems:     'center',
     justifyContent: 'center',
+    marginBottom:   -8,
   },
   slide3Glow: {
     position:        'absolute',
-    width:           300,
-    height:          300,
-    borderRadius:    150,
+    width:           260,
+    height:          260,
+    borderRadius:    130,
     backgroundColor: ACCENT,
   },
-  slide3BodyGroup: {
+
+  // Speech bubble
+  slide3BubbleWrap: {
     alignItems: 'center',
-    gap:        18,
+    width:      '100%',
   },
-  slide3Body: {
+  slide3BubbleTip: {
+    width:             0,
+    height:            0,
+    borderLeftWidth:   12,
+    borderRightWidth:  12,
+    borderBottomWidth: 14,
+    borderLeftColor:   'transparent',
+    borderRightColor:  'transparent',
+    borderBottomColor: SURFACE,
+  },
+  slide3Bubble: {
+    backgroundColor:   SURFACE,
+    borderRadius:      20,
+    paddingHorizontal: 24,
+    paddingVertical:   20,
+    width:             '100%',
+    alignItems:        'center',
+    gap:               8,
+  },
+  slide3BubbleName: {
+    fontSize:      12,
+    fontFamily:    'Inter-SemiBold',
+    fontWeight:    '600',
+    color:         ACCENT,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  slide3BubbleText: {
     fontSize:   17,
     fontFamily: 'Inter-Regular',
     fontWeight: '400',
-    color:      TEXT_SUB,
+    color:      TEXT,
     textAlign:  'center',
     lineHeight: 27,
   },
