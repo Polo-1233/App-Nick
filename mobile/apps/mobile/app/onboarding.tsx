@@ -621,13 +621,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
   },
 
-  // Title — absolute, centered horizontally in the top half
+  // Title — absolute, floats between progress bar and top of circle.
+  // Circle center ≈ 50% of slide; circle top ≈ 35%. Title centered in 0→35% zone.
   titleArea: {
     position:          'absolute',
     top:               0,
     left:              24,
     right:             24,
-    height:            '45%',
+    height:            '34%',
     alignItems:        'center',
     justifyContent:    'center',
   },
