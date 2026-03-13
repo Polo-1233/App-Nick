@@ -765,9 +765,9 @@ const s = StyleSheet.create({
     flex:              1,
     paddingHorizontal: 32,
     alignItems:        'center',
+    justifyContent:    'center',
   },
   slide3Content: {
-    flex:           1,
     width:          '100%',
     alignItems:     'center',
     justifyContent: 'center',
