@@ -53,8 +53,8 @@ import { usePremium } from '../../lib/use-premium';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
 import { CalendarSkeletonScreen } from '../SkeletonLoader';
-import { MascotImage } from '../ui/MascotImage';
-import { BottomAdviceBanner } from '../BottomAdviceBanner';
+
+
 import { PremiumGate } from '../PremiumGate';
 import { EventSheet } from '../calendar/EventSheet';
 import { CalendarTopPills, type ViewMode } from '../calendar/CalendarTopPills';
@@ -96,12 +96,7 @@ function phantomBlocks(profile: UserProfile): TimeBlock[] {
   ];
 }
 
-function getAdviceMessage(zone?: ReadinessZone): string {
-  if (zone === 'green')  return 'Looking good. Protect your pre-sleep window tonight.';
-  if (zone === 'yellow') return 'Stay consistent with your anchor to rebuild rhythm.';
-  if (zone === 'orange') return 'Focus on hitting your anchor time — consistency is the reset.';
-  return 'Keep your anchor time fixed and let the cycles do the rest.';
-}
+
 
 // ─── CalendarScreen ───────────────────────────────────────────────────────────
 
@@ -143,7 +138,7 @@ export default function CalendarScreen() {
   const zone       = dayPlan?.readiness.zone ?? null;
 
   const todayCycles  = dayPlan?.readiness.recentCycles[0];
-  const adviceMsg    = useMemo(() => getAdviceMessage(zone ?? undefined), [zone]);
+
 
   // ── Load static data once ───────────────────────────────────────────────────
 
@@ -257,7 +252,7 @@ export default function CalendarScreen() {
   if (!dayPlan) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 }}>
-        <MascotImage emotion="rassurante" size="md" />
+        <Ionicons name="moon-outline" size={40} color={theme.colors.textMuted} />
         <Text style={{ color: theme.colors.textSub, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
           No plan for today. Log a night to get started.
         </Text>
@@ -266,9 +261,7 @@ export default function CalendarScreen() {
   }
 
   // ── FAB position ─────────────────────────────────────────────────────────────
-  // CalendarScreen fills the space above the tab bar (the pager handles that).
-  // BANNER_H (≈ 80 px) accounts for the BottomAdviceBanner floating above the tab bar.
-  const fabBottom = BANNER_H + 12;
+  const fabBottom = 20;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -319,8 +312,7 @@ export default function CalendarScreen() {
         )}
       </View>
 
-      {/* ─── Bottom advice banner ─── */}
-      <BottomAdviceBanner message={adviceMsg} />
+
 
       {/* ─── FAB "+" (Google Calendar style) ─── */}
       <View

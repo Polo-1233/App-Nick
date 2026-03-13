@@ -213,6 +213,7 @@ interface SettingsModalProps {
   onThemeChange:   (m: ThemeMode) => void;
   onSave:          (updates: Partial<UserProfile>) => Promise<void>;
   onSignOut:       () => void;
+  onReset:         () => void;
   windDownEnabled:      boolean;
   windDownMusicEnabled: boolean;
   onWindDownChange:      (v: boolean) => void;
@@ -221,7 +222,7 @@ interface SettingsModalProps {
 
 function SettingsModal({
   visible, onClose, profile, themeMode, onThemeChange,
-  onSave, onSignOut, windDownEnabled, windDownMusicEnabled,
+  onSave, onSignOut, onReset, windDownEnabled, windDownMusicEnabled,
   onWindDownChange, onWindDownMusicChange,
 }: SettingsModalProps) {
   const [editAnchorDate,       setEditAnchorDate]       = useState(() => minutesToDate(profile.anchorTime ?? 390));
@@ -365,6 +366,17 @@ function SettingsModal({
             <Row icon="log-out-outline" label="Sign out" danger onPress={onSignOut} />
           </View>
 
+          {/* Reset */}
+          <Text style={sm.section}>Data</Text>
+          <View style={sm.group}>
+            <Row
+              icon="refresh-outline"
+              label="Reset & restart onboarding"
+              danger
+              onPress={onReset}
+            />
+          </View>
+
           <View style={{ height: 40 }} />
         </ScrollView>
 
@@ -459,6 +471,25 @@ export default function ProfileScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => { void logout(); } },
     ]);
+  }
+
+  function handleReset() {
+    Alert.alert(
+      'Reset everything?',
+      'This will delete all your sleep data and restart the onboarding. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await clearAllStorage();
+            await logout();
+            router.replace('/onboarding');
+          },
+        },
+      ],
+    );
   }
 
   async function handleWindDownChange(v: boolean) {
@@ -593,6 +624,7 @@ export default function ProfileScreen() {
           onThemeChange={m => { HapticsLight(); setThemeMode(m); }}
           onSave={handleSaveProfile}
           onSignOut={() => { setShowSettings(false); void handleSignOut(); }}
+          onReset={() => { setShowSettings(false); handleReset(); }}
           windDownEnabled={windDownEnabled}
           windDownMusicEnabled={windDownMusicEnabled}
           onWindDownChange={v => { void handleWindDownChange(v); }}
