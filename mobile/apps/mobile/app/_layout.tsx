@@ -137,10 +137,14 @@ function RootLayoutInner() {
   useEffect(() => {
     if (!dataReady || !splashDone || authLoading || hasRedirected.current) return;
     hasRedirected.current = true;
-    if (!isAuthenticated) {
-      router.replace('/login');
-    } else if (!hasIntro) {
+    if (!hasIntro) {
+      // Not done onboarding yet — send to onboarding regardless of auth state.
+      // Login is collected INSIDE the onboarding flow (step 11.5 in OnboardingPlanOverlay),
+      // just before the calendar access request.
       router.replace('/onboarding');
+    } else if (!isAuthenticated) {
+      // Completed onboarding but not logged in (e.g. after sign-out).
+      router.replace('/login');
     }
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
 
