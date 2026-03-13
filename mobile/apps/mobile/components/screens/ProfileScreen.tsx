@@ -55,7 +55,7 @@ const C = {
   bg:        '#0B1220',
   card:      '#1A2436',
   surface2:  '#243046',
-  accent:    '#F5A623',
+  accent:    '#4DA3FF',
   secondary: '#4DA3FF',
   success:   '#3DDC97',
   text:      '#E6EDF7',
