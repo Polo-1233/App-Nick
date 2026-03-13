@@ -1,32 +1,33 @@
 /**
- * Profile screen — R90 Navigator redesign.
+ * ProfileScreen — R90 Navigator V2
  *
- * Layout (top → bottom):
- *   1. Identity — avatar (initials) · name/email · Free/Premium badge
- *   2. Readiness Zone — elevated card with zone badge, thresholds
- *   3. Stats Week — 2×2 grid (cycles / target / avg / best night)
- *   4. Calendar Sync — GoogleCalendarConnect + CalendarSelector + WriteBackCalendarPicker + CalendarSyncStatus
- *   5. Settings — ARP Time · Chronotype · Notifications · Theme · Premium · Sign out
- *   6. About — version · delete data
+ * Layout:
+ *   1. Header — avatar initials + name
+ *   2. Cycle Progress Widget — circular arc (pure RN, no SVG)
+ *   3. Two main cards — Premium + Sleep History
+ *   4. Secondary menu — 4 options
+ *   5. Settings modal (bottom sheet inline)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Pressable,
+  Modal,
   Switch,
   Alert,
+  Animated,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Chronotype, NightRecord, UserProfile } from '@r90/types';
-import { useDayPlanContext } from '../../lib/day-plan-context';
 import { usePremiumGate } from '../../lib/use-premium-gate';
 import {
   loadProfile,
@@ -39,23 +40,30 @@ import { useTheme } from '../../lib/theme-context';
 import type { ThemeMode } from '../../lib/theme';
 import { useAuth } from '../../lib/auth-context';
 import { ProfileSkeletonScreen } from '../SkeletonLoader';
-import { CalendarSelector } from '../CalendarSelector';
 import { GoogleCalendarConnect } from '../GoogleCalendarConnect';
-import { WriteBackCalendarPicker } from '../WriteBackCalendarPicker';
-import { CalendarSyncStatus } from '../CalendarSyncStatus';
-import { Card } from '../ui/Card';
-import { Badge } from '../ui/Badge';
 import { HapticsLight } from '../../utils/haptics';
 import {
   loadWindDownEnabled,
   saveWindDownEnabled,
   loadWindDownMusicEnabled,
   saveWindDownMusicEnabled,
-  ensureNotificationsPermissionSoft,
-  cancelWindDownNotification,
 } from '../../lib/wind-down';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+
+const C = {
+  bg:        '#0B1220',
+  card:      '#1A2436',
+  surface2:  '#243046',
+  accent:    '#F5A623',
+  secondary: '#4DA3FF',
+  success:   '#3DDC97',
+  text:      '#E6EDF7',
+  textSub:   '#9FB0C5',
+  textMuted: '#6B7F99',
+  error:     '#F87171',
+  border:    'rgba(255,255,255,0.07)',
+};
 
 const APP_VERSION = '0.1.0';
 
@@ -71,17 +79,11 @@ const APPEARANCE_LABEL: Record<ThemeMode, string> = {
   dark:   'Dark',
 };
 
-const ZONE_CONFIG = {
-  green:  { label: 'Ready',    color: '#3DDC97', icon: 'checkmark-circle-outline' as const },
-  yellow: { label: 'Building', color: '#F5A623', icon: 'trending-up-outline' as const },
-  orange: { label: 'Recovery', color: '#F87171', icon: 'moon-outline' as const },
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function minutesToDate(minutes: number): Date {
+function minutesToDate(m: number): Date {
   const d = new Date();
-  d.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  d.setHours(Math.floor(m / 60), m % 60, 0, 0);
   return d;
 }
 
@@ -89,56 +91,355 @@ function formatMinutes(m: number): string {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-// ── Screen ────────────────────────────────────────────────────────────────────
+// ── Circular Progress (pure RN — no SVG) ─────────────────────────────────────
+// Uses two rotating half-discs to draw an arc.
+// progress: 0.0 → 1.0
+
+const RING = 180;
+const STROKE = 10;
+const HALF = RING / 2;
+
+function CircularProgress({ progress, done, total }: { progress: number; done: number; total: number }) {
+  const clamp = Math.min(Math.max(progress, 0), 1);
+
+  // Right half always shows accent when progress > 0
+  // Left half shows accent only when progress > 0.5
+  const rightDeg = clamp <= 0.5 ? clamp * 360 : 180;
+  const leftDeg  = clamp > 0.5  ? (clamp - 0.5) * 360 : 0;
+
+  return (
+    <View style={cp.wrap}>
+      {/* Background ring */}
+      <View style={cp.bgRing} />
+
+      {/* Right half progress */}
+      <View style={[cp.halfBox, cp.rightBox]}>
+        <View style={[cp.halfMask, { transform: [{ rotate: `${rightDeg}deg` }] }]}>
+          <View style={cp.halfDisc} />
+        </View>
+      </View>
+
+      {/* Left half progress — only visible when > 50% */}
+      {clamp > 0.5 && (
+        <View style={[cp.halfBox, cp.leftBox]}>
+          <View style={[cp.halfMask, { transform: [{ rotate: `${leftDeg}deg` }] }]}>
+            <View style={[cp.halfDisc, { left: 0 }]} />
+          </View>
+        </View>
+      )}
+
+      {/* Center content */}
+      <View style={cp.center} pointerEvents="none">
+        <Text style={cp.doneText}>{done}</Text>
+        <Text style={cp.slashText}>/ {total}</Text>
+        <Text style={cp.labelText}>cycles</Text>
+      </View>
+    </View>
+  );
+}
+
+const cp = StyleSheet.create({
+  wrap: {
+    width:           RING,
+    height:          RING,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  bgRing: {
+    position:        'absolute',
+    width:           RING,
+    height:          RING,
+    borderRadius:    HALF,
+    borderWidth:     STROKE,
+    borderColor:     C.surface2,
+  },
+  halfBox: {
+    position:        'absolute',
+    width:           HALF,
+    height:          RING,
+    overflow:        'hidden',
+  },
+  rightBox: { left: HALF },
+  leftBox:  { left: 0 },
+  halfMask: {
+    width:           HALF,
+    height:          RING,
+    overflow:        'hidden',
+    transformOrigin: 'left center',
+  },
+  halfDisc: {
+    position:        'absolute',
+    right:           0,
+    width:           HALF,
+    height:          RING,
+    borderTopRightRadius:    HALF,
+    borderBottomRightRadius: HALF,
+    backgroundColor: C.accent,
+  },
+  center: {
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            0,
+  },
+  doneText: {
+    fontSize:   42,
+    fontWeight: '900',
+    color:      C.text,
+    lineHeight: 48,
+  },
+  slashText: {
+    fontSize:   18,
+    fontWeight: '600',
+    color:      C.textSub,
+    marginTop:  2,
+  },
+  labelText: {
+    fontSize:   12,
+    fontWeight: '500',
+    color:      C.textMuted,
+    marginTop:  2,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+});
+
+// ── Settings Modal ────────────────────────────────────────────────────────────
+
+interface SettingsModalProps {
+  visible:         boolean;
+  onClose:         () => void;
+  profile:         UserProfile;
+  themeMode:       ThemeMode;
+  onThemeChange:   (m: ThemeMode) => void;
+  onSave:          (updates: Partial<UserProfile>) => Promise<void>;
+  onSignOut:       () => void;
+  windDownEnabled:      boolean;
+  windDownMusicEnabled: boolean;
+  onWindDownChange:      (v: boolean) => void;
+  onWindDownMusicChange: (v: boolean) => void;
+}
+
+function SettingsModal({
+  visible, onClose, profile, themeMode, onThemeChange,
+  onSave, onSignOut, windDownEnabled, windDownMusicEnabled,
+  onWindDownChange, onWindDownMusicChange,
+}: SettingsModalProps) {
+  const [editAnchorDate,       setEditAnchorDate]       = useState(() => minutesToDate(profile.anchorTime ?? 390));
+  const [editChronotype,       setEditChronotype]       = useState<Chronotype>(profile.chronotype ?? 'Neither');
+  const [showAnchorPicker,     setShowAnchorPicker]     = useState(false);
+  const [showChronoExpand,     setShowChronoExpand]     = useState(false);
+  const [showAppearanceExpand, setShowAppearanceExpand] = useState(false);
+  const [isSaving,             setIsSaving]             = useState(false);
+
+  const anchorMin = editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes();
+
+  async function handleSave() {
+    setIsSaving(true);
+    await onSave({ anchorTime: anchorMin, chronotype: editChronotype });
+    setIsSaving(false);
+    onClose();
+  }
+
+  const Row = ({ icon, label, value, onPress, danger }: {
+    icon: string; label: string; value?: string; onPress?: () => void; danger?: boolean;
+  }) => (
+    <Pressable style={sm.row} onPress={onPress}>
+      <View style={sm.rowLeft}>
+        <Ionicons name={icon as any} size={18} color={danger ? C.error : C.textSub} />
+        <Text style={[sm.rowLabel, danger && { color: C.error }]}>{label}</Text>
+      </View>
+      {value ? <Text style={sm.rowValue}>{value}</Text> : null}
+      {onPress && !danger && <Ionicons name="chevron-forward" size={14} color={C.textMuted} />}
+    </Pressable>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={sm.root}>
+        <View style={sm.header}>
+          <Text style={sm.title}>Settings</Text>
+          <Pressable onPress={onClose} hitSlop={8}>
+            <Ionicons name="close" size={22} color={C.textSub} />
+          </Pressable>
+        </View>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Sleep settings */}
+          <Text style={sm.section}>Sleep</Text>
+          <View style={sm.group}>
+            <Row
+              icon="time-outline"
+              label="Wake-up time (ARP)"
+              value={formatMinutes(anchorMin)}
+              onPress={() => setShowAnchorPicker(v => !v)}
+            />
+            {showAnchorPicker && (
+              <DateTimePicker
+                value={editAnchorDate}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(_, d) => d && setEditAnchorDate(d)}
+              />
+            )}
+            <Row
+              icon="body-outline"
+              label="Chronotype"
+              value={CHRONOTYPE_LABEL[editChronotype]}
+              onPress={() => setShowChronoExpand(v => !v)}
+            />
+            {showChronoExpand && (
+              <View style={sm.expandBox}>
+                {(['AMer', 'Neither', 'PMer'] as Chronotype[]).map(ct => (
+                  <Pressable key={ct} style={sm.expandRow} onPress={() => setEditChronotype(ct)}>
+                    <Text style={[sm.expandLabel, editChronotype === ct && { color: C.accent }]}>
+                      {CHRONOTYPE_LABEL[ct]}
+                    </Text>
+                    {editChronotype === ct && <Ionicons name="checkmark" size={16} color={C.accent} />}
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Wind-down */}
+          <Text style={sm.section}>Wind-down</Text>
+          <View style={sm.group}>
+            <View style={sm.row}>
+              <View style={sm.rowLeft}>
+                <Ionicons name="moon-outline" size={18} color={C.textSub} />
+                <Text style={sm.rowLabel}>Wind-down reminder</Text>
+              </View>
+              <Switch
+                value={windDownEnabled}
+                onValueChange={onWindDownChange}
+                trackColor={{ false: C.surface2, true: C.accent }}
+                thumbColor={C.text}
+              />
+            </View>
+            <View style={sm.row}>
+              <View style={sm.rowLeft}>
+                <Ionicons name="musical-notes-outline" size={18} color={C.textSub} />
+                <Text style={sm.rowLabel}>Wind-down music</Text>
+              </View>
+              <Switch
+                value={windDownMusicEnabled}
+                onValueChange={onWindDownMusicChange}
+                trackColor={{ false: C.surface2, true: C.accent }}
+                thumbColor={C.text}
+              />
+            </View>
+          </View>
+
+          {/* Appearance */}
+          <Text style={sm.section}>Appearance</Text>
+          <View style={sm.group}>
+            <Row
+              icon="contrast-outline"
+              label="Theme"
+              value={APPEARANCE_LABEL[themeMode]}
+              onPress={() => setShowAppearanceExpand(v => !v)}
+            />
+            {showAppearanceExpand && (
+              <View style={sm.expandBox}>
+                {(['system', 'light', 'dark'] as ThemeMode[]).map(m => (
+                  <Pressable key={m} style={sm.expandRow} onPress={() => onThemeChange(m)}>
+                    <Text style={[sm.expandLabel, themeMode === m && { color: C.accent }]}>
+                      {APPEARANCE_LABEL[m]}
+                    </Text>
+                    {themeMode === m && <Ionicons name="checkmark" size={16} color={C.accent} />}
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* Calendar */}
+          <Text style={sm.section}>Calendar</Text>
+          <View style={sm.group}>
+            <GoogleCalendarConnect />
+          </View>
+
+          {/* Account */}
+          <Text style={sm.section}>Account</Text>
+          <View style={sm.group}>
+            <Row icon="log-out-outline" label="Sign out" danger onPress={onSignOut} />
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+
+        {/* Save button */}
+        <View style={sm.footer}>
+          <Pressable
+            style={[sm.saveBtn, { backgroundColor: C.accent }]}
+            onPress={() => { void handleSave(); }}
+            disabled={isSaving}
+          >
+            <Text style={sm.saveBtnText}>{isSaving ? 'Saving…' : 'Save changes'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const sm = StyleSheet.create({
+  root:        { flex: 1, backgroundColor: C.bg },
+  header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 24 },
+  title:       { fontSize: 20, fontWeight: '700', color: C.text },
+  section:     { fontSize: 11, fontWeight: '600', color: C.textMuted, letterSpacing: 1, textTransform: 'uppercase', marginHorizontal: 20, marginTop: 20, marginBottom: 6 },
+  group:       { backgroundColor: C.card, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden' },
+  row:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
+  rowLeft:     { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  rowLabel:    { fontSize: 15, color: C.text, fontWeight: '500' },
+  rowValue:    { fontSize: 14, color: C.textSub, marginRight: 6 },
+  expandBox:   { backgroundColor: C.surface2, paddingHorizontal: 16 },
+  expandRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
+  expandLabel: { fontSize: 14, color: C.textSub },
+  footer:      { padding: 16, paddingBottom: 28 },
+  saveBtn:     { borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0B1220' },
+});
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-  const { theme, mode: themeMode, setMode: setThemeMode, immersiveMode, setImmersiveMode } = useTheme();
-  const { dayPlan, refreshPlan } = useDayPlanContext();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const { session, logout } = useAuth();
   const router = useRouter();
   const { isPremium } = usePremiumGate();
 
   const [profile,     setProfile]     = useState<UserProfile | null>(null);
   const [weekHistory, setWeekHistory] = useState<NightRecord[]>([]);
-  const [firstName,   setFirstName]   = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError,   setDataError]   = useState<string | null>(null);
-
-  // Settings edit state
-  const [editAnchorDate,       setEditAnchorDate]       = useState(new Date());
-  const [editChronotype,       setEditChronotype]       = useState<Chronotype>('Neither');
-  const [showAnchorPicker,     setShowAnchorPicker]     = useState(false);
-  const [showChronoExpand,     setShowChronoExpand]     = useState(false);
-  const [showAppearanceExpand, setShowAppearanceExpand] = useState(false);
-  const [hasChanges,           setHasChanges]           = useState(false);
-  const [isSaving,             setIsSaving]             = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [windDownEnabled,      setWindDownEnabled]      = useState(false);
   const [windDownMusicEnabled, setWindDownMusicEnabled] = useState(false);
 
-  useEffect(() => {
-    void loadData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadData() {
     setDataLoading(true);
     setDataError(null);
     try {
-      const [p, history, onboarding, windDownEn, windDownMusicEn] = await Promise.all([
+      const [p, history, onboarding, wd, wdm] = await Promise.all([
         loadProfile(),
         loadWeekHistory(),
         loadOnboardingData(),
         loadWindDownEnabled(),
         loadWindDownMusicEnabled(),
       ]);
-      if (p) {
-        setProfile(p);
-        setEditAnchorDate(minutesToDate(p.anchorTime));
-        setEditChronotype(p.chronotype);
-      }
+      if (!p) { setDataError('Could not load your profile.'); return; }
+      setProfile(p);
       setWeekHistory(history);
-      if (onboarding?.firstName) setFirstName(onboarding.firstName);
-      setWindDownEnabled(windDownEn);
-      setWindDownMusicEnabled(windDownMusicEn);
+      setWindDownEnabled(wd);
+      setWindDownMusicEnabled(wdm);
+
+      const rawName = onboarding?.firstName ?? session?.user?.email ?? '';
+      const firstWord = rawName.split(/[\s@]/)[0] ?? '';
+      setDisplayName(firstWord || 'You');
     } catch {
       setDataError('Could not load your profile. Please try again.');
     } finally {
@@ -146,717 +447,264 @@ export default function ProfileScreen() {
     }
   }
 
-  function onAnchorChange(date: Date) {
-    setEditAnchorDate(date);
+  async function handleSaveProfile(updates: Partial<UserProfile>) {
     if (!profile) return;
-    const newMin = date.getHours() * 60 + date.getMinutes();
-    setHasChanges(newMin !== profile.anchorTime || editChronotype !== profile.chronotype);
+    const updated = { ...profile, ...updates };
+    setProfile(updated);
+    await saveProfile(updated);
   }
 
-  function onChronotypeChange(type: Chronotype) {
-    setEditChronotype(type);
-    setShowChronoExpand(false);
-    if (!profile) return;
-    const newMin = editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes();
-    setHasChanges(type !== profile.chronotype || newMin !== profile.anchorTime);
+  async function handleSignOut() {
+    Alert.alert('Sign out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => { void logout(); } },
+    ]);
   }
 
-  async function handleWindDownToggle(val: boolean) {
-    if (val) {
-      const status = await ensureNotificationsPermissionSoft();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Notifications required',
-          'Enable notifications in your device Settings to use wind-down reminders.',
-        );
-        return;
-      }
-    } else {
-      await cancelWindDownNotification();
-    }
-    await saveWindDownEnabled(val);
-    setWindDownEnabled(val);
+  async function handleWindDownChange(v: boolean) {
+    setWindDownEnabled(v);
+    await saveWindDownEnabled(v);
   }
 
-  async function handleWindDownMusicToggle(val: boolean) {
-    await saveWindDownMusicEnabled(val);
-    setWindDownMusicEnabled(val);
+  async function handleWindDownMusicChange(v: boolean) {
+    setWindDownMusicEnabled(v);
+    await saveWindDownMusicEnabled(v);
   }
 
-  async function handleSaveSettings() {
-    if (!profile || !hasChanges) return;
-    setIsSaving(true);
-    try {
-      const updated: UserProfile = {
-        ...profile,
-        anchorTime: editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes(),
-        chronotype: editChronotype,
-      };
-      await saveProfile(updated);
-      setProfile(updated);
-      setHasChanges(false);
-      HapticsLight();
-      refreshPlan();
-    } catch {
-      Alert.alert('Error', 'Could not save settings. Try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function handleDeleteData() {
-    Alert.alert(
-      'Delete all data',
-      'This will erase your profile, sleep history, and all records. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete everything',
-          style: 'destructive',
-          onPress: async () => {
-            await clearAllStorage();
-            router.replace('/onboarding');
-          },
-        },
-      ],
-    );
-  }
-
+  // ── Loading / error ──
   if (dataLoading) return <ProfileSkeletonScreen />;
-
   if (dataError || !profile) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', gap: 20, padding: 32 }}>
-        <Text style={{ color: theme.colors.textSub, fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: C.textSub, fontSize: 15, textAlign: 'center', paddingHorizontal: 32 }}>
           {dataError ?? 'Profile not available.'}
         </Text>
-        <Pressable
-          style={{ backgroundColor: theme.colors.surface, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}
-          onPress={() => { void loadData(); }}
-        >
-          <Text style={{ color: theme.colors.text, fontSize: 15, fontWeight: '600' }}>Try again</Text>
+        <Pressable style={{ marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: C.accent, borderRadius: 12 }} onPress={() => { void loadData(); }}>
+          <Text style={{ color: '#0B1220', fontWeight: '700' }}>Retry</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  const c = theme.colors;
-
-  const weeklyTotal  = dayPlan?.readiness.weeklyTotal
-    ?? weekHistory.reduce((sum, n) => sum + n.cyclesCompleted, 0);
-  const weeklyTarget = profile.weeklyTarget ?? 35;
-  const zone         = dayPlan?.readiness.zone ?? 'green';
-  const zoneStatus   = dayPlan?.zoneStatus ?? 'experimental';
-  const zoneConfig   = ZONE_CONFIG[zone] ?? ZONE_CONFIG.yellow;
-
-  const avgCycles = weekHistory.length > 0
-    ? (weekHistory.reduce((sum, n) => sum + n.cyclesCompleted, 0) / weekHistory.length).toFixed(1)
-    : '—';
-  const bestNight = weekHistory.length > 0
-    ? Math.max(...weekHistory.map(n => n.cyclesCompleted))
-    : 0;
-
-  const userEmail    = session?.user?.email ?? '';
-  const avatarLetter = (firstName?.[0] ?? userEmail[0] ?? 'U').toUpperCase();
-  const displayName  = firstName || userEmail || 'You';
+  // ── Stats ──
+  const weekCycles  = weekHistory.reduce((s, n) => s + n.cyclesCompleted, 0);
+  const weekTarget  = profile.weeklyTarget ?? 35;
+  const progress    = weekTarget > 0 ? weekCycles / weekTarget : 0;
+  const remaining   = Math.max(weekTarget - weekCycles, 0);
+  const avatarLetter = displayName.charAt(0).toUpperCase() || '?';
 
   return (
-    <View style={[s.root, { backgroundColor: c.background }]}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top', 'left', 'right']}>
-        <ScrollView
-          contentContainerStyle={s.scroll}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-        >
+    <SafeAreaView style={s.root} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-          {/* ── Premium Banner — top of screen, always visible ── */}
+        {/* ── Settings button top-right ── */}
+        <Pressable style={s.settingsBtn} onPress={() => setShowSettings(true)} hitSlop={8}>
+          <Ionicons name="settings-outline" size={22} color={C.textSub} />
+        </Pressable>
+
+        {/* ── 1. Header ── */}
+        <View style={s.header}>
+          <View style={[s.avatar, { backgroundColor: C.accent }]}>
+            <Text style={s.avatarText}>{avatarLetter}</Text>
+          </View>
+          <Text style={s.userName}>{displayName}</Text>
+        </View>
+
+        {/* ── 2. Cycle progress widget ── */}
+        <View style={s.widgetCard}>
+          <Text style={s.widgetTitle}>This week</Text>
+          <View style={s.widgetRing}>
+            <CircularProgress progress={progress} done={weekCycles} total={weekTarget} />
+          </View>
+          <Text style={s.widgetSub}>
+            {remaining === 0
+              ? '🎉 Weekly goal reached!'
+              : `${remaining} cycles remaining to reach your goal`}
+          </Text>
+        </View>
+
+        {/* ── 3. Cards ── */}
+        <View style={s.cards}>
+          {/* Premium card */}
           <Pressable
-            onPress={() => router.push('/subscription')}
-            style={[
-              s.premiumBanner,
-              isPremium
-                ? { backgroundColor: `${c.accent}18`, borderColor: `${c.accent}50` }
-                : { backgroundColor: '#1A2436', borderColor: `${c.accent}40` },
-            ]}
+            style={[s.card, isPremium && { borderColor: `${C.accent}40`, borderWidth: 1 }]}
+            onPress={() => { HapticsLight(); router.push('/subscription'); }}
           >
-            <View style={s.premiumBannerLeft}>
-              <View style={[s.premiumIconCircle, { backgroundColor: `${c.accent}20` }]}>
-                <Ionicons
-                  name={isPremium ? 'star' : 'star-outline'}
-                  size={20}
-                  color={c.accent}
-                />
-              </View>
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={[s.premiumBannerTitle, { color: c.text }]}>
-                  {isPremium ? 'R90 Premium — Active' : 'Upgrade to R90 Premium'}
-                </Text>
-                <Text style={[s.premiumBannerSub, { color: c.textSub }]}>
-                  {isPremium
-                    ? 'Full access to insights & coaching'
-                    : 'Advanced insights, AI coaching & more'}
-                </Text>
-              </View>
+            <View style={[s.cardIcon, { backgroundColor: `${C.accent}18` }]}>
+              <Ionicons name={isPremium ? 'star' : 'star-outline'} size={22} color={C.accent} />
             </View>
-            {!isPremium && (
-              <View style={[s.premiumBannerCta, { backgroundColor: c.accent }]}>
-                <Text style={s.premiumBannerCtaText}>Upgrade</Text>
-              </View>
-            )}
-            {isPremium && (
-              <Ionicons name="checkmark-circle" size={22} color={c.accent} />
-            )}
+            <Text style={s.cardTitle}>{isPremium ? 'Premium' : 'Upgrade'}</Text>
+            <Text style={s.cardSub}>
+              {isPremium ? 'Active ✓' : 'Advanced insights'}
+            </Text>
           </Pressable>
 
-          {/* ── Section 1 — Identity ── */}
-          <View style={s.identitySection}>
-            <View style={[s.avatar, { backgroundColor: c.accent }]}>
-              <Text style={s.avatarText}>{avatarLetter}</Text>
+          {/* Sleep History card */}
+          <Pressable
+            style={s.card}
+            onPress={() => { HapticsLight(); router.push('/sleep-history'); }}
+          >
+            <View style={[s.cardIcon, { backgroundColor: `${C.secondary}18` }]}>
+              <Ionicons name="bar-chart-outline" size={22} color={C.secondary} />
             </View>
-            <View style={s.identityInfo}>
-              <Text style={[s.identityName, { color: c.text }]}>{displayName}</Text>
-              {userEmail && userEmail !== displayName ? (
-                <Text style={[s.identityEmail, { color: c.textSub }]}>{userEmail}</Text>
-              ) : null}
-              <View style={{ marginTop: 6 }}>
-                <Badge label="Free" color="muted" size="sm" />
-              </View>
-            </View>
-          </View>
+            <Text style={s.cardTitle}>Sleep History</Text>
+            <Text style={s.cardSub}>Data & trends</Text>
+          </Pressable>
+        </View>
 
-          {/* ── Section 2 — Readiness Zone ── */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: c.textSub }]}>Readiness Zone</Text>
-            <Card variant="elevated">
-              <View style={s.zoneRow}>
-                <Ionicons name={zoneConfig.icon} size={32} color={zoneConfig.color} />
-                <Text style={[s.zoneLabel, { color: zoneConfig.color }]}>{zoneConfig.label}</Text>
-              </View>
-              <Text style={[s.zoneBase, { color: c.textMuted }]}>Based on your last 3 nights</Text>
-              <Text style={[s.zoneThresholds, { color: c.textMuted }]}>
-                {'≥4.5 cycles · Ready · ≥3.0 · Building · <3.0 · Recovery'}
-              </Text>
-              {zoneStatus === 'experimental' ? (
-                <View style={[s.experimentalBadge, { backgroundColor: `${c.textMuted}18`, borderColor: `${c.textMuted}30` }]}>
-                  <Text style={[s.experimentalText, { color: c.textMuted }]}>pending validation</Text>
-                </View>
-              ) : null}
-            </Card>
-          </View>
-
-          {/* ── Section 3 — Stats Week ── */}
-          <View style={s.statsGrid}>
-            <StatCard label="This Week"   value={String(weeklyTotal)} />
-            <StatCard label="Target"      value={String(weeklyTarget)} />
-            <StatCard label="Avg / night" value={String(avgCycles)} />
-            <StatCard label="Best Night"  value={bestNight > 0 ? String(bestNight) : '—'} />
-          </View>
-
-          {/* ── Section 4 — Calendar Sync ── */}
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: c.textSub }]}>Calendar Sync</Text>
-            <Text style={[s.calHint, { color: c.textMuted }]}>
-              Connect your calendar accounts and choose which calendars R90 reads.
-            </Text>
-            <Text style={[s.subLabel, { color: c.textFaint }]}>ACCOUNTS</Text>
-            <GoogleCalendarConnect onConnectionChange={refreshPlan} />
-            <Text style={[s.subLabel, { color: c.textFaint, marginTop: 16 }]}>DEVICE CALENDARS</Text>
-            <CalendarSelector onSelectionChange={refreshPlan} />
-            <Text style={[s.subLabel, { color: c.textFaint, marginTop: 16 }]}>WRITE SLEEP BLOCKS TO</Text>
-            <WriteBackCalendarPicker />
-            <CalendarSyncStatus />
-          </View>
-
-          {/* ── Section 5 — Settings ── */}
-          <View style={s.section}>
-            {/* ARP Time */}
-            <SettingsRow
-              iconName="time-outline"
-              label="ARP Time"
-              value={formatMinutes(editAnchorDate.getHours() * 60 + editAnchorDate.getMinutes())}
-              onPress={() => setShowAnchorPicker(v => !v)}
-              expanded={showAnchorPicker}
-            />
-            {showAnchorPicker ? (
-              <View style={s.pickerWrap}>
-                {Platform.OS === 'ios' ? (
-                  <DateTimePicker
-                    value={editAnchorDate}
-                    mode="time"
-                    display="spinner"
-                    onChange={(_, d) => { if (d) onAnchorChange(d); }}
-                    style={s.picker}
-                  />
-                ) : (
-                  <DateTimePicker
-                    value={editAnchorDate}
-                    mode="time"
-                    display="default"
-                    onChange={(_, d) => {
-                      setShowAnchorPicker(false);
-                      if (d) onAnchorChange(d);
-                    }}
-                  />
-                )}
-              </View>
-            ) : null}
-
-            {/* Chronotype */}
-            <SettingsRow
-              iconName="sunny-outline"
-              label="Chronotype"
-              value={CHRONOTYPE_LABEL[editChronotype]}
-              onPress={() => setShowChronoExpand(v => !v)}
-              expanded={showChronoExpand}
-            />
-            {showChronoExpand ? (
-              <View style={s.expandRow}>
-                {(['AMer', 'Neither', 'PMer'] as const).map(type => {
-                  const sel = editChronotype === type;
-                  return (
-                    <Pressable
-                      key={type}
-                      style={[
-                        s.expandBtn,
-                        { backgroundColor: sel ? `${c.accent}20` : c.surface, borderColor: sel ? c.accent : c.border },
-                      ]}
-                      onPress={() => onChronotypeChange(type)}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: sel ? c.accent : c.textMuted }}>
-                        {CHRONOTYPE_LABEL[type]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
-
-            {/* Notifications */}
-            <SettingsRowSwitch
-              iconName="notifications-outline"
-              label="Notifications"
-              value={windDownEnabled}
-              onValueChange={(val) => { void handleWindDownToggle(val); }}
-            />
-            <SettingsRowSwitch
-              iconName="musical-notes-outline"
-              label="Wind-down Music"
-              value={windDownMusicEnabled}
-              onValueChange={(val) => { void handleWindDownMusicToggle(val); }}
-            />
-
-            {/* Theme */}
-            <SettingsRow
-              iconName="contrast-outline"
-              label="Theme"
-              value={APPEARANCE_LABEL[themeMode]}
-              onPress={() => setShowAppearanceExpand(v => !v)}
-              expanded={showAppearanceExpand}
-            />
-            {showAppearanceExpand ? (
-              <View style={s.expandRow}>
-                {(['system', 'light', 'dark'] as const).map(m => {
-                  const sel = themeMode === m;
-                  return (
-                    <Pressable
-                      key={m}
-                      style={[
-                        s.expandBtn,
-                        { backgroundColor: sel ? `${c.accent}20` : c.surface, borderColor: sel ? c.accent : c.border },
-                      ]}
-                      onPress={() => {
-                        void setThemeMode(m);
-                        setShowAppearanceExpand(false);
-                      }}
-                    >
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: sel ? c.accent : c.textMuted }}>
-                        {APPEARANCE_LABEL[m]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
-
-            {/* Immersive Mode — Android only */}
-            {Platform.OS === 'android' ? (
-              <SettingsRowSwitch
-                iconName="scan-outline"
-                label="Immersive Mode"
-                value={immersiveMode}
-                onValueChange={(val) => { void setImmersiveMode(val); }}
-              />
-            ) : null}
-
-            {/* Premium */}
-            <SettingsRow
-              iconName="star-outline"
-              label="Premium"
-              onPress={() => router.push('/subscription')}
-            />
-
-            {/* Sign out */}
-            <SettingsRow
-              iconName="log-out-outline"
-              label="Sign out"
-              danger
-              onPress={() => {
-                Alert.alert('Sign out', 'Are you sure you want to sign out?', [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Sign out', style: 'destructive', onPress: () => { void logout(); } },
-                ]);
-              }}
-            />
-
-            {/* Save changes */}
-            {hasChanges ? (
-              <Pressable
-                style={[s.saveBtn, { backgroundColor: c.accent }, isSaving && { opacity: 0.6 }]}
-                onPress={() => { void handleSaveSettings(); }}
-                disabled={isSaving}
-              >
-                <Text style={[s.saveBtnText, { color: c.background }]}>
-                  {isSaving ? 'Saving…' : 'Save Changes'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {/* ── About ── */}
-          <View style={[s.section, { marginBottom: 60 }]}>
-            <View style={[s.aboutRow, { borderBottomColor: c.borderSub }]}>
-              <Text style={{ fontSize: 14, color: c.textMuted }}>Version</Text>
-              <Text style={{ fontSize: 14, color: c.textMuted }}>{APP_VERSION}</Text>
-            </View>
+        {/* ── 4. Secondary menu ── */}
+        <View style={s.menu}>
+          {[
+            { icon: 'moon-outline',     label: 'Sleep History', onPress: () => router.push('/sleep-history') },
+            { icon: 'book-outline',     label: 'Learning',      onPress: () => router.push('/learning') },
+            { icon: 'settings-outline', label: 'Settings',      onPress: () => setShowSettings(true) },
+            { icon: 'headset-outline',  label: 'Support',       onPress: () => { void Linking.openURL('mailto:support@r90navigator.com'); } },
+          ].map(({ icon, label, onPress }, i, arr) => (
             <Pressable
-              style={[s.deleteBtn, { backgroundColor: `${c.error}10`, borderColor: `${c.error}30` }]}
-              onPress={handleDeleteData}
+              key={label}
+              style={[
+                s.menuRow,
+                i === 0            && s.menuRowFirst,
+                i === arr.length-1 && s.menuRowLast,
+              ]}
+              onPress={() => { HapticsLight(); onPress(); }}
             >
-              <Text style={{ color: c.error, fontSize: 14, fontWeight: '600' }}>Delete all my data</Text>
+              <View style={s.menuRowLeft}>
+                <Ionicons name={icon as any} size={18} color={C.textSub} />
+                <Text style={s.menuRowLabel}>{label}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
             </Pressable>
-          </View>
+          ))}
+        </View>
 
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
-}
+        {/* App version */}
+        <Text style={s.version}>R90 Navigator v{APP_VERSION}</Text>
 
-// ── StatCard ──────────────────────────────────────────────────────────────────
+      </ScrollView>
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  const { theme } = useTheme();
-  const c = theme.colors;
-  return (
-    <View style={[s.statCard, { backgroundColor: c.surface }]}>
-      <Text style={[s.statValue, { color: c.accent }]}>{value}</Text>
-      <Text style={[s.statLabel, { color: c.textMuted }]}>{label}</Text>
-    </View>
-  );
-}
-
-// ── SettingsRow ───────────────────────────────────────────────────────────────
-
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-
-interface RowProps {
-  iconName:  IoniconsName;
-  label:     string;
-  value?:    string;
-  onPress?:  () => void;
-  expanded?: boolean;
-  danger?:   boolean;
-}
-
-function SettingsRow({ iconName, label, value, onPress, expanded, danger }: RowProps) {
-  const { theme } = useTheme();
-  const c = theme.colors;
-  return (
-    <Pressable
-      style={({ pressed }) => [s.settingsRow, { borderBottomColor: c.borderSub }, pressed && { opacity: 0.6 }]}
-      onPress={onPress}
-      hitSlop={4}
-    >
-      <View style={s.iconWrap}>
-        <Ionicons name={iconName} size={20} color={danger ? c.error : c.textMuted} />
-      </View>
-      <Text style={[s.rowLabel, { color: danger ? c.error : c.text }]}>{label}</Text>
-      <View style={s.rowRight}>
-        {value ? <Text style={[s.rowValue, { color: c.textMuted }]}>{value}</Text> : null}
-        <Ionicons
-          name={expanded ? 'chevron-down' : 'chevron-forward'}
-          size={16}
-          color={expanded ? c.textMuted : c.textFaint}
+      {/* Settings modal */}
+      {showSettings && profile && (
+        <SettingsModal
+          visible={showSettings}
+          onClose={() => setShowSettings(false)}
+          profile={profile}
+          themeMode={themeMode}
+          onThemeChange={m => { HapticsLight(); setThemeMode(m); }}
+          onSave={handleSaveProfile}
+          onSignOut={() => { setShowSettings(false); void handleSignOut(); }}
+          windDownEnabled={windDownEnabled}
+          windDownMusicEnabled={windDownMusicEnabled}
+          onWindDownChange={v => { void handleWindDownChange(v); }}
+          onWindDownMusicChange={v => { void handleWindDownMusicChange(v); }}
         />
-      </View>
-    </Pressable>
-  );
-}
-
-// ── SettingsRowSwitch ──────────────────────────────────────────────────────────
-
-interface SwitchRowProps {
-  iconName:      IoniconsName;
-  label:         string;
-  value:         boolean;
-  onValueChange: (v: boolean) => void;
-}
-
-function SettingsRowSwitch({ iconName, label, value, onValueChange }: SwitchRowProps) {
-  const { theme } = useTheme();
-  const c = theme.colors;
-  return (
-    <View style={[s.settingsRow, { borderBottomColor: c.borderSub }]}>
-      <View style={s.iconWrap}>
-        <Ionicons name={iconName} size={20} color={c.textMuted} />
-      </View>
-      <Text style={[s.rowLabel, { color: c.text }]}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: c.border, true: c.accent }}
-        thumbColor="#FFFFFF"
-      />
-    </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root: { flex: 1 },
-  scroll: {
-    paddingHorizontal: 20,
-    paddingTop:        16,
-    paddingBottom:     20,
+  root:   { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingBottom: 48 },
+
+  // Settings button
+  settingsBtn: {
+    position: 'absolute', top: 20, right: 20, zIndex: 10,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: C.card,
+    alignItems: 'center', justifyContent: 'center',
   },
 
-  // ── Identity ──
-  identitySection: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           16,
-    marginBottom:  28,
+  // Header
+  header: {
+    alignItems:     'center',
+    paddingTop:     40,
+    paddingBottom:  28,
+    gap:            12,
   },
   avatar: {
-    width:          64,
-    height:         64,
-    borderRadius:   32,
-    alignItems:     'center',
-    justifyContent: 'center',
+    width: 72, height: 72, borderRadius: 36,
+    alignItems: 'center', justifyContent: 'center',
   },
   avatarText: {
-    fontSize:   28,
-    fontWeight: '700',
-    color:      '#0B1220',
+    fontSize: 28, fontWeight: '700', color: '#0B1220',
   },
-  identityInfo: {
-    flex: 1,
-    gap:  2,
-  },
-  identityName: {
-    fontSize:   18,
-    fontWeight: '600',
-  },
-  identityEmail: {
-    fontSize:   13,
-    fontWeight: '400',
+  userName: {
+    fontSize: 22, fontWeight: '700', color: C.text,
   },
 
-  // ── Premium banner ──
-  premiumBanner: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    borderWidth:    1,
-    borderRadius:   16,
-    padding:        16,
-    marginBottom:   20,
-  },
-  premiumBannerLeft: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    flex:          1,
-  },
-  premiumIconCircle: {
-    width:          40,
-    height:         40,
-    borderRadius:   20,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-  premiumBannerTitle: {
-    fontSize:   15,
-    fontWeight: '600',
-  },
-  premiumBannerSub: {
-    fontSize:  12,
-    marginTop: 2,
-  },
-  premiumBannerCta: {
-    borderRadius:      20,
-    paddingHorizontal: 14,
-    paddingVertical:    7,
-    marginLeft:        12,
-  },
-  premiumBannerCtaText: {
-    fontSize:   13,
-    fontWeight: '700',
-    color:      '#0B1220',
-  },
-
-  // ── Section ──
-  section: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
-    fontSize:     15,
-    fontWeight:   '600',
-    marginBottom: 12,
-  },
-
-  // ── Readiness ──
-  zoneRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
-    marginBottom:  8,
-  },
-  zoneLabel: {
-    fontSize:   24,
-    fontWeight: '700',
-  },
-  zoneBase: {
-    fontSize:     12,
-    marginBottom: 8,
-  },
-  zoneThresholds: {
-    fontSize:   11,
-    lineHeight: 16,
-  },
-  experimentalBadge: {
-    alignSelf:         'flex-end',
-    marginTop:          8,
-    paddingHorizontal:  8,
-    paddingVertical:    3,
-    borderRadius:      10,
-    borderWidth:        1,
-  },
-  experimentalText: {
-    fontSize:   10,
-    fontWeight: '500',
-  },
-
-  // ── Stats Grid ──
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    gap:           12,
-    marginBottom:  28,
-  },
-  statCard: {
-    width:        '47%',
-    borderRadius: 16,
-    padding:      16,
-    gap:           4,
-  },
-  statValue: {
-    fontSize:   24,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 12,
-  },
-
-  // ── Calendar ──
-  calHint: {
-    fontSize:     13,
-    lineHeight:   20,
-    marginBottom: 12,
-  },
-  subLabel: {
-    fontSize:      10,
-    fontWeight:    '700',
-    letterSpacing: 1.5,
-    marginBottom:  4,
-    marginTop:     4,
-  },
-
-  // ── Settings rows ──
-  settingsRow: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    paddingVertical:   15,
-    borderBottomWidth: 1,
-  },
-  iconWrap: {
-    width:          34,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginRight:    4,
-  },
-  rowLabel: {
-    flex:       1,
-    fontSize:   15,
-    fontWeight: '500',
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-  },
-  rowValue: {
-    fontSize: 14,
-  },
-
-  // ── Expand pickers ──
-  expandRow: {
-    flexDirection: 'row',
-    gap:           8,
-    paddingTop:    10,
-    paddingBottom: 16,
-  },
-  expandBtn: {
-    flex:            1,
-    paddingVertical: 12,
-    borderRadius:    10,
-    borderWidth:     1,
+  // Widget
+  widgetCard: {
+    backgroundColor: C.card,
+    borderRadius:    20,
+    marginHorizontal: 16,
+    padding:         24,
     alignItems:      'center',
+    gap:             16,
+    marginBottom:    16,
+  },
+  widgetTitle: {
+    fontSize: 13, fontWeight: '600', color: C.textSub,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+  },
+  widgetRing: {
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  widgetSub: {
+    fontSize: 13, color: C.textSub, textAlign: 'center',
   },
 
-  // ── Time picker ──
-  pickerWrap: {
-    marginBottom: 4,
+  // Cards
+  cards: {
+    flexDirection:   'row',
+    marginHorizontal: 16,
+    gap:             12,
+    marginBottom:    16,
   },
-  picker: {
-    backgroundColor: '#111111',
-    borderRadius:    12,
+  card: {
+    flex:          1,
+    backgroundColor: C.card,
+    borderRadius:  16,
+    padding:       16,
+    gap:           8,
+  },
+  cardIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: 15, fontWeight: '600', color: C.text,
+  },
+  cardSub: {
+    fontSize: 12, color: C.textSub,
   },
 
-  // ── Save button ──
-  saveBtn: {
-    padding:      14,
-    borderRadius: 10,
-    marginTop:    20,
-    alignItems:   'center',
+  // Menu
+  menu: {
+    backgroundColor: C.card,
+    borderRadius:    16,
+    marginHorizontal: 16,
+    overflow:        'hidden',
+    marginBottom:    24,
   },
-  saveBtnText: {
-    fontSize:   15,
-    fontWeight: '700',
+  menuRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingHorizontal: 16,
+    paddingVertical:   15,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: C.border,
   },
+  menuRowFirst: { borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  menuRowLast:  { borderBottomWidth: 0, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
+  menuRowLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuRowLabel: { fontSize: 15, fontWeight: '500', color: C.text },
 
-  // ── About ──
-  aboutRow: {
-    flexDirection:     'row',
-    justifyContent:    'space-between',
-    paddingVertical:   12,
-    borderBottomWidth: 1,
-    marginBottom:      16,
-  },
-  deleteBtn: {
-    padding:      14,
-    borderRadius: 10,
-    alignItems:   'center',
-    borderWidth:  1,
+  version: {
+    textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 4,
   },
 });

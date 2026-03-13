@@ -1,303 +1,279 @@
 /**
  * subscription.tsx — Premium subscription screen
  *
- * Uses the RevenueCat native Paywall UI for displaying offerings.
- * Falls back to a manual offerings list if the paywall is unavailable.
- *
- * Includes:
- *   - RevenueCat Paywall (react-native-purchases-ui)
- *   - Restore purchases button
- *   - Customer Center (manage subscription / cancel / refunds)
+ * Revolut-style horizontal slides: Free ← → Premium
+ * Starts on Premium slide (index 1).
+ * Keeps RevenueCat purchase logic intact.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
+  ScrollView,
+  Dimensions,
   ActivityIndicator,
   Alert,
-  ScrollView,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
-import {
-  getCurrentOffering,
-  purchasePackage,
-  restorePurchases,
-  hasPremiumEntitlement,
-  PREMIUM_ENTITLEMENT_ID,
-} from '../lib/purchases';
+import { Ionicons } from '@expo/vector-icons';
+import { purchasePackage, restorePurchases, getCurrentOffering } from '../lib/purchases';
+import { usePremiumGate } from '../lib/use-premium-gate';
+import { HapticsLight } from '../utils/haptics';
 
-// ─── Main screen ──────────────────────────────────────────────────────────────
+const { width: SCREEN_W } = Dimensions.get('window');
+
+const C = {
+  bg:        '#0B1220',
+  card:      '#1A2436',
+  surface2:  '#243046',
+  accent:    '#F5A623',
+  text:      '#E6EDF7',
+  textSub:   '#9FB0C5',
+  textMuted: '#6B7F99',
+  success:   '#3DDC97',
+  error:     '#F87171',
+};
+
+const FREE_FEATURES    = ['Sleep planning', 'R-Lo coaching', 'Cycle tracking'];
+const PREMIUM_FEATURES = ['Advanced sleep analysis', 'Jet lag optimization', 'Auto schedule adaptation', 'Fatigue analysis', 'Everything in Free'];
+
+function FeatureRow({ text, accent }: { text: string; accent?: boolean }) {
+  return (
+    <View style={f.row}>
+      <View style={[f.dot, { backgroundColor: accent ? C.accent : C.success }]} />
+      <Text style={[f.text, { color: accent ? C.text : C.textSub }]}>{text}</Text>
+    </View>
+  );
+}
+const f = StyleSheet.create({
+  row:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  dot:  { width: 6, height: 6, borderRadius: 3 },
+  text: { fontSize: 15, fontWeight: '400' },
+});
 
 export default function SubscriptionScreen() {
-  const router = useRouter();
-  const [isPremium, setIsPremium] = useState(false);
-  const [loading,   setLoading]   = useState(true);
+  const router    = useRouter();
+  const { isPremium, refresh: refreshPremium } = usePremiumGate();
+  const scrollRef = useRef<ScrollView>(null);
+  const [activeSlide, setActiveSlide] = useState(1); // Start on Premium
+  const [loading, setLoading]         = useState(false);
 
-  useEffect(() => {
-    hasPremiumEntitlement().then(active => {
-      setIsPremium(active);
-      setLoading(false);
-    });
+  // Scroll to Premium on mount
+  const onScrollViewReady = useCallback(() => {
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ x: SCREEN_W, animated: false });
+    }, 50);
   }, []);
 
-  // ── Present RevenueCat native paywall ─────────────────────────────────────
+  function handleScroll(e: any) {
+    const x = e.nativeEvent.contentOffset.x;
+    setActiveSlide(x < SCREEN_W / 2 ? 0 : 1);
+  }
 
-  async function presentPaywall() {
+  async function handlePurchase() {
+    HapticsLight();
+    setLoading(true);
     try {
-      const result = await RevenueCatUI.presentPaywall();
-      switch (result) {
-        case PAYWALL_RESULT.PURCHASED:
-        case PAYWALL_RESULT.RESTORED:
-          setIsPremium(true);
-          Alert.alert('Welcome to Premium', 'Your subscription is now active.');
-          break;
-        case PAYWALL_RESULT.ERROR:
-          Alert.alert('Error', 'Something went wrong. Please try again.');
-          break;
-        // CANCELLED — no action needed
+      const offeringResult = await getCurrentOffering();
+      const offering = offeringResult.offering;
+      const pkg = offering?.availablePackages.find((p: any) => p.packageType === 'MONTHLY')
+               ?? offering?.availablePackages[0];
+      if (!pkg) { Alert.alert('Not available', 'No subscription plans available right now.'); return; }
+      const result = await purchasePackage(pkg);
+      if (result.ok) {
+        await refreshPremium();
+        Alert.alert('Welcome to Premium! 🎉', 'Your subscription is active.', [
+          { text: 'Continue', onPress: () => router.back() },
+        ]);
+      } else if (result.error !== 'cancelled') {
+        Alert.alert('Purchase failed', result.error ?? 'Please try again.');
       }
     } catch {
-      // Paywall not available — fall through to manual offering below
-      setShowFallback(true);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
     }
   }
-
-  // ── Customer Center (manage / cancel / refunds) ───────────────────────────
-
-  async function presentCustomerCenter() {
-    try {
-      await RevenueCatUI.presentCustomerCenter();
-      // Re-check entitlement after customer center closes
-      const active = await hasPremiumEntitlement();
-      setIsPremium(active);
-    } catch {
-      Alert.alert(
-        'Manage Subscription',
-        'Go to iPhone Settings → Apple ID → Subscriptions to manage your plan.',
-      );
-    }
-  }
-
-  // ── Restore ──────────────────────────────────────────────────────────────
 
   async function handleRestore() {
+    HapticsLight();
     setLoading(true);
-    const result = await restorePurchases();
-    setLoading(false);
-    if (result.ok) {
-      setIsPremium(true);
-      Alert.alert('Restored', 'Your subscription has been restored.');
-    } else if (result.error !== 'No active subscription found') {
-      Alert.alert('Restore failed', result.error ?? 'Please try again.');
-    } else {
-      Alert.alert('Nothing to restore', 'No active subscription found on this Apple ID.');
-    }
-  }
-
-  // ── Fallback manual offering ──────────────────────────────────────────────
-
-  const [showFallback, setShowFallback] = useState(false);
-
-  if (loading) {
-    return (
-      <View style={s.center}>
-        <ActivityIndicator color="#22C55E" size="large" />
-      </View>
-    );
-  }
-
-  if (isPremium) {
-    return <PremiumActiveScreen onManage={presentCustomerCenter} onBack={() => router.back()} />;
-  }
-
-  if (showFallback) {
-    return (
-      <FallbackOfferingsScreen
-        onSuccess={() => setIsPremium(true)}
-        onRestore={handleRestore}
-        onBack={() => router.back()}
-      />
-    );
-  }
-
-  return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.container}>
-        {/* Header */}
-        <Pressable style={s.closeBtn} onPress={() => router.back()}>
-          <Text style={s.closeBtnText}>✕</Text>
-        </Pressable>
-
-        <Text style={s.title}>R90 Navigator Premium</Text>
-        <Text style={s.subtitle}>
-          Full access to personalised sleep coaching, advanced analytics, and priority support.
-        </Text>
-
-        {/* Present RevenueCat native paywall */}
-        <Pressable style={s.primaryBtn} onPress={() => { void presentPaywall(); }}>
-          <Text style={s.primaryBtnText}>View plans</Text>
-        </Pressable>
-
-        {/* Restore */}
-        <Pressable style={s.secondaryBtn} onPress={() => { void handleRestore(); }}>
-          <Text style={s.secondaryBtnText}>Restore purchases</Text>
-        </Pressable>
-
-        <Text style={s.legal}>
-          Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage in Settings → Apple ID → Subscriptions.
-        </Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-// ─── Premium active screen ────────────────────────────────────────────────────
-
-function PremiumActiveScreen({
-  onManage,
-  onBack,
-}: {
-  onManage: () => void;
-  onBack:   () => void;
-}) {
-  return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.container}>
-        <Pressable style={s.closeBtn} onPress={onBack}>
-          <Text style={s.closeBtnText}>✕</Text>
-        </Pressable>
-
-        <View style={s.activeIcon}>
-          <Text style={s.activeIconText}>✓</Text>
-        </View>
-        <Text style={s.title}>Premium active</Text>
-        <Text style={s.subtitle}>
-          You have full access to R90 Navigator Premium.
-        </Text>
-
-        <Pressable style={s.primaryBtn} onPress={onManage}>
-          <Text style={s.primaryBtnText}>Manage subscription</Text>
-        </Pressable>
-        <Pressable style={s.secondaryBtn} onPress={onBack}>
-          <Text style={s.secondaryBtnText}>Back</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-// ─── Fallback offerings screen ────────────────────────────────────────────────
-
-function FallbackOfferingsScreen({
-  onSuccess,
-  onRestore,
-  onBack,
-}: {
-  onSuccess: () => void;
-  onRestore: () => void;
-  onBack:    () => void;
-}) {
-  const [offering,  setOffering]  = useState<PurchasesOffering | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [purchasing, setPurchasing] = useState(false);
-
-  useEffect(() => {
-    getCurrentOffering().then(result => {
-      if (result.ok && result.offering) setOffering(result.offering);
+    try {
+      const result = await restorePurchases();
+      if (result.ok) {
+        await refreshPremium();
+        Alert.alert('Restored', 'Your purchases have been restored.');
+      } else {
+        Alert.alert('Nothing to restore', 'No previous purchases found.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not restore. Please try again.');
+    } finally {
       setLoading(false);
-    });
-  }, []);
-
-  async function handlePurchase(pkg: PurchasesPackage) {
-    setPurchasing(true);
-    const result = await purchasePackage(pkg);
-    setPurchasing(false);
-    if (result.ok) {
-      onSuccess();
-    } else if (result.error !== 'cancelled') {
-      Alert.alert('Purchase failed', result.error ?? 'Please try again.');
     }
   }
 
-  if (loading) {
-    return <View style={s.center}><ActivityIndicator color="#22C55E" /></View>;
-  }
-
   return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.fallbackContent}>
-        <Pressable style={s.closeBtn} onPress={onBack}>
-          <Text style={s.closeBtnText}>✕</Text>
+    <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+
+      {/* Header */}
+      <View style={s.header}>
+        <Pressable onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={C.textSub} />
         </Pressable>
+        <Text style={s.headerTitle}>Choose your plan</Text>
+        <View style={{ width: 38 }} />
+      </View>
 
-        <Text style={s.title}>R90 Navigator Premium</Text>
+      <Text style={s.headerSub}>Simple, transparent pricing.</Text>
 
-        {offering?.availablePackages.map(pkg => (
-          <Pressable
-            key={pkg.identifier}
-            style={s.packageCard}
-            onPress={() => { void handlePurchase(pkg); }}
-            disabled={purchasing}
-          >
-            <Text style={s.packageTitle}>{pkg.product.title}</Text>
-            <Text style={s.packagePrice}>{pkg.product.priceString}</Text>
-            {pkg.product.description ? (
-              <Text style={s.packageDesc}>{pkg.product.description}</Text>
-            ) : null}
-          </Pressable>
-        ))}
+      {/* Slides */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onLayout={onScrollViewReady}
+        style={s.slider}
+        contentContainerStyle={{ width: SCREEN_W * 2 }}
+      >
+        {/* Slide 0 — Free */}
+        <View style={[s.slide, { width: SCREEN_W }]}>
+          <View style={s.planCard}>
+            <View style={s.planBadge}>
+              <Text style={s.planBadgeText}>Current plan</Text>
+            </View>
+            <Text style={s.planName}>Free</Text>
+            <View style={s.featuresBox}>
+              {FREE_FEATURES.map(t => <FeatureRow key={t} text={t} />)}
+            </View>
+          </View>
+        </View>
 
-        {!offering && (
-          <Text style={s.noOfferings}>
-            No offerings available. Please check back later.
-          </Text>
-        )}
+        {/* Slide 1 — Premium */}
+        <View style={[s.slide, { width: SCREEN_W }]}>
+          <View style={[s.planCard, s.planCardPremium]}>
+            <View style={[s.planBadge, { backgroundColor: `${C.accent}20`, borderColor: `${C.accent}40` }]}>
+              <Ionicons name="star" size={11} color={C.accent} style={{ marginRight: 4 }} />
+              <Text style={[s.planBadgeText, { color: C.accent }]}>Recommended</Text>
+            </View>
+            <Text style={[s.planName, { color: C.accent }]}>Premium</Text>
+            <View style={s.priceRow}>
+              <Text style={s.priceMain}>€4.99</Text>
+              <Text style={s.pricePeriod}>/month</Text>
+            </View>
+            <Text style={s.priceAlt}>or €39.99/year — save 33%</Text>
+            <View style={s.featuresBox}>
+              {PREMIUM_FEATURES.map(t => <FeatureRow key={t} text={t} accent />)}
+            </View>
 
-        <Pressable style={s.secondaryBtn} onPress={onRestore}>
-          <Text style={s.secondaryBtnText}>Restore purchases</Text>
-        </Pressable>
+            {isPremium ? (
+              <View style={[s.activeBox]}>
+                <Ionicons name="checkmark-circle" size={20} color={C.success} />
+                <Text style={[s.activeTxt]}>Premium is active</Text>
+              </View>
+            ) : (
+              <Pressable
+                style={[s.ctaBtn, loading && { opacity: 0.6 }]}
+                onPress={() => { void handlePurchase(); }}
+                disabled={loading}
+              >
+                {loading
+                  ? <ActivityIndicator color="#0B1220" />
+                  : <Text style={s.ctaBtnText}>Get Premium</Text>
+                }
+              </Pressable>
+            )}
 
-        <Text style={s.legal}>
-          Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period.
-        </Text>
+            <Pressable
+              style={s.restoreBtn}
+              onPress={() => { void handleRestore(); }}
+              disabled={loading}
+            >
+              <Text style={s.restoreBtnText}>Restore purchase</Text>
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
+
+      {/* Dots */}
+      <View style={s.dots}>
+        {[0, 1].map(i => (
+          <Pressable
+            key={i}
+            style={[s.dot, activeSlide === i && s.dotActive]}
+            onPress={() => {
+              scrollRef.current?.scrollTo({ x: i * SCREEN_W, animated: true });
+            }}
+          />
+        ))}
+      </View>
+
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: '#0D0D0D' },
-  center:         { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0D0D0D' },
-  container:      { flex: 1, padding: 24, justifyContent: 'center', gap: 16 },
-  fallbackContent:{ padding: 24, paddingBottom: 48, gap: 16 },
+  root:        { flex: 1, backgroundColor: C.bg },
+  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  backBtn:     { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: C.text },
+  headerSub:   { fontSize: 14, color: C.textSub, textAlign: 'center', marginBottom: 16 },
 
-  closeBtn:       { position: 'absolute', top: 16, right: 16, padding: 8 },
-  closeBtnText:   { color: 'rgba(255,255,255,0.5)', fontSize: 18 },
+  slider: { flex: 1 },
 
-  activeIcon:     { width: 64, height: 64, borderRadius: 32, backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
-  activeIconText: { color: '#000', fontSize: 28, fontWeight: '700' },
+  slide: {
+    paddingHorizontal: 20,
+    justifyContent:    'center',
+  },
+  planCard: {
+    backgroundColor: C.card,
+    borderRadius:    24,
+    padding:         24,
+    gap:             12,
+  },
+  planCardPremium: {
+    borderWidth: 1,
+    borderColor: `${C.accent}30`,
+  },
+  planBadge: {
+    flexDirection:    'row',
+    alignItems:       'center',
+    alignSelf:        'flex-start',
+    borderRadius:     20,
+    paddingHorizontal: 10,
+    paddingVertical:   4,
+    backgroundColor:  C.surface2,
+    borderWidth:      1,
+    borderColor:      C.surface2,
+  },
+  planBadgeText: { fontSize: 11, fontWeight: '600', color: C.textSub },
 
-  title:          { color: '#FFFFFF', fontSize: 28, fontWeight: '700', textAlign: 'center' },
-  subtitle:       { color: '#9CA3AF', fontSize: 15, lineHeight: 22, textAlign: 'center' },
+  planName: { fontSize: 40, fontWeight: '900', color: C.text },
 
-  primaryBtn:         { backgroundColor: '#22C55E', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  primaryBtnText:     { color: '#000000', fontSize: 16, fontWeight: '700' },
-  secondaryBtn:       { paddingVertical: 14, alignItems: 'center' },
-  secondaryBtnText:   { color: '#6B7280', fontSize: 14 },
+  priceRow:    { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  priceMain:   { fontSize: 32, fontWeight: '800', color: C.text },
+  pricePeriod: { fontSize: 16, color: C.textSub },
+  priceAlt:    { fontSize: 13, color: C.textMuted, marginTop: -6 },
 
-  packageCard:    { backgroundColor: '#1A1A1A', borderRadius: 14, padding: 20, borderWidth: 1, borderColor: '#2A2A2A', gap: 4 },
-  packageTitle:   { color: '#FFFFFF', fontSize: 17, fontWeight: '600' },
-  packagePrice:   { color: '#22C55E', fontSize: 22, fontWeight: '700' },
-  packageDesc:    { color: '#9CA3AF', fontSize: 13, marginTop: 4 },
+  featuresBox: { gap: 2, marginTop: 4 },
 
-  noOfferings:    { color: '#6B7280', textAlign: 'center', fontSize: 14 },
-  legal:          { color: '#374151', fontSize: 11, textAlign: 'center', lineHeight: 16, marginTop: 8 },
+  ctaBtn:     { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 8 },
+  ctaBtnText: { fontSize: 16, fontWeight: '700', color: '#0B1220' },
+
+  activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 8 },
+  activeTxt: { fontSize: 15, fontWeight: '600', color: C.success },
+
+  restoreBtn:     { alignItems: 'center', paddingVertical: 10 },
+  restoreBtnText: { fontSize: 13, color: C.textMuted },
+
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 16 },
+  dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: C.surface2 },
+  dotActive: { width: 20, backgroundColor: C.accent },
 });

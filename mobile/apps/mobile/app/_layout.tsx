@@ -174,12 +174,15 @@ function RootLayoutInner() {
           contentStyle: { backgroundColor: theme.colors.background },
         }}
       >
-        <Stack.Screen name="(tabs)"     options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="log-night"   options={{ headerShown: false }} />
-        <Stack.Screen name="wind-down"  options={{ headerShown: false }} />
-        <Stack.Screen name="login"      options={{ headerShown: false }} />
-        <Stack.Screen name="checkin"    options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding"   options={{ headerShown: false }} />
+        <Stack.Screen name="log-night"    options={{ headerShown: false }} />
+        <Stack.Screen name="wind-down"   options={{ headerShown: false }} />
+        <Stack.Screen name="login"       options={{ headerShown: false }} />
+        <Stack.Screen name="checkin"     options={{ headerShown: false }} />
+        <Stack.Screen name="subscription"  options={{ headerShown: false }} />
+        <Stack.Screen name="sleep-history" options={{ headerShown: false }} />
+        <Stack.Screen name="learning"      options={{ headerShown: false }} />
       </Stack>
     </>
   );
