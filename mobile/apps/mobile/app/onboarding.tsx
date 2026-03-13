@@ -612,18 +612,24 @@ const s = StyleSheet.create({
   },
 
   // ── Shared slide layout (slides 0, 1, 2) ──────────────────────────────────
+  // The circle is the center anchor (flex:1, justifyContent:center).
+  // The title floats above via absolute positioning — never pushes the circle.
   slideV: {
     flex:              1,
     alignItems:        'center',
+    justifyContent:    'center',
     paddingHorizontal: 24,
   },
 
-  // Title floats centered between the header bar and the breathing circle
+  // Title — absolute, centered horizontally in the top half
   titleArea: {
-    flex:           1,
-    alignItems:     'center',
-    justifyContent: 'center',
-    width:          '100%',
+    position:          'absolute',
+    top:               0,
+    left:              24,
+    right:             24,
+    height:            '45%',
+    alignItems:        'center',
+    justifyContent:    'center',
   },
 
   titleBlock: {
@@ -642,13 +648,11 @@ const s = StyleSheet.create({
   },
 
   // ── Breathing circle container ─────────────────────────────────────────────
-  // Fixed height = circle + glow headroom. Title fills flex:1 space above.
+  // No flex — circle sits naturally in the center of slideV (justifyContent:center)
   circleCenter: {
     width:          '100%',
-    height:         CIRCLE_SIZE * 1.5,
     alignItems:     'center',
     justifyContent: 'center',
-    marginBottom:   16,
   },
 
   // Turquoise glow — absolute behind the ring, centered via circleCenter
