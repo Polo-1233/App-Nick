@@ -295,12 +295,14 @@ export default function OnboardingScreen() {
             {/* ── Slide 0: Premium intro ────────────────────────────────── */}
             <View style={[s.slideV, { width: windowWidth }]}>
 
-              {/* Title — above the circle */}
-              <Animated.View style={[s.titleBlock, { opacity: fadeAnim0 }]}>
-                <Text style={s.slideTitle}>
-                  {"Most sleep problems\naren't sleep problems"}
-                </Text>
-              </Animated.View>
+              {/* Title — centered between header and circle */}
+              <View style={s.titleArea}>
+                <Animated.View style={[s.titleBlock, { opacity: fadeAnim0 }]}>
+                  <Text style={s.slideTitle}>
+                    {"Most sleep problems\naren't sleep problems"}
+                  </Text>
+                </Animated.View>
+              </View>
 
               {/* Breathing circle — vertical center of remaining space */}
               <View style={s.circleCenter}>
@@ -335,12 +337,13 @@ export default function OnboardingScreen() {
             {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
             <View style={[s.slideV, { width: windowWidth }]}>
 
-              {/* Title */}
-              <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
-                <Text style={s.slideTitle}>
-                  {"Sleep is the result\nof your entire day"}
-                </Text>
-              </Animated.View>
+              <View style={s.titleArea}>
+                <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
+                  <Text style={s.slideTitle}>
+                    {"Sleep is the result\nof your entire day"}
+                  </Text>
+                </Animated.View>
+              </View>
 
               {/* Breathing circle */}
               <View style={s.circleCenter}>
@@ -384,10 +387,11 @@ export default function OnboardingScreen() {
             {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
             <View style={[s.slideV, { width: windowWidth }]}>
 
-              {/* Title */}
-              <Animated.View style={[s.titleBlock, { opacity: fadeAnim2 }]}>
-                <Text style={s.slideTitle}>{"The R90 Method"}</Text>
-              </Animated.View>
+              <View style={s.titleArea}>
+                <Animated.View style={[s.titleBlock, { opacity: fadeAnim2 }]}>
+                  <Text style={s.slideTitle}>{"The R90 Method"}</Text>
+                </Animated.View>
+              </View>
 
               {/* Silver breathing circle — authority palette */}
               <View style={s.circleCenter}>
@@ -461,6 +465,11 @@ export default function OnboardingScreen() {
 
             {/* ── Slide 4: R-Lo focus — home preview + chat ───────────── */}
             <View style={[s.slide4, { width: windowWidth }]}>
+
+              {/* Title — centered in top third */}
+              <Animated.View style={[s.slide4Title, { opacity: fadeAnim4 }]}>
+                <Text style={s.slideTitle}>{"Your rhythm.\nYour coach."}</Text>
+              </Animated.View>
 
               {/* Dimmed static home-screen skeleton (backdrop) */}
               <View style={s.slide4Preview} pointerEvents="none">
@@ -600,18 +609,23 @@ const s = StyleSheet.create({
   },
 
   // ── Shared slide layout (slides 0, 1, 2) ──────────────────────────────────
-  // Title above → flex:1 circle center below
   slideV: {
+    flex:              1,
+    alignItems:        'center',
+    paddingHorizontal: 24,
+  },
+
+  // Title floats centered between the header bar and the breathing circle
+  titleArea: {
     flex:           1,
     alignItems:     'center',
-    paddingHorizontal: 24,
-    paddingTop:     4,
+    justifyContent: 'center',
+    width:          '100%',
   },
 
   titleBlock: {
-    alignItems:      'center',
+    alignItems:        'center',
     paddingHorizontal: 8,
-    paddingBottom:   4,
   },
 
   slideTitle: {
@@ -625,12 +639,13 @@ const s = StyleSheet.create({
   },
 
   // ── Breathing circle container ─────────────────────────────────────────────
+  // Fixed height = circle + glow headroom. Title fills flex:1 space above.
   circleCenter: {
-    flex:            1,
-    width:           '100%',
-    alignItems:      'center',
-    justifyContent:  'center',
-    alignSelf:       'center',
+    width:          '100%',
+    height:         CIRCLE_SIZE * 1.5,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginBottom:   16,
   },
 
   // Turquoise glow — absolute behind the ring, centered via circleCenter
@@ -741,13 +756,14 @@ const s = StyleSheet.create({
   slide3: {
     flex:              1,
     paddingHorizontal: 32,
-    justifyContent:    'center',
     alignItems:        'center',
   },
   slide3Content: {
+    flex:       1,
     width:      '100%',
     alignItems: 'center',
-    gap:        28,
+    justifyContent: 'center',
+    gap:        24,
   },
   slide3Title: {
     fontSize:      34,
@@ -785,6 +801,17 @@ const s = StyleSheet.create({
   slide4: {
     flex:     1,
     overflow: 'hidden',
+  },
+  slide4Title: {
+    position:          'absolute',
+    top:               0,
+    left:              0,
+    right:             0,
+    alignItems:        'center',
+    justifyContent:    'center',
+    height:            '38%',
+    zIndex:            10,
+    paddingHorizontal: 24,
   },
   slide4Preview: {
     position:          'absolute',
@@ -880,7 +907,7 @@ const s = StyleSheet.create({
   },
   slide4ChatArea: {
     position:          'absolute',
-    top:               0,
+    top:               '40%',
     left:              0,
     right:             0,
     bottom:            56,
