@@ -27,13 +27,13 @@ export function OnboardingStep({ step, totalSteps, message, children }: Props) {
         ))}
       </View>
 
-      {/* Airloop message bubble */}
+      {/* R-Lo message bubble */}
       <View style={styles.messageBubble}>
         <View style={styles.avatarRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>A</Text>
+            <Text style={styles.avatarText}>R</Text>
           </View>
-          <Text style={styles.avatarLabel}>Airloop</Text>
+          <Text style={styles.avatarLabel}>R-Lo</Text>
         </View>
         <Text style={styles.messageText}>{message}</Text>
       </View>

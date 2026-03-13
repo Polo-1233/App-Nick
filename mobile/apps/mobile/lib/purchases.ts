@@ -25,7 +25,7 @@ import { Platform } from 'react-native';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
-const REVENUECAT_API_KEY_IOS     = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY     ?? 'test_vsvTpmpWzZtOvqQJXnTCFeFGDSM';
+const REVENUECAT_API_KEY_IOS     = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY     || 'appl_grvoRVEsHFspIMxZUJtgdFYXBZw';
 const REVENUECAT_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '';
 
 /** Entitlement identifier in RevenueCat dashboard. */
@@ -63,6 +63,7 @@ export function configurePurchases(): void {
   try {
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+      console.log('[purchases] RevenueCat iOS API key:', REVENUECAT_API_KEY_IOS);
     }
     if (Platform.OS === 'ios') {
       Purchases.configure({ apiKey: REVENUECAT_API_KEY_IOS });

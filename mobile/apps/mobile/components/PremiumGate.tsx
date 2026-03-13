@@ -27,9 +27,9 @@ export function PremiumGate({ visible, featureName, onClose }: Props) {
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.label}>PREMIUM</Text>
-          <Text style={styles.title}>Airloop Premium</Text>
+          <Text style={styles.title}>R-Lo Premium</Text>
           <Text style={styles.description}>
-            {featureName} requires Airloop Premium — advanced plan management for people who take recovery seriously.
+            {featureName} requires R-Lo Premium — advanced plan management for people who take recovery seriously.
           </Text>
 
           <View style={styles.featureList}>

@@ -27,6 +27,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Chronotype, NightRecord, UserProfile } from '@r90/types';
 import { useDayPlanContext } from '../../lib/day-plan-context';
+import { usePremiumGate } from '../../lib/use-premium-gate';
 import {
   loadProfile,
   saveProfile,
@@ -95,6 +96,7 @@ export default function ProfileScreen() {
   const { dayPlan, refreshPlan } = useDayPlanContext();
   const { session, logout } = useAuth();
   const router = useRouter();
+  const { isPremium } = usePremiumGate();
 
   const [profile,     setProfile]     = useState<UserProfile | null>(null);
   const [weekHistory, setWeekHistory] = useState<NightRecord[]>([]);
@@ -282,6 +284,38 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          {/* ── Premium Banner ── */}
+          <Pressable
+            onPress={() => router.push('/subscription')}
+            style={[
+              s.premiumBanner,
+              isPremium
+                ? { backgroundColor: `${c.accent}18`, borderColor: `${c.accent}40` }
+                : { backgroundColor: `${c.accent}10`, borderColor: `${c.accent}30` },
+            ]}
+          >
+            <View style={s.premiumBannerLeft}>
+              <Ionicons
+                name={isPremium ? 'star' : 'star-outline'}
+                size={22}
+                color={c.accent}
+              />
+              <View style={{ marginLeft: 12 }}>
+                <Text style={[s.premiumBannerTitle, { color: c.text }]}>
+                  {isPremium ? 'R90 Premium' : 'Upgrade to Premium'}
+                </Text>
+                <Text style={[s.premiumBannerSub, { color: c.textSub }]}>
+                  {isPremium ? 'Active — thank you 🙌' : 'Unlock advanced insights & coaching'}
+                </Text>
+              </View>
+            </View>
+            {!isPremium && (
+              <View style={[s.premiumBannerCta, { backgroundColor: c.accent }]}>
+                <Text style={s.premiumBannerCtaText}>Upgrade</Text>
+              </View>
+            )}
+          </Pressable>
 
           {/* ── Section 2 — Readiness Zone ── */}
           <View style={s.section}>
@@ -620,6 +654,41 @@ const s = StyleSheet.create({
   identityEmail: {
     fontSize:   13,
     fontWeight: '400',
+  },
+
+  // ── Premium banner ──
+  premiumBanner: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    borderWidth:    1,
+    borderRadius:   16,
+    padding:        16,
+    marginBottom:   20,
+  },
+  premiumBannerLeft: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    flex:          1,
+  },
+  premiumBannerTitle: {
+    fontSize:   15,
+    fontWeight: '600',
+  },
+  premiumBannerSub: {
+    fontSize:  12,
+    marginTop: 2,
+  },
+  premiumBannerCta: {
+    borderRadius:      20,
+    paddingHorizontal: 14,
+    paddingVertical:    7,
+    marginLeft:        12,
+  },
+  premiumBannerCtaText: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      '#0B1220',
   },
 
   // ── Section ──

@@ -39,12 +39,12 @@ export function AirloopSplash({ onDone }: Props) {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity }]}>
-        {/* Airloop mark */}
+        {/* R-Lo mark */}
         <View style={styles.mark}>
-          <Text style={styles.markLetter}>A</Text>
+          <Text style={styles.markLetter}>R</Text>
         </View>
 
-        <Text style={styles.name}>Airloop</Text>
+        <Text style={styles.name}>R-Lo</Text>
         <Text style={styles.tagline}>Your recovery companion.</Text>
       </Animated.View>
     </View>

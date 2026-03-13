@@ -8,7 +8,7 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
-import { hasCompletedOnboarding } from '../lib/storage';
+import { hasCompletedIntro } from '../lib/storage';
 import { ThemeProvider, useTheme } from '../lib/theme-context';
 import { configurePurchases } from '../lib/purchases';
 import { AppSplash } from '../components/AppSplash';
@@ -116,15 +116,15 @@ function RootLayoutInner() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [dataReady,  setDataReady]  = useState(false);
   const [splashDone, setSplashDone] = useState(false);
-  const [hasProfile, setHasProfile] = useState(false);
+  const [hasIntro,  setHasIntro]  = useState(false);
   const hasRedirected = useRef(false);
 
   // Hook must be called before any early returns (React rules)
   useAndroidNavBar(immersiveMode, theme.colors.background, theme.dark);
 
   useEffect(() => {
-    hasCompletedOnboarding().then(completed => {
-      setHasProfile(completed);
+    hasCompletedIntro().then(completed => {
+      setHasIntro(completed);
       setDataReady(true);
     });
   }, []);
@@ -139,10 +139,10 @@ function RootLayoutInner() {
     hasRedirected.current = true;
     if (!isAuthenticated) {
       router.replace('/login');
-    } else if (!hasProfile) {
+    } else if (!hasIntro) {
       router.replace('/onboarding');
     }
-  }, [dataReady, splashDone, authLoading, isAuthenticated, hasProfile, router]);
+  }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
 
   // Deep-link into the app when the user taps a local notification.
   // Currently used by wind-down reminders (data.route = '/wind-down').

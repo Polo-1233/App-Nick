@@ -1,15 +1,20 @@
 /**
- * Onboarding — 6-screen personalization flow (horizontal pager).
+ * Onboarding — 5-screen intro pager (slides 0–4).
  *
  * Slides:
- *   0 — Welcome        R-Lo mascot (Enthousisate), R90 title, tagline
- *   1 — How it works   Sleep cycles science
- *   2 — Chronotype     AMer / Neither / PMer selection
- *   3 — Cycles target  4 or 5 cycles per night
- *   4 — ARP            Wake-up time (Anchor Rise Point)
- *   5 — Final          Celebration, pulsing CTA
+ *   0 — Premium intro     "Most sleep problems aren't sleep problems"
+ *   1 — Cognitive intro   "Sleep is the result of your entire day"
+ *   2 — Authority         The R90 Method / Nick Littlehales
+ *   3 — Meet R-Lo         Mascot introduction
+ *   4 — R-Lo focus        Home preview + R-Lo chat bubble preview
  *
- * On Finish: saves UserProfile + OnboardingData, then routes to Home.
+ * Layout (slides 0–2):
+ *   ProgressBar → TitleBlock → (flex:1) BreathingCircle → Button
+ *   Title sits above the circle; explanatory text lives inside the circle.
+ *
+ * On finish: bootstraps the backend user record, marks intro complete,
+ * then routes to /(tabs). Data collection (name, wake time, sleep issue,
+ * chronotype) happens via the overlay flow in /(tabs)/_layout.tsx.
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
@@ -19,7 +24,6 @@ import {
   StyleSheet,
   Pressable,
   Alert,
-  Platform,
   Keyboard,
   useWindowDimensions,
   Animated,
@@ -27,18 +31,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { formatTime } from '@r90/core';
-import { saveProfile, saveOnboardingData } from '../lib/storage';
-import { bootstrapUser, updateProfile } from '../lib/api';
+import { markIntroComplete } from '../lib/storage';
+import { bootstrapUser } from '../lib/api';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
-import {
-  requestCalendar,
-  requestNotifications,
-  markPermissionPromptShown,
-} from '../lib/permissions';
-import { PermissionModal, type PermStep } from '../components/PermissionModal';
-import { AcquisitionSourceSheet } from '../components/AcquisitionSourceSheet';
 import { MascotImage } from '../components/ui/MascotImage';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { Button } from '../components/ui/Button';
@@ -52,28 +47,23 @@ interface AVSound {
   setVolumeAsync(volume: number): Promise<void>;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 6;
+const TOTAL_PAGES = 5;
 
-const ACCENT     = '#F5A623';
-const BG         = '#0B1220';
-const SURFACE    = '#1A2436';
-const BORDER     = '#243046';
-const TEXT       = '#E6EDF7';
-const TEXT_SUB   = '#9FB0C5';
+const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
+const HOME_STAT_WIDTHS    = [88, 56, 72] as const;
+
+const ACCENT  = '#33C8E8';   // turquoise brand accent
+const BG      = '#0B1220';
+const SURFACE = '#1A2436';
+const BORDER  = '#243046';
+const TEXT    = '#E6EDF7';
+const TEXT_SUB  = '#9FB0C5';
 const TEXT_MUTED = '#6B7F99';
 
-const CHRONOTYPE_CARDS = [
-  { id: 'AMer',    icon: 'sunny'        as const, label: 'Early Bird', sublabel: 'Before 7am' },
-  { id: 'Neither', icon: 'partly-sunny' as const, label: 'In Between', sublabel: '7am – 9am'  },
-  { id: 'PMer',    icon: 'moon'         as const, label: 'Night Owl',  sublabel: 'After 9am'  },
-];
-
-const CYCLE_CARDS = [
-  { id: '4', cycles: '4 Cycles', hours: '6 hours',   desc: 'Good for busy schedules', badge: 'Minimum',     recommended: false },
-  { id: '5', cycles: '5 Cycles', hours: '7.5 hours', desc: 'Optimal for most',         badge: 'Recommended', recommended: true  },
-];
+const CIRCLE_SIZE = 230;
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -81,24 +71,95 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { width: windowWidth } = useWindowDimensions();
 
-  const [page,              setPage]              = useState(0);
-  const [wakeDate,          setWakeDate]          = useState(() => {
-    const d = new Date();
-    d.setHours(6, 30, 0, 0);
-    return d;
-  });
-  const [showAndroidPicker, setShowAndroidPicker] = useState(false);
-  const [chronotype,        setChronotype]        = useState('');
-  const [cyclesTarget,      setCyclesTarget]      = useState('');
-  const [saving,            setSaving]            = useState(false);
-  const [permStep,          setPermStep]          = useState<PermStep | null>(null);
-  const [showAcquisition,   setShowAcquisition]   = useState(false);
+  const [page,   setPage]   = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const isNavigating = useRef(false);
   const translateX   = useRef(new Animated.Value(0)).current;
   const pulseAnim    = useRef(new Animated.Value(1)).current;
+  const breatheAnim  = useRef(new Animated.Value(0)).current;
+  const fadeAnim0    = useRef(new Animated.Value(0)).current;
+  const fadeAnim1    = useRef(new Animated.Value(0)).current;
+  const fadeAnim2    = useRef(new Animated.Value(0)).current;
+  const fadeAnim3    = useRef(new Animated.Value(0)).current;
+  const fadeAnim4    = useRef(new Animated.Value(0)).current;
+  const dotsAnim     = useRef(new Animated.Value(0)).current;
+  const messageAnim  = useRef(new Animated.Value(0)).current;
   const soundRef     = useRef<AVSound | null>(null);
   const fadeRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Breathing circle — starts on mount, runs forever ─────────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breatheAnim, { toValue: 1, duration: 3600, useNativeDriver: true }),
+        Animated.timing(breatheAnim, { toValue: 0, duration: 3600, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breatheAnim]);
+
+  // ── Slide 0: fade-in on first mount ───────────────────────────────────────
+  useEffect(() => {
+    Animated.timing(fadeAnim0, {
+      toValue: 1, duration: 700, delay: 150, useNativeDriver: true,
+    }).start();
+  }, [fadeAnim0]);
+
+  // ── Slide 1: fade-in each time the user lands here ────────────────────────
+  useEffect(() => {
+    if (page === 1) {
+      fadeAnim1.setValue(0);
+      Animated.timing(fadeAnim1, {
+        toValue: 1, duration: 600, delay: 100, useNativeDriver: true,
+      }).start();
+    }
+  }, [page, fadeAnim1]);
+
+  // ── Slide 2: fade-in each time the user lands here ────────────────────────
+  useEffect(() => {
+    if (page === 2) {
+      fadeAnim2.setValue(0);
+      Animated.timing(fadeAnim2, {
+        toValue: 1, duration: 600, delay: 100, useNativeDriver: true,
+      }).start();
+    }
+  }, [page, fadeAnim2]);
+
+  // ── Slide 3: fade-in each time the user lands here ────────────────────────
+  useEffect(() => {
+    if (page === 3) {
+      fadeAnim3.setValue(0);
+      Animated.timing(fadeAnim3, {
+        toValue: 1, duration: 700, delay: 80, useNativeDriver: true,
+      }).start();
+    }
+  }, [page, fadeAnim3]);
+
+  // ── Slide 4: typing indicator → message reveal ────────────────────────────
+  useEffect(() => {
+    if (page !== 4) return;
+    fadeAnim4.setValue(0);
+    messageAnim.setValue(0);
+    dotsAnim.setValue(0);
+
+    Animated.timing(fadeAnim4, {
+      toValue: 1, duration: 500, delay: 100, useNativeDriver: true,
+    }).start();
+
+    const dotsLoop = Animated.loop(
+      Animated.timing(dotsAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+    );
+    dotsLoop.start();
+
+    const timer = setTimeout(() => {
+      dotsLoop.stop();
+      Animated.timing(messageAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }, 2100);
+
+    return () => { clearTimeout(timer); dotsLoop.stop(); };
+  }, [page, fadeAnim4, dotsAnim, messageAnim]);
 
   // ── Pulse animation on the final CTA ──────────────────────────────────────
   useEffect(() => {
@@ -115,7 +176,7 @@ export default function OnboardingScreen() {
     }
   }, [page, pulseAnim]);
 
-  // ── Background music ────────────────────────────────────────────────────────
+  // ── Background music ──────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -155,127 +216,49 @@ export default function OnboardingScreen() {
     };
   }, []);
 
-  const wakeMinutes = wakeDate.getHours() * 60 + wakeDate.getMinutes();
-
   const goToPage = useCallback((index: number) => {
     if (isNavigating.current) return;
     isNavigating.current = true;
     Keyboard.dismiss();
     Animated.timing(translateX, {
-      toValue:         -index * windowWidth,
-      duration:        320,
-      useNativeDriver: true,
+      toValue: -index * windowWidth, duration: 320, useNativeDriver: true,
     }).start(() => { isNavigating.current = false; });
     setPage(index);
-    setShowAndroidPicker(false);
   }, [translateX, windowWidth]);
 
   function handleBack() {
     if (page > 0) goToPage(page - 1);
   }
 
-  function validate(): boolean {
-    if (page === 2 && !chronotype) {
-      Alert.alert('', 'Please choose when you feel at your best.');
-      return false;
+  async function finishIntro() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await Promise.all([bootstrapUser(), markIntroComplete()]);
+      setSaving(false);
+      HapticsSuccess();
+      router.replace('/(tabs)');
+    } catch {
+      setSaving(false);
+      Alert.alert('Setup failed', 'Could not complete setup. Please try again.');
     }
-    if (page === 3 && !cyclesTarget) {
-      Alert.alert('', 'Please choose your cycles target.');
-      return false;
-    }
-    return true;
   }
 
   async function handleNext() {
-    if (!validate()) return;
     HapticsLight();
     if (page < TOTAL_PAGES - 1) {
       goToPage(page + 1);
     } else {
-      await finish();
+      await finishIntro();
     }
   }
 
-  async function finish() {
-    if (saving) return;
-    setSaving(true);
-    try {
-      const idealCycles  = cyclesTarget === '4' ? 4 : 5;
-      const weeklyTarget = idealCycles * 7;
-
-      await saveProfile({
-        anchorTime:          wakeMinutes,
-        chronotype:          (chronotype as 'AMer' | 'PMer' | 'Neither') || 'Neither',
-        idealCyclesPerNight: idealCycles,
-        weeklyTarget,
-      });
-      await saveOnboardingData({
-        firstName:       '',
-        wakeTimeMinutes: wakeMinutes,
-        priority:        chronotype,
-        constraint:      cyclesTarget,
-      });
-
-      await bootstrapUser();
-
-      const arpHH       = String(Math.floor(wakeMinutes / 60)).padStart(2, '0');
-      const roundedMM   = wakeMinutes % 60 >= 15 ? '30' : '00';
-      const arpTime     = `${arpHH}:${roundedMM}`;
-
-      const backendChronotype =
-        chronotype === 'AMer'    ? 'AMer' :
-        chronotype === 'PMer'    ? 'PMer' :
-        chronotype === 'Neither' ? 'In-betweener' : 'Unknown';
-
-      await updateProfile({
-        arp_time:             arpTime,
-        arp_committed:        true,
-        chronotype:           backendChronotype,
-        cycle_target:         idealCycles,
-        onboarding_step:      5,
-        onboarding_completed: true,
-      });
-
-      setSaving(false);
-      HapticsSuccess();
-      setPermStep('calendar');
-    } catch {
-      setSaving(false);
-      Alert.alert('Setup failed', 'Could not save your profile. Please try again.');
-    }
-  }
-
-  async function handlePermAllow() {
-    if (permStep === 'calendar') {
-      await requestCalendar();
-      setPermStep('notifications');
-    } else {
-      await requestNotifications();
-      await markPermissionPromptShown();
-      setPermStep(null);
-      setShowAcquisition(true);
-    }
-  }
-
-  function handlePermSkip() {
-    if (permStep === 'calendar') {
-      setPermStep('notifications');
-    } else {
-      markPermissionPromptShown();
-      setPermStep(null);
-      setShowAcquisition(true);
-    }
-  }
-
-  const isNextDisabled =
-    (page === 2 && !chronotype) ||
-    (page === 3 && !cyclesTarget) ||
-    saving;
+  const isNextDisabled = saving;
 
   const nextLabel =
-    page === 0              ? 'Get Started' :
-    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Start my R90 journey') :
-    'Next';
+    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Begin with R-Lo') :
+    page === 3               ? "Let's begin" :
+    'Continue';
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -309,169 +292,257 @@ export default function OnboardingScreen() {
             ]}
           >
 
-            {/* ── Slide 0: Welcome ──────────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideCenter}>
-                <MascotImage emotion="Enthousisate" size="xl" />
-                <Text style={s.r90Title}>R90</Text>
-                <Text style={s.tagline}>Sleep. Recover. Perform.</Text>
-                <Text style={s.taglineSub}>The methodology trusted by elite athletes.</Text>
+            {/* ── Slide 0: Premium intro ────────────────────────────────── */}
+            <View style={[s.slideV, { width: windowWidth }]}>
+
+              {/* Title — above the circle */}
+              <Animated.View style={[s.titleBlock, { opacity: fadeAnim0 }]}>
+                <Text style={s.slideTitle}>
+                  {"Most sleep problems\naren't sleep problems"}
+                </Text>
+              </Animated.View>
+
+              {/* Breathing circle — vertical center of remaining space */}
+              <View style={s.circleCenter}>
+                {/* Glow orb (absolute, sits behind the ring) */}
+                <Animated.View
+                  style={[
+                    s.circleGlow,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.10, 0.0] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
+                    },
+                  ]}
+                />
+                {/* Ring with inner explanatory text */}
+                <Animated.View
+                  style={[
+                    s.circleRing,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 0.88, 0.55] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.08] }) }],
+                    },
+                  ]}
+                >
+                  <Animated.Text style={[s.circleInnerText, { opacity: fadeAnim0 }]}>
+                    {"Your body runs on\n90-minute recovery cycles."}
+                  </Animated.Text>
+                </Animated.View>
               </View>
+
             </View>
 
-            {/* ── Slide 1: How it works ─────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideInner}>
-                <View style={s.iconWrap}>
-                  <Ionicons name="moon-outline" size={80} color={ACCENT} />
-                </View>
-                <Text style={s.slideTitle}>Sleep in 90-min cycles</Text>
-                <Text style={s.slideBody}>
-                  R90 is built around the science of sleep cycles. Every night is made up of 90-minute blocks. The goal: 5 quality cycles.
+            {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
+            <View style={[s.slideV, { width: windowWidth }]}>
+
+              {/* Title */}
+              <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
+                <Text style={s.slideTitle}>
+                  {"Sleep is the result\nof your entire day"}
                 </Text>
-                <View style={s.bulletList}>
-                  {['90-min cycles', '5 cycles target', 'Track your progress'].map((b) => (
-                    <View key={b} style={s.bulletRow}>
-                      <View style={s.bulletDot} />
-                      <Text style={s.bulletText}>{b}</Text>
+              </Animated.View>
+
+              {/* Breathing circle */}
+              <View style={s.circleCenter}>
+                <Animated.View
+                  style={[
+                    s.circleGlow,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.08, 0.0] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    s.circleRing,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.48, 0.78, 0.48] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.08] }) }],
+                    },
+                  ]}
+                >
+                  {/* Rhythm lines — faint horizontal markers behind text */}
+                  <View style={[StyleSheet.absoluteFill, s.circleRhythmWrap]} pointerEvents="none">
+                    <View style={s.rhythmLines}>
+                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
+                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }) }]} />
+                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
+                    </View>
+                  </View>
+
+                  {/* Text stanzas */}
+                  <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim1 }]}>
+                    <Text style={s.circleInnerText}>{"Your energy follows\nbiological cycles."}</Text>
+                    <Text style={s.circleInnerText}>{"Most people live\nagainst them."}</Text>
+                  </Animated.View>
+                </Animated.View>
+              </View>
+
+            </View>
+
+            {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
+            <View style={[s.slideV, { width: windowWidth }]}>
+
+              {/* Title */}
+              <Animated.View style={[s.titleBlock, { opacity: fadeAnim2 }]}>
+                <Text style={s.slideTitle}>{"The R90 Method"}</Text>
+              </Animated.View>
+
+              {/* Silver breathing circle — authority palette */}
+              <View style={s.circleCenter}>
+                <Animated.View
+                  style={[
+                    s.circleGlowSilver,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.05, 0.0] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
+                    },
+                  ]}
+                />
+                <Animated.View
+                  style={[
+                    s.circleRingSilver,
+                    {
+                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.28, 0.52, 0.28] }),
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.06] }) }],
+                    },
+                  ]}
+                >
+                  <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim2 }]}>
+                    <Text style={s.circleAuthorLine}>
+                      {'Developed by\n'}
+                      <Text style={s.circleAuthorName}>{'Nick Littlehales.'}</Text>
+                    </Text>
+                    <Text style={s.circleCredential}>
+                      {"Sleep coach to elite athletes\nand high-performance teams."}
+                    </Text>
+                  </Animated.View>
+                </Animated.View>
+              </View>
+
+            </View>
+
+            {/* ── Slide 3: Meet R-Lo ────────────────────────────────────── */}
+            <View style={[s.slide3, { width: windowWidth }]}>
+              <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
+
+                {/* Title */}
+                <Text style={s.slide3Title}>Meet R-Lo</Text>
+
+                {/* Mascot with turquoise ambient glow */}
+                <View style={s.slide3MascotArea}>
+                  <Animated.View
+                    style={[
+                      s.slide3Glow,
+                      {
+                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }),
+                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.14] }) }],
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={{
+                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.04] }) }],
+                    }}
+                  >
+                    <MascotImage emotion="encourageant" size="xl" />
+                  </Animated.View>
+                </View>
+
+                {/* Body */}
+                <View style={s.slide3BodyGroup}>
+                  <Text style={s.slide3Body}>{"Your personal\nsleep coach."}</Text>
+                  <Text style={s.slide3Body}>{"I'll help you align\nyour day with your biology."}</Text>
+                </View>
+
+              </Animated.View>
+            </View>
+
+            {/* ── Slide 4: R-Lo focus — home preview + chat ───────────── */}
+            <View style={[s.slide4, { width: windowWidth }]}>
+
+              {/* Dimmed static home-screen skeleton (backdrop) */}
+              <View style={s.slide4Preview} pointerEvents="none">
+                {/* Greeting bar */}
+                <View style={s.slide4GreetRow}>
+                  <View style={s.slide4GreetText}>
+                    <View style={s.slide4GreetLine1} />
+                    <View style={s.slide4GreetLine2} />
+                  </View>
+                  <View style={s.slide4Avatar} />
+                </View>
+
+                {/* Cycle ring + stat chips */}
+                <View style={s.slide4RingRow}>
+                  <View style={s.slide4Ring}>
+                    <View style={s.slide4RingInner} />
+                  </View>
+                  <View style={s.slide4Chips}>
+                    {HOME_STAT_WIDTHS.map((w, i) => (
+                      <View key={i} style={[s.slide4Chip, { width: w }]} />
+                    ))}
+                  </View>
+                </View>
+
+                {/* Calendar strip */}
+                <View style={s.slide4Cal}>
+                  {DAYS_ABR.map((day, i) => (
+                    <View key={i} style={s.slide4CalCol}>
+                      <View style={[s.slide4CalBar, { height: CAL_PREVIEW_HEIGHTS[i] }]} />
+                      <Text style={s.slide4CalDay}>{day}</Text>
                     </View>
                   ))}
                 </View>
               </View>
-            </View>
 
-            {/* ── Slide 2: Chronotype ───────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideInner}>
-                <Text style={[s.slideTitle, { fontSize: 24 }]}>
-                  When do you naturally{'\n'}wake up?
-                </Text>
-                <Text style={s.slideSub}>Be honest — no right answer.</Text>
-                <View style={s.mascotRow}>
-                  <MascotImage emotion="Reflexion" size="md" />
-                </View>
-                <View style={s.cardList}>
-                  {CHRONOTYPE_CARDS.map((card) => {
-                    const active = chronotype === card.id;
-                    return (
-                      <Pressable
-                        key={card.id}
-                        style={[s.selectCard, active && s.selectCardActive]}
-                        onPress={() => setChronotype(card.id)}
-                      >
-                        <View style={s.selectCardLeft}>
-                          <Ionicons
-                            name={card.icon}
-                            size={22}
-                            color={active ? ACCENT : TEXT_SUB}
-                          />
-                          <Text style={[s.selectCardLabel, active && s.selectCardLabelActive]}>
-                            {card.label}
-                          </Text>
-                        </View>
-                        <Text style={[s.selectCardSub, active && s.selectCardSubActive]}>
-                          {card.sublabel}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
+              {/* Semi-transparent scrim — dims preview, focuses eye on chat */}
+              <View style={s.slide4Scrim} pointerEvents="none" />
 
-            {/* ── Slide 3: Cycles target ────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideInner}>
-                <Text style={[s.slideTitle, { fontSize: 24 }]}>
-                  How many cycles{'\n'}per night?
-                </Text>
-                <View style={s.cycleRow}>
-                  {CYCLE_CARDS.map((card) => {
-                    const active = cyclesTarget === card.id;
-                    return (
-                      <Pressable
-                        key={card.id}
-                        style={[s.cycleCard, active && s.cycleCardActive]}
-                        onPress={() => setCyclesTarget(card.id)}
-                      >
-                        <View style={s.cycleBadgeWrap}>
-                          <View style={[s.cycleBadge, card.recommended && s.cycleBadgeAccent]}>
-                            <Text style={[s.cycleBadgeText, card.recommended && s.cycleBadgeTextAccent]}>
-                              {card.badge}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={[s.cycleTitle, active && s.cycleTitleActive]}>
-                          {card.cycles}
-                        </Text>
-                        <Text style={s.cycleHours}>{card.hours}</Text>
-                        <Text style={s.cycleDesc}>{card.desc}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
+              {/* R-Lo chat bubble — centered, full brightness */}
+              <Animated.View style={[s.slide4ChatArea, { opacity: fadeAnim4 }]}>
+                <Animated.View
+                  style={{
+                    alignSelf:  'flex-end',
+                    marginBottom: 6,
+                    transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.03] }) }],
+                  }}
+                >
+                  <MascotImage emotion="rassurante" size="sm" />
+                </Animated.View>
 
-            {/* ── Slide 4: ARP ──────────────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideInner}>
-                <Text style={[s.slideTitle, { fontSize: 24 }]}>Set your wake-up time</Text>
-                <Text style={s.slideSub}>
-                  Your Anchor Rise Point — the foundation of your R90 plan.
-                </Text>
-                <View style={s.mascotRow}>
-                  <MascotImage emotion="encourageant" size="sm" />
-                </View>
-                <View style={s.pickerWrap}>
-                  {Platform.OS === 'ios' ? (
-                    <DateTimePicker
-                      value={wakeDate}
-                      mode="time"
-                      display="spinner"
-                      onChange={(_, d) => { if (d) setWakeDate(d); }}
-                      style={s.iosPicker}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      {...({ textColor: TEXT } as any)}
-                    />
-                  ) : (
-                    <>
-                      <Pressable
-                        style={s.androidTimeBtn}
-                        onPress={() => setShowAndroidPicker(true)}
-                      >
-                        <Text style={s.androidTimeText}>{formatTime(wakeMinutes)}</Text>
-                      </Pressable>
-                      {showAndroidPicker && (
-                        <DateTimePicker
-                          value={wakeDate}
-                          mode="time"
-                          display="default"
-                          onChange={(_, d) => {
-                            setShowAndroidPicker(false);
-                            if (d) setWakeDate(d);
-                          }}
-                        />
-                      )}
-                    </>
-                  )}
-                </View>
-              </View>
-            </View>
+                <View style={s.slide4Bubble}>
+                  {/* Message text — always laid out to size the bubble */}
+                  <Animated.Text style={[s.slide4MsgText, { opacity: messageAnim }]}>
+                    {"Hi.\n\nI'm R-Lo.\n\nLet's understand\nyour rhythm."}
+                  </Animated.Text>
 
-            {/* ── Slide 5: Final ────────────────────────────────────────── */}
-            <View style={[s.slide, { width: windowWidth }]}>
-              <View style={s.slideCenter}>
-                <MascotImage emotion="celebration" size="xl" />
-                <Text style={s.finalTitle}>You're ready!</Text>
-                <Text style={s.finalSub}>Your R90 plan is set. Let's start tracking.</Text>
+                  {/* Typing dots — absolute overlay, fades out when message arrives */}
+                  <Animated.View
+                    style={[
+                      StyleSheet.absoluteFill,
+                      s.slide4DotsRow,
+                      { opacity: messageAnim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [1, 0, 0] }) },
+                    ]}
+                  >
+                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 1.0, 0.3, 0.3, 0.3] }) }]} />
+                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 0.3, 1.0, 0.3, 0.3] }) }]} />
+                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 0.3, 0.3, 1.0, 0.3] }) }]} />
+                  </Animated.View>
+                </View>
+              </Animated.View>
+
+              {/* Dimmed tab-bar silhouette */}
+              <View style={s.slide4TabBar} pointerEvents="none">
+                {[0, 1, 2, 3].map(i => <View key={i} style={s.slide4TabDot} />)}
               </View>
+
             </View>
 
           </Animated.View>
         </View>
 
-        {/* ── Footer: CTA button (pulse on slide 5) ── */}
+        {/* ── Footer: CTA button ── */}
         <View style={s.footer}>
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <Button
@@ -487,17 +558,6 @@ export default function OnboardingScreen() {
         </View>
 
       </SafeAreaView>
-
-      <PermissionModal
-        visible={permStep !== null}
-        step={permStep ?? 'calendar'}
-        onAllow={handlePermAllow}
-        onSkip={handlePermSkip}
-      />
-      <AcquisitionSourceSheet
-        visible={showAcquisition}
-        onDone={() => router.replace('/')}
-      />
     </View>
   );
 }
@@ -505,17 +565,17 @@ export default function OnboardingScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  root:       { flex: 1, backgroundColor: BG },
-  safeArea:   { flex: 1 },
+  root:     { flex: 1, backgroundColor: BG },
+  safeArea: { flex: 1 },
 
-  // Header
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    flexDirection:   'row',
-    alignItems:      'center',
+    flexDirection:     'row',
+    alignItems:        'center',
     paddingHorizontal: 20,
-    paddingTop:      8,
-    paddingBottom:   16,
-    gap:             12,
+    paddingTop:        8,
+    paddingBottom:     16,
+    gap:               12,
   },
   backBtn: {
     width:           36,
@@ -528,161 +588,355 @@ const s = StyleSheet.create({
   backHidden:   { opacity: 0 },
   progressWrap: { flex: 1 },
 
-  // Pager
+  // ── Pager ─────────────────────────────────────────────────────────────────
   pagerClip: { flex: 1, overflow: 'hidden' },
   pager:     { flex: 1, flexDirection: 'row' },
-  slide:     { flex: 1, paddingHorizontal: 24 },
 
-  // Centered layout (slides 0, 5)
-  slideCenter: {
-    flex:           1,
-    justifyContent: 'center',
-    alignItems:     'center',
-    gap:            16,
-    paddingBottom:  8,
-  },
-
-  // Top-aligned layout (slides 1–4)
-  slideInner: {
-    flex:    1,
-    paddingTop: 8,
-    gap:     18,
-  },
-
-  // Slide 0 — Welcome
-  r90Title: {
-    fontSize:     52,
-    fontFamily:   'Inter-Bold',
-    fontWeight:   '700',
-    color:        ACCENT,
-    letterSpacing: -1,
-  },
-  tagline: {
-    fontSize:   18,
-    fontFamily: 'Inter-Medium',
-    fontWeight: '500',
-    color:      TEXT_SUB,
-    textAlign:  'center',
-  },
-  taglineSub: {
-    fontSize:  14,
-    color:     TEXT_MUTED,
-    textAlign: 'center',
-  },
-
-  // Slide 1 — How it works
-  iconWrap:   { alignSelf: 'center', marginBottom: 4 },
-  slideTitle: {
-    fontSize:   28,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    color:      TEXT,
-    lineHeight: 36,
-  },
-  slideSub: {
-    fontSize:   15,
-    color:      TEXT_SUB,
-    lineHeight: 22,
-    marginTop:  -4,
-  },
-  slideBody: {
-    fontSize:   16,
-    color:      TEXT_SUB,
-    lineHeight: 26,
-  },
-  bulletList: { gap: 10 },
-  bulletRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bulletDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT },
-  bulletText: { fontSize: 15, fontWeight: '500', color: TEXT },
-
-  // Slide 2 — Chronotype
-  mascotRow: { alignItems: 'center' },
-  cardList:  { gap: 10 },
-  selectCard: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
-    backgroundColor: SURFACE,
-    borderRadius:    14,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    borderWidth:     1.5,
-    borderColor:     BORDER,
-  },
-  selectCardActive: {
-    borderColor:     ACCENT,
-    backgroundColor: 'rgba(245,166,35,0.08)',
-  },
-  selectCardLeft:        { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  selectCardLabel:       { fontSize: 16, fontWeight: '600', color: TEXT },
-  selectCardLabelActive: { color: ACCENT },
-  selectCardSub:         { fontSize: 13, color: TEXT_MUTED },
-  selectCardSubActive:   { color: TEXT_SUB },
-
-  // Slide 3 — Cycles
-  cycleRow: { flexDirection: 'row', gap: 12, flex: 1 },
-  cycleCard: {
-    flex:            1,
-    backgroundColor: SURFACE,
-    borderRadius:    16,
-    padding:         16,
-    borderWidth:     1.5,
-    borderColor:     BORDER,
-    gap:             6,
-  },
-  cycleCardActive:    { borderColor: ACCENT, backgroundColor: 'rgba(245,166,35,0.08)' },
-  cycleBadgeWrap:     { marginBottom: 2 },
-  cycleBadge: {
-    alignSelf:        'flex-start',
-    backgroundColor:  'rgba(255,255,255,0.08)',
-    borderRadius:     8,
-    paddingHorizontal: 8,
-    paddingVertical:  3,
-  },
-  cycleBadgeAccent:    { backgroundColor: 'rgba(245,166,35,0.15)' },
-  cycleBadgeText:      { fontSize: 11, fontWeight: '600', color: TEXT_MUTED },
-  cycleBadgeTextAccent: { color: ACCENT },
-  cycleTitle:          { fontSize: 20, fontWeight: '700', color: TEXT },
-  cycleTitleActive:    { color: ACCENT },
-  cycleHours:          { fontSize: 14, fontWeight: '500', color: TEXT_SUB },
-  cycleDesc:           { fontSize: 12, color: TEXT_MUTED, lineHeight: 18 },
-
-  // Slide 4 — ARP
-  pickerWrap: {
-    backgroundColor: 'rgba(26,36,54,0.9)',
-    borderRadius:    16,
-    overflow:        'hidden',
-    borderWidth:     1,
-    borderColor:     BORDER,
-  },
-  iosPicker:       { height: 160 },
-  androidTimeBtn:  { paddingVertical: 22, alignItems: 'center' },
-  androidTimeText: {
-    color:         TEXT,
-    fontSize:      38,
-    fontWeight:    '700',
-    letterSpacing: 2,
-  },
-
-  // Slide 5 — Final
-  finalTitle: {
-    fontSize:   32,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    color:      ACCENT,
-    textAlign:  'center',
-  },
-  finalSub: {
-    fontSize:   16,
-    color:      TEXT_SUB,
-    textAlign:  'center',
-    lineHeight: 24,
-  },
-
-  // Footer
+  // ── Footer ────────────────────────────────────────────────────────────────
   footer: {
     paddingHorizontal: 24,
     paddingTop:        12,
     paddingBottom:     4,
+  },
+
+  // ── Shared slide layout (slides 0, 1, 2) ──────────────────────────────────
+  // Title above → flex:1 circle center below
+  slideV: {
+    flex:           1,
+    alignItems:     'center',
+    paddingHorizontal: 24,
+    paddingTop:     4,
+  },
+
+  titleBlock: {
+    alignItems:      'center',
+    paddingHorizontal: 8,
+    paddingBottom:   4,
+  },
+
+  slideTitle: {
+    fontSize:      30,
+    fontFamily:    'Inter-Bold',
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    lineHeight:    42,
+    letterSpacing: -0.5,
+  },
+
+  // ── Breathing circle container ─────────────────────────────────────────────
+  circleCenter: {
+    flex:            1,
+    width:           '100%',
+    alignItems:      'center',
+    justifyContent:  'center',
+    alignSelf:       'center',
+  },
+
+  // Turquoise glow — absolute behind the ring, centered via circleCenter
+  circleGlow: {
+    position:        'absolute',
+    width:           CIRCLE_SIZE * 1.35,
+    height:          CIRCLE_SIZE * 1.35,
+    borderRadius:    (CIRCLE_SIZE * 1.35) / 2,
+    backgroundColor: ACCENT,
+  },
+
+  // Turquoise ring — relative, determines layout position
+  circleRing: {
+    width:          CIRCLE_SIZE,
+    height:         CIRCLE_SIZE,
+    borderRadius:   CIRCLE_SIZE / 2,
+    borderWidth:    1.5,
+    borderColor:    ACCENT,
+    justifyContent: 'center',
+    alignItems:     'center',
+    shadowColor:    ACCENT,
+    shadowOpacity:  0.55,
+    shadowRadius:   22,
+    shadowOffset:   { width: 0, height: 0 },
+  },
+
+  // Silver ring — authority slide (slide 2)
+  circleGlowSilver: {
+    position:        'absolute',
+    width:           CIRCLE_SIZE * 1.35,
+    height:          CIRCLE_SIZE * 1.35,
+    borderRadius:    (CIRCLE_SIZE * 1.35) / 2,
+    backgroundColor: TEXT,
+  },
+  circleRingSilver: {
+    width:          CIRCLE_SIZE,
+    height:         CIRCLE_SIZE,
+    borderRadius:   CIRCLE_SIZE / 2,
+    borderWidth:    1,
+    borderColor:    TEXT,
+    justifyContent: 'center',
+    alignItems:     'center',
+    shadowColor:    TEXT,
+    shadowOpacity:  0.2,
+    shadowRadius:   14,
+    shadowOffset:   { width: 0, height: 0 },
+  },
+
+  // ── Circle inner text ──────────────────────────────────────────────────────
+  circleInnerGroup: {
+    alignItems: 'center',
+    gap:        16,
+  },
+
+  circleInnerText: {
+    fontSize:   14,
+    fontFamily: 'Inter-Regular',
+    fontWeight: '400',
+    color:      TEXT_SUB,
+    textAlign:  'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+
+  // Slide 2 author attribution
+  circleAuthorLine: {
+    fontSize:   14,
+    fontFamily: 'Inter-Regular',
+    fontWeight: '400',
+    color:      TEXT_SUB,
+    textAlign:  'center',
+    lineHeight: 22,
+  },
+  circleAuthorName: {
+    fontSize:      15,
+    fontFamily:    'Inter-SemiBold',
+    fontWeight:    '600',
+    color:         TEXT,
+    letterSpacing: 0.2,
+  },
+  circleCredential: {
+    fontSize:          12,
+    fontFamily:        'Inter-Regular',
+    fontWeight:        '400',
+    color:             TEXT_MUTED,
+    textAlign:         'center',
+    lineHeight:        19,
+    paddingHorizontal: 18,
+  },
+
+  // ── Rhythm lines (slide 1 — inside ring) ──────────────────────────────────
+  circleRhythmWrap: {
+    justifyContent: 'center',
+    alignItems:     'center',
+  },
+  rhythmLines: {
+    alignItems: 'center',
+    gap:        26,
+  },
+  rhythmLine: {
+    width:           110,
+    height:          1,
+    backgroundColor: ACCENT,
+    borderRadius:    1,
+  },
+
+  // ── Slide 3 — Meet R-Lo ───────────────────────────────────────────────────
+  slide3: {
+    flex:              1,
+    paddingHorizontal: 32,
+    justifyContent:    'center',
+    alignItems:        'center',
+  },
+  slide3Content: {
+    width:      '100%',
+    alignItems: 'center',
+    gap:        28,
+  },
+  slide3Title: {
+    fontSize:      34,
+    fontFamily:    'Inter-Bold',
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    letterSpacing: -0.5,
+  },
+  slide3MascotArea: {
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  slide3Glow: {
+    position:        'absolute',
+    width:           300,
+    height:          300,
+    borderRadius:    150,
+    backgroundColor: ACCENT,
+  },
+  slide3BodyGroup: {
+    alignItems: 'center',
+    gap:        18,
+  },
+  slide3Body: {
+    fontSize:   17,
+    fontFamily: 'Inter-Regular',
+    fontWeight: '400',
+    color:      TEXT_SUB,
+    textAlign:  'center',
+    lineHeight: 27,
+  },
+
+  // ── Slide 4 — R-Lo focus / home preview ──────────────────────────────────
+  slide4: {
+    flex:     1,
+    overflow: 'hidden',
+  },
+  slide4Preview: {
+    position:          'absolute',
+    top:               0,
+    left:              0,
+    right:             0,
+    bottom:            0,
+    paddingHorizontal: 24,
+    paddingTop:        16,
+    opacity:           0.22,
+    gap:               20,
+  },
+  slide4GreetRow: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+  },
+  slide4GreetText:  { gap: 6 },
+  slide4GreetLine1: {
+    width:           110,
+    height:          10,
+    borderRadius:    5,
+    backgroundColor: TEXT,
+  },
+  slide4GreetLine2: {
+    width:           72,
+    height:          8,
+    borderRadius:    4,
+    backgroundColor: TEXT_SUB,
+  },
+  slide4Avatar: {
+    width:           36,
+    height:          36,
+    borderRadius:    18,
+    backgroundColor: SURFACE,
+    borderWidth:     1,
+    borderColor:     BORDER,
+  },
+  slide4RingRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           20,
+  },
+  slide4Ring: {
+    width:           80,
+    height:          80,
+    borderRadius:    40,
+    borderWidth:     6,
+    borderColor:     ACCENT,
+    justifyContent:  'center',
+    alignItems:      'center',
+  },
+  slide4RingInner: {
+    width:           50,
+    height:          12,
+    borderRadius:    6,
+    backgroundColor: TEXT_SUB,
+  },
+  slide4Chips: { gap: 8 },
+  slide4Chip: {
+    height:          12,
+    borderRadius:    6,
+    backgroundColor: SURFACE,
+    borderWidth:     1,
+    borderColor:     BORDER,
+  },
+  slide4Cal: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'flex-end',
+  },
+  slide4CalCol: {
+    alignItems: 'center',
+    gap:        4,
+  },
+  slide4CalBar: {
+    width:           28,
+    borderRadius:    6,
+    backgroundColor: ACCENT,
+  },
+  slide4CalDay: {
+    fontSize:   10,
+    fontFamily: 'Inter-Medium',
+    color:      TEXT_MUTED,
+  },
+  slide4Scrim: {
+    position:        'absolute',
+    top:             0,
+    left:            0,
+    right:           0,
+    bottom:          0,
+    backgroundColor: 'rgba(11,18,32,0.58)',
+  },
+  slide4ChatArea: {
+    position:          'absolute',
+    top:               0,
+    left:              0,
+    right:             0,
+    bottom:            56,
+    flexDirection:     'row',
+    justifyContent:    'center',
+    alignItems:        'center',
+    paddingHorizontal: 28,
+    gap:               12,
+  },
+  slide4Bubble: {
+    flex:                1,
+    backgroundColor:     SURFACE,
+    borderRadius:        18,
+    borderTopLeftRadius: 4,
+    padding:             20,
+    borderWidth:         1,
+    borderColor:         BORDER,
+    minHeight:           120,
+  },
+  slide4DotsRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            8,
+  },
+  slide4Dot: {
+    width:           9,
+    height:          9,
+    borderRadius:    4.5,
+    backgroundColor: TEXT_SUB,
+  },
+  slide4MsgText: {
+    fontSize:   18,
+    fontFamily: 'Inter-Regular',
+    fontWeight: '400',
+    color:      TEXT,
+    lineHeight: 30,
+  },
+  slide4TabBar: {
+    position:          'absolute',
+    bottom:            0,
+    left:              0,
+    right:             0,
+    height:            56,
+    backgroundColor:   BG,
+    borderTopWidth:    1,
+    borderTopColor:    BORDER,
+    flexDirection:     'row',
+    justifyContent:    'space-around',
+    alignItems:        'center',
+    opacity:           0.22,
+  },
+  slide4TabDot: {
+    width:           28,
+    height:          28,
+    borderRadius:    14,
+    backgroundColor: SURFACE,
   },
 });

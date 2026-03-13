@@ -1,55 +1,116 @@
+/**
+ * HomeScreen — R-Lo Chat Experience
+ *
+ * The Home screen IS the conversation with R-Lo.
+ *
+ * Layout:
+ *   SafeArea
+ *   ├── Minimal header (greeting + settings)
+ *   ├── Empty state  → R-Lo mascot + tagline + suggestion chips
+ *   │   OR
+ *   │   Active state → FlatList of chat messages
+ *   └── Input composer (text field + send button)
+ *
+ * Architecture:
+ *   - useChat() hook for embedded streaming chat (separate from modal AirloopChat)
+ *   - useDayPlanContext() for conflict detection + onboarding gate
+ *   - ConflictSheet still surfaces when conflicts are detected
+ */
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  Alert,
-  ScrollView,
+  TextInput,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeSkeletonScreen } from "../SkeletonLoader";
-import { PostEventSheet } from "../PostEventSheet";
 import { ConflictSheet } from "../ConflictSheet";
 import { useDayPlanContext } from "../../lib/day-plan-context";
-import { loadProfile } from "../../lib/storage";
-import { useBackendHome } from "../../lib/use-backend-home";
-import { actionRecommendation } from "../../lib/api";
-import { getSuggestedAlarmTime, openAlarmApp, formatAlarmSuggestion } from "../../lib/alarm";
-import { HapticsLight } from "../../utils/haptics";
+import { loadProfile, hasCompletedIntro } from "../../lib/storage";
 import { usePremium } from "../../lib/use-premium";
-import { useChatContext } from "../../lib/chat-context";
+import { useChat, type ChatMessage } from "../../lib/use-chat";
 import { useTheme } from "../../lib/theme-context";
-import { Card } from "../ui/Card";
-import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
-import { ProgressBar } from "../ui/ProgressBar";
 import { MascotImage } from "../ui/MascotImage";
-import type { ReadinessZone, UserProfile } from "@r90/types";
+import type { UserProfile } from "@r90/types";
 
-// ─── Zone helpers ─────────────────────────────────────────────────────────────
+// ─── Suggested prompts (shown in empty state) ─────────────────────────────────
 
-const ZONE_COLOR: Record<ReadinessZone, string> = {
-  green:  '#3DDC97',
-  yellow: '#F5A623',
-  orange: '#F97316',
-};
+const SUGGESTIONS = [
+  "How am I doing this week?",
+  "What should I do before bed tonight?",
+  "Help me understand my sleep cycles",
+  "I've been waking up tired lately",
+];
 
-const ZONE_LABEL: Record<ReadinessZone, string> = {
-  green:  'Ready',
-  yellow: 'Building',
-  orange: 'Recovery',
-};
+// ─── Blinking cursor (shown while R-Lo is streaming) ─────────────────────────
 
-const ZONE_BADGE: Record<ReadinessZone, 'success' | 'accent' | 'warning'> = {
-  green:  'success',
-  yellow: 'accent',
-  orange: 'warning',
-};
+function BlinkingCursor({ color }: { color: string }) {
+  const opacity = useRef(new Animated.Value(1)).current;
 
-// ─── Component ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0, duration: 420, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return <Animated.Text style={{ color, fontSize: 14, opacity }}>▋</Animated.Text>;
+}
+
+// ─── Chat bubble ──────────────────────────────────────────────────────────────
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const { theme } = useTheme();
+  const c = theme.colors;
+  const isUser      = message.role === "user";
+  const isError     = message.status === "error";
+  const isStreaming  = message.status === "streaming" && message.content.length > 0;
+
+  return (
+    <View style={[st.bubbleRow, isUser && st.bubbleRowUser]}>
+      {/* R-Lo avatar — mascot image for assistant messages */}
+      {!isUser && (
+        <MascotImage
+          emotion="rassurante"
+          size="sm"
+          style={st.rloAvatarImg}
+        />
+      )}
+
+      <View style={[
+        st.bubble,
+        { backgroundColor: c.surface },
+        isUser  && { backgroundColor: c.accent, borderBottomRightRadius: 4, borderBottomLeftRadius: 18 },
+        isError && { backgroundColor: 'rgba(248,113,113,0.1)', borderWidth: 1, borderColor: c.error },
+      ]}>
+        <Text style={[
+          st.bubbleText,
+          { color: c.text },
+          isUser  && { color: '#000000' },
+          isError && { color: c.error },
+        ]}>
+          {message.content || " "}
+        </Text>
+        {isStreaming && <BlinkingCursor color={c.accent} />}
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -64,43 +125,30 @@ export default function HomeScreen() {
     applyConflictOption,
   } = useDayPlanContext();
 
-  const { payload: backendPayload, loading: backendLoading, refresh: refreshBackend } = useBackendHome();
-  const { recordUsage } = usePremium();
-  const { openChat }    = useChatContext();
-  const router          = useRouter();
+  const { recordUsage }                         = usePremium();
+  const router                                  = useRouter();
+  const { messages, isStreaming, sendMessage }  = useChat();
 
-  const [showPostEvent, setShowPostEvent] = useState(false);
+  const [input,         setInput]         = useState("");
   const [showConflicts, setShowConflicts] = useState(false);
   const [profile,       setProfile]       = useState<UserProfile | null>(null);
+
+  const listRef         = useRef<FlatList<ChatMessage>>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
 
-  // ── Backend recommendation action handler ──────────────────────────────────
-  const handleRecommendationAction = useCallback(async (
-    recId:  string,
-    action: 'actioned' | 'dismissed',
-  ) => {
-    await actionRecommendation(recId, action);
-    void refreshBackend();
-  }, [refreshBackend]);
-
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const weeklyTotal  = backendPayload?.weekly_balance?.total  ?? dayPlan?.readiness.weeklyTotal  ?? 0;
-  const weeklyTarget = backendPayload?.weekly_balance?.target ?? dayPlan?.readiness.weeklyTarget ?? 35;
-  const primaryRec   = backendPayload?.primary_recommendation ?? null;
-  const tonightOnset = backendPayload?.tonight_sleep_onset    ?? null;
-  const fallbackOnset = backendPayload?.fallback_onset        ?? null;
-  const action       = dayPlan?.nextAction;
-
-  // ── Redirect if onboarding needed ─────────────────────────────────────────
+  // ── Redirect if onboarding incomplete ─────────────────────────────────────
   useEffect(() => {
-    if (needsOnboarding && !hasRedirected.current) {
-      hasRedirected.current = true;
-      router.replace("/onboarding");
-    }
+    if (!needsOnboarding || hasRedirected.current) return;
+    hasCompletedIntro().then(introComplete => {
+      if (!introComplete && !hasRedirected.current) {
+        hasRedirected.current = true;
+        router.replace("/onboarding");
+      }
+    });
   }, [needsOnboarding, router]);
 
-  // ── Refresh on screen focus ────────────────────────────────────────────────
+  // ── Refresh day plan on screen focus ──────────────────────────────────────
   useFocusEffect(
     useCallback(() => {
       if (!hasMountedFocus.current) {
@@ -108,237 +156,169 @@ export default function HomeScreen() {
         return;
       }
       refreshPlan();
-      void refreshBackend();
-    }, [refreshPlan, refreshBackend]),
+    }, [refreshPlan]),
   );
 
-  // ── Load profile ───────────────────────────────────────────────────────────
+  // ── Load profile (needed for PostEventSheet if surfaced elsewhere) ─────────
   useEffect(() => {
     loadProfile().then(setProfile);
   }, []);
 
-  // ── Show conflict sheet when conflicts detected ────────────────────────────
+  // ── Surface conflict sheet when day plan has conflicts ────────────────────
   useEffect(() => {
     if (dayPlan && dayPlan.conflicts.length > 0) {
       setShowConflicts(true);
     }
   }, [dayPlan]);
 
-  // ── Alarm handler ──────────────────────────────────────────────────────────
-  const handleAlarmPress = useCallback(async () => {
-    if (!profile || !dayPlan) return;
-    void HapticsLight();
-    const suggestion = getSuggestedAlarmTime(profile, dayPlan);
-    const result     = await openAlarmApp(suggestion);
-    if (!result.ok) {
-      Alert.alert(
-        'Wake-up alarm',
-        result.reason ?? `Set your alarm for ${formatAlarmSuggestion(suggestion)} to protect your anchor time.`,
-      );
-    }
-  }, [profile, dayPlan]);
+  // ── Auto-scroll when messages update ──────────────────────────────────────
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const t = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(t);
+  }, [messages]);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
-  const loading = localLoading && backendLoading;
-
-  if (loading) return <HomeSkeletonScreen />;
-
-  if ((localError || !dayPlan) && !backendPayload) {
-    return (
-      <View style={[st.root, st.errorContainer, { backgroundColor: c.background }]}>
-        <Text style={[st.errorText, { color: c.textSub }]}>
-          {localError ?? 'Could not load your sleep plan.'}
-        </Text>
-        <Pressable
-          style={[st.retryBtn, { backgroundColor: c.surface, borderColor: c.border }]}
-          onPress={() => { refreshPlan(); void refreshBackend(); }}
-        >
-          <Text style={[st.retryBtnText, { color: c.text }]}>Try again</Text>
-        </Pressable>
-      </View>
-    );
+  // ── Send handler ──────────────────────────────────────────────────────────
+  function handleSend() {
+    const text = input.trim();
+    if (!text || isStreaming) return;
+    setInput("");
+    void sendMessage(text);
   }
 
-  // ── Derived display values ─────────────────────────────────────────────────
-  const isGateBlocked = backendPayload?.gate_blocked ?? false;
-  const readinessZone = (isGateBlocked ? 'yellow' : (dayPlan?.readiness.zone ?? 'green')) as ReadinessZone;
-  const zoneColor     = ZONE_COLOR[readinessZone];
-  const zoneLabel     = ZONE_LABEL[readinessZone];
-  const zoneBadge     = ZONE_BADGE[readinessZone];
+  const canSend = input.trim().length > 0 && !isStreaming;
 
-  const avgCycles  = weeklyTotal > 0 ? (weeklyTotal / 7).toFixed(1) : '0.0';
-  const now        = new Date();
-  const hour       = now.getHours();
-  const greeting   = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const todayStr   = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const dayOfWeek  = now.getDay();
-  const weekDayNum = dayOfWeek === 0 ? 7 : dayOfWeek;
-  const onTrack    = weeklyTotal >= Math.floor((weeklyTarget / 7) * weekDayNum);
+  // ── Loading skeleton (only if no chat yet) ────────────────────────────────
+  if (localLoading && messages.length === 0) return <HomeSkeletonScreen />;
 
-  const recText = primaryRec
-    ? primaryRec.message_key.replace(/_/g, ' ')
-    : action?.title ?? (
-        tonightOnset
-          ? `Tonight → ${tonightOnset}${fallbackOnset ? ` (or ${fallbackOnset})` : ''}`
-          : 'Keep tracking to get personalized recommendations.'
-      );
+  // ── Date / greeting ───────────────────────────────────────────────────────
+  const now      = new Date();
+  const hour     = now.getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const todayStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={[st.root, { backgroundColor: c.background }]} edges={['top', 'bottom']}>
-      <ScrollView
-        style={st.scroll}
-        contentContainerStyle={st.scrollContent}
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={[st.root, { backgroundColor: c.background }]} edges={['top']}>
+
+      {/* ── Minimal header ────────────────────────────────────────────────── */}
+      <View style={st.header}>
+        <View style={st.headerText}>
+          <Text style={[st.greeting, { color: c.text }]}>{greeting}</Text>
+          <Text style={[st.date, { color: c.textMuted }]}>{todayStr}</Text>
+        </View>
+        <Pressable
+          style={[st.settingsBtn, { backgroundColor: c.surface }]}
+          onPress={() => router.push('/profile')}
+          accessibilityRole="button"
+          accessibilityLabel="Profile and settings"
+        >
+          <Ionicons name="settings-outline" size={18} color={c.textSub} />
+        </Pressable>
+      </View>
+
+      <KeyboardAvoidingView
+        style={st.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
 
-        {/* ── Section 1: Header ─────────────────────────────────────────── */}
-        <View style={st.header}>
-          <View style={st.headerLeft}>
-            <Text style={[st.greeting, { color: c.text }]}>{greeting}</Text>
-            <Text style={[st.date, { color: c.textSub }]}>{todayStr}</Text>
+        {/* ── Content area: empty state OR messages ─────────────────────── */}
+        {messages.length === 0 ? (
+
+          /* ── Empty state — R-Lo mascot + suggestions ───────────────────── */
+          <View style={st.emptyWrap}>
+
+            {/* R-Lo mascot with soft glow */}
+            <View style={st.mascotWrap}>
+              <View style={[st.mascotGlow, { backgroundColor: c.accent }]} />
+              <MascotImage emotion="encourageant" size="xl" />
+            </View>
+
+            {/* Welcome copy */}
+            <Text style={[st.emptyTitle, { color: c.text }]}>
+              How can I help?
+            </Text>
+            <Text style={[st.emptySub, { color: c.textMuted }]}>
+              {"I'm R-Lo, your personal sleep coach.\nAsk me anything about your rest and recovery."}
+            </Text>
+
+            {/* Suggestion chips */}
+            <View style={st.suggestions}>
+              {SUGGESTIONS.map(prompt => (
+                <Pressable
+                  key={prompt}
+                  style={({ pressed }) => [
+                    st.chip,
+                    { backgroundColor: c.surface, borderColor: c.border, opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => void sendMessage(prompt)}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={14} color={c.accent} />
+                  <Text style={[st.chipText, { color: c.textSub }]}>{prompt}</Text>
+                </Pressable>
+              ))}
+            </View>
+
           </View>
+
+        ) : (
+
+          /* ── Active state — chat messages ──────────────────────────────── */
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={m => m.id}
+            contentContainerStyle={st.listContent}
+            renderItem={({ item }) => <ChatBubble message={item} />}
+            showsVerticalScrollIndicator={false}
+          />
+
+        )}
+
+        {/* ── Input composer ─────────────────────────────────────────────── */}
+        <View style={[st.inputBar, { backgroundColor: c.background, borderTopColor: `${c.border}55` }]}>
+          <TextInput
+            style={[
+              st.input,
+              { backgroundColor: c.surface, color: c.text, borderColor: c.border },
+            ]}
+            placeholder="Message R-Lo…"
+            placeholderTextColor={c.textMuted}
+            value={input}
+            onChangeText={setInput}
+            onSubmitEditing={handleSend}
+            returnKeyType="send"
+            multiline
+            maxLength={500}
+            editable={!isStreaming}
+          />
           <Pressable
-            style={[st.settingsBtn, { backgroundColor: c.surface }]}
-            onPress={() => router.push('/profile')}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
+            style={[st.sendBtn, { backgroundColor: canSend ? c.accent : c.surface2 }]}
+            onPress={handleSend}
+            disabled={!canSend}
           >
-            <Ionicons name="settings-outline" size={20} color={c.textSub} />
+            <Ionicons
+              name="arrow-up"
+              size={18}
+              color={canSend ? '#000000' : c.textMuted}
+            />
           </Pressable>
         </View>
 
-        {/* ── Section 2: Readiness Card ─────────────────────────────────── */}
-        <Card variant="elevated" style={st.card}>
-          <Badge label={zoneLabel} color={zoneBadge} />
-          <Text style={[st.avgCycles, { color: zoneColor }]}>{avgCycles}</Text>
-          <Text style={[st.avgLabel, { color: c.textSub }]}>avg cycles · last 3 nights</Text>
-          <View style={st.progressWrap}>
-            <ProgressBar value={parseFloat(avgCycles) / 5} color={zoneColor} height={6} />
-          </View>
-        </Card>
+      </KeyboardAvoidingView>
 
-        {/* ── Section 3: This week ──────────────────────────────────────── */}
-        <Text style={[st.sectionLabel, { color: c.textSub }]}>This week</Text>
-        <Card style={st.card}>
-          <View style={st.weekRow}>
-            <Text style={[st.weekCycles, { color: c.text }]}>
-              {weeklyTotal} / {weeklyTarget} cycles
-            </Text>
-            <Text style={[st.weekStatus, { color: onTrack ? c.success : c.warning }]}>
-              {onTrack ? '● On track' : '● Behind'}
-            </Text>
-          </View>
-          <View style={st.progressWrap}>
-            <ProgressBar value={weeklyTotal / weeklyTarget} color={c.accent} height={6} />
-          </View>
-          <Text style={[st.weekLabel, { color: c.textMuted }]}>
-            Day {weekDayNum} of 7
-          </Text>
-        </Card>
-
-        {/* ── Section 4: Quick actions ──────────────────────────────────── */}
-        <Text style={[st.sectionLabel, { color: c.textSub }]}>Quick actions</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.pillsContent}
-          style={st.pillsScroll}
-        >
-          {[
-            { label: '+ Log night',   onPress: () => router.push('/log-night') },
-            { label: '✓ Check-in',    onPress: () => router.push('/checkin')   },
-            { label: '🌙 Late event', onPress: () => setShowPostEvent(true)    },
-            { label: '💤 Wind-down',  onPress: () => router.push('/wind-down') },
-          ].map((pill) => (
-            <Pressable
-              key={pill.label}
-              style={({ pressed }) => [
-                st.pill,
-                {
-                  backgroundColor: c.surface2,
-                  borderColor:     c.border,
-                  opacity:         pressed ? 0.7 : 1,
-                },
-              ]}
-              onPress={pill.onPress}
-            >
-              <Text style={[st.pillText, { color: c.text }]}>{pill.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* ── Section 5: Recommendation ────────────────────────────────── */}
-        <Text style={[st.sectionLabel, { color: c.textMuted }]}>Airloop recommends</Text>
-        <Card variant="outlined" style={st.card}>
-          <View style={st.recRow}>
-            <MascotImage emotion="encourageant" size="sm" />
-            <View style={st.recContent}>
-              <Text style={[st.recText, { color: c.text }]}>{recText}</Text>
-              {primaryRec && (
-                <View style={st.recActions}>
-                  <Pressable
-                    style={[st.recBtn, { backgroundColor: c.success }]}
-                    onPress={() => void handleRecommendationAction(primaryRec.id, 'actioned')}
-                  >
-                    <Text style={st.recBtnText}>Done</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[st.recBtn, { backgroundColor: c.surface2, borderWidth: 1, borderColor: c.border }]}
-                    onPress={() => void handleRecommendationAction(primaryRec.id, 'dismissed')}
-                  >
-                    <Text style={[st.recBtnText, { color: c.textSub }]}>Dismiss</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          </View>
-          <View style={st.askRow}>
-            <Button label="Ask Airloop" variant="ghost" size="sm" onPress={openChat} />
-          </View>
-        </Card>
-
-        {/* ── Section 6: Shortcuts ──────────────────────────────────────── */}
-        <View style={st.shortcutRow}>
-          <Button
-            label="View plan"
-            variant="secondary"
-            size="md"
-            style={st.shortcutBtn}
-            onPress={() => router.push('/log-night')}
-          />
-          <Button
-            label="Full insights"
-            variant="secondary"
-            size="md"
-            style={st.shortcutBtn}
-            onPress={() => router.push('/checkin')}
-          />
-        </View>
-
-      </ScrollView>
-
-      {/* ── Sheets ────────────────────────────────────────────────────────── */}
-      {profile && (
-        <PostEventSheet
-          visible={showPostEvent}
-          profile={profile}
-          onClose={() => setShowPostEvent(false)}
-          onConfirm={(window) => {
-            applyConflictOption(window);
-            recordUsage("post_event");
-            setShowPostEvent(false);
-          }}
-        />
-      )}
-
+      {/* ── Conflict sheet ─────────────────────────────────────────────────── */}
       <ConflictSheet
         visible={showConflicts}
         conflicts={dayPlan?.conflicts ?? []}
         onClose={() => setShowConflicts(false)}
         onAcknowledge={() => setShowConflicts(false)}
       />
+
     </SafeAreaView>
   );
 }
@@ -346,90 +326,161 @@ export default function HomeScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const st = StyleSheet.create({
-  root:          { flex: 1 },
-  scroll:        { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36, gap: 0 },
+  root: { flex: 1 },
+  flex: { flex: 1 },
 
-  // Header
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-    marginBottom:   20,
+    flexDirection:     'row',
+    justifyContent:    'space-between',
+    alignItems:        'center',
+    paddingHorizontal: 20,
+    paddingTop:        14,
+    paddingBottom:     10,
   },
-  headerLeft: { gap: 3 },
+  headerText: { gap: 2 },
   greeting: {
-    fontSize:   22,
-    fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
+    fontSize:      20,
+    fontFamily:    'Inter-SemiBold',
+    fontWeight:    '600',
+    letterSpacing: -0.2,
   },
-  date:        { fontSize: 14 },
+  date: { fontSize: 12 },
   settingsBtn: {
-    width:          38,
-    height:         38,
-    borderRadius:   19,
+    width:          36,
+    height:         36,
+    borderRadius:   18,
     justifyContent: 'center',
     alignItems:     'center',
   },
 
-  // Cards + labels
-  card:         { marginBottom: 16 },
-  sectionLabel: {
-    fontSize:     15,
-    fontFamily:   'Inter-SemiBold',
-    fontWeight:   '600',
-    marginBottom: 8,
+  // ── Empty state ───────────────────────────────────────────────────────────
+  emptyWrap: {
+    flex:              1,
+    alignItems:        'center',
+    paddingHorizontal: 28,
+    paddingTop:        8,
+    paddingBottom:     8,
   },
 
-  // Readiness card
-  avgCycles: {
-    fontSize:   42,
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    marginTop:  8,
-    lineHeight: 50,
-  },
-  avgLabel:    { fontSize: 13, marginBottom: 8 },
-  progressWrap: { marginTop: 4 },
-
-  // This week
-  weekRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
+  // Mascot + glow
+  mascotWrap: {
     alignItems:     'center',
-    marginBottom:   8,
+    justifyContent: 'center',
+    marginTop:      8,
+    marginBottom:   22,
   },
-  weekCycles: { fontSize: 20, fontFamily: 'Inter-SemiBold', fontWeight: '600' },
-  weekStatus: { fontSize: 13, fontWeight: '500' },
-  weekLabel:  { fontSize: 12, marginTop: 6 },
+  mascotGlow: {
+    position:     'absolute',
+    width:        260,
+    height:       260,
+    borderRadius: 130,
+    opacity:      0.06,
+  },
 
-  // Quick action pills
-  pillsScroll:  { marginBottom: 16 },
-  pillsContent: { gap: 8, paddingRight: 4 },
-  pill: {
+  // Welcome copy
+  emptyTitle: {
+    fontSize:      24,
+    fontFamily:    'Inter-SemiBold',
+    fontWeight:    '600',
+    textAlign:     'center',
+    letterSpacing: -0.3,
+    marginBottom:  8,
+  },
+  emptySub: {
+    fontSize:     14,
+    textAlign:    'center',
+    lineHeight:   21,
+    marginBottom: 28,
+  },
+
+  // Suggestion chips
+  suggestions: {
+    width: '100%',
+    gap:   10,
+  },
+  chip: {
     paddingHorizontal: 16,
-    paddingVertical:   10,
-    borderRadius:      9999,
+    paddingVertical:   13,
+    borderRadius:      14,
     borderWidth:       1,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               10,
   },
-  pillText: { fontSize: 14, fontWeight: '500' },
+  chipText: {
+    fontSize:   14,
+    lineHeight: 20,
+    flex:       1,
+  },
 
-  // Recommendation
-  recRow:     { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  recContent: { flex: 1, gap: 8 },
-  recText:    { fontSize: 15, lineHeight: 22 },
-  recActions: { flexDirection: 'row', gap: 8 },
-  recBtn:     { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  recBtnText: { fontSize: 13, fontWeight: '600', color: '#000' },
-  askRow:     { marginTop: 12, alignItems: 'flex-start' },
+  // ── Messages ──────────────────────────────────────────────────────────────
+  listContent: {
+    padding:        16,
+    paddingBottom:  12,
+    gap:            14,
+  },
 
-  // Shortcuts
-  shortcutRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
-  shortcutBtn: { flex: 1 },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems:    'flex-end',
+    gap:           8,
+    maxWidth:      '85%',
+  },
+  bubbleRowUser: {
+    alignSelf:     'flex-end',
+    flexDirection: 'row-reverse',
+  },
 
-  // Error state
-  errorContainer: { justifyContent: 'center', alignItems: 'center', gap: 20, padding: 32 },
-  errorText:      { fontSize: 16, textAlign: 'center', lineHeight: 24 },
-  retryBtn:       { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 12, borderWidth: 1 },
-  retryBtnText:   { fontSize: 15, fontWeight: '600' },
+  // Mascot avatar beside R-Lo messages
+  rloAvatarImg: {
+    width:  34,
+    height: 34,
+    flexShrink: 0,
+    alignSelf: 'flex-end',
+  },
+
+  bubble: {
+    borderRadius:           18,
+    borderBottomLeftRadius: 4,
+    paddingVertical:        12,
+    paddingHorizontal:      16,
+    flexShrink:             1,
+    flexDirection:          'row',
+    flexWrap:               'wrap',
+    alignItems:             'flex-end',
+    gap:                    2,
+  },
+  bubbleText: {
+    fontSize:   15,
+    lineHeight: 23,
+  },
+
+  // ── Input composer ────────────────────────────────────────────────────────
+  inputBar: {
+    flexDirection:     'row',
+    alignItems:        'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical:   12,
+    gap:               10,
+    borderTopWidth:    StyleSheet.hairlineWidth,
+  },
+  input: {
+    flex:              1,
+    borderRadius:      22,
+    paddingHorizontal: 18,
+    paddingVertical:   11,
+    fontSize:          15,
+    maxHeight:         120,
+    borderWidth:       1,
+    lineHeight:        22,
+  },
+  sendBtn: {
+    width:           42,
+    height:          42,
+    borderRadius:    21,
+    alignItems:      'center',
+    justifyContent:  'center',
+    flexShrink:      0,
+  },
 });

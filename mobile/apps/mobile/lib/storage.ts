@@ -14,13 +14,16 @@ export const STORAGE_VERSION = '1';
 
 // Storage key schema — all @r90 app-data keys
 export const STORAGE_KEYS = {
-  VERSION:     `@r90:version`,
-  PROFILE:     `@r90:profile:v${STORAGE_VERSION}`,
-  WEEK_HISTORY:`@r90:weekHistory:v${STORAGE_VERSION}`,
-  CRP_RECORDS: `@r90:crpRecords:v${STORAGE_VERSION}`,
-  USAGE:       `@r90:usage:v${STORAGE_VERSION}`,
-  ONBOARDING:  `@r90:onboarding:v${STORAGE_VERSION}`,
-  ACQUISITION: `@r90:acquisitionSource:v1`,
+  VERSION:          `@r90:version`,
+  PROFILE:          `@r90:profile:v${STORAGE_VERSION}`,
+  WEEK_HISTORY:     `@r90:weekHistory:v${STORAGE_VERSION}`,
+  CRP_RECORDS:      `@r90:crpRecords:v${STORAGE_VERSION}`,
+  USAGE:            `@r90:usage:v${STORAGE_VERSION}`,
+  ONBOARDING:       `@r90:onboarding:v${STORAGE_VERSION}`,
+  ACQUISITION:      `@r90:acquisitionSource:v1`,
+  CHAT_ONBOARDING:  `@r90:chatOnboarding:v1`,
+  PLAN_ONBOARDING:  `@r90:planOnboarding:v1`,
+  INTRO_COMPLETED:  `@r90:introCompleted:v1`,
 } as const;
 
 /**
@@ -379,4 +382,110 @@ export async function loadAcquisitionSource(): Promise<AcquisitionSourceRecord |
 export async function hasCompletedOnboarding(): Promise<boolean> {
   const profile = await loadProfile();
   return profile !== null;
+}
+
+// ─── Chat onboarding (steps 6–9, in-app conversation) ────────────────────────
+
+/**
+ * Data collected during the in-app R-Lo conversation (steps 6–9).
+ */
+export interface ChatOnboardingData {
+  name:               string;
+  wakeTime:           string;  // e.g. "06:30" or "Other"
+  mainIssue:          string;  // e.g. "I feel tired"
+  chronotypeEstimate: string;  // e.g. "7–8"
+  completedAt:        string;  // ISO 8601
+}
+
+/**
+ * Persist chat onboarding answers and mark the flow as complete.
+ */
+export async function saveChatOnboardingData(data: ChatOnboardingData): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.CHAT_ONBOARDING, JSON.stringify(data));
+  } catch (error) {
+    console.error('[storage] Failed to save chat onboarding data:', error);
+  }
+}
+
+/**
+ * Load chat onboarding answers saved during steps 6–9.
+ * Returns null if not yet saved.
+ */
+export async function loadChatOnboardingData(): Promise<ChatOnboardingData | null> {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CHAT_ONBOARDING);
+    if (!data) return null;
+    return JSON.parse(data) as ChatOnboardingData;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true when the user has already completed steps 6–9.
+ */
+export async function hasCompletedChatOnboarding(): Promise<boolean> {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.CHAT_ONBOARDING);
+    return data !== null;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Plan onboarding (steps 10–12, generation + reveal + calendar) ─────────────
+
+/**
+ * Mark steps 10–12 as complete.
+ */
+export async function markPlanOnboardingComplete(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.PLAN_ONBOARDING, new Date().toISOString());
+  } catch (error) {
+    console.error('[storage] Failed to mark plan onboarding complete:', error);
+  }
+}
+
+/**
+ * Returns true when the user has already completed steps 10–12.
+ */
+export async function hasCompletedPlanOnboarding(): Promise<boolean> {
+  try {
+    const data = await AsyncStorage.getItem(STORAGE_KEYS.PLAN_ONBOARDING);
+    return data !== null;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Intro gate (replaces profile-based routing gate) ────────────────────────
+
+/**
+ * Mark the intro pager (slides 0–4) as complete.
+ * Called at the end of onboarding.tsx before navigating to /(tabs).
+ */
+export async function markIntroComplete(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.INTRO_COMPLETED, new Date().toISOString());
+  } catch (error) {
+    console.error('[storage] Failed to mark intro complete:', error);
+  }
+}
+
+/**
+ * Returns true when the intro pager is done.
+ * Also returns true for existing users who completed the old onboarding
+ * (they have a profile in AsyncStorage), ensuring backward compatibility.
+ */
+export async function hasCompletedIntro(): Promise<boolean> {
+  try {
+    const [introData, profileData] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_KEYS.INTRO_COMPLETED),
+      AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
+    ]);
+    return introData !== null || profileData !== null;
+  } catch {
+    return false;
+  }
 }

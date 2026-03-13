@@ -124,6 +124,11 @@ export interface ProfileUpdateInput {
   caffeine_use?: 'none' | 'low' | 'moderate' | 'high';
   tracker_in_use?: boolean;
   occupation_schedule?: 'standard' | 'early_starts' | 'flexible' | 'freelance' | 'shift_work';
+  // Fields collected during the in-app R-Lo conversation (steps 6–9)
+  first_name?: string;
+  self_reported_wake_time?: string; // "HH:MM"
+  sleep_main_issue?: string;
+  chronotype_estimate?: string;     // e.g. "7–8"
 }
 
 export async function updateProfile(input: ProfileUpdateInput): Promise<ApiResponse<{ ok: boolean }>> {

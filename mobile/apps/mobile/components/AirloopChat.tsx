@@ -12,6 +12,8 @@
  *   - Animated cursor during streaming
  *   - Conversation history (session-scoped)
  *   - Suggested prompts on first open
+ *
+ * Branding: shown as "R-Lo" in all user-facing text.
  */
 
 import { useRef, useEffect, useState } from "react";
@@ -112,12 +114,12 @@ export function AirloopChat({ visible, onClose }: Props) {
         <View style={[s.header, { backgroundColor: c.surface, borderBottomColor: c.borderSub }]}>
           <View style={s.headerLeft}>
             <View style={[s.avatar, { backgroundColor: `${c.accent}33` }]}>
-              <Text style={[s.avatarText, { color: c.accent }]}>A</Text>
+              <Text style={[s.avatarText, { color: c.accent }]}>R</Text>
             </View>
             <View>
-              <Text style={[s.headerTitle, { color: c.text }]}>Airloop</Text>
+              <Text style={[s.headerTitle, { color: c.text }]}>R-Lo</Text>
               <Text style={[s.headerSub, { color: c.textMuted }]}>
-                R90 Coach · Powered by GPT-4o
+                Sleep Coach · Powered by GPT-4o
               </Text>
             </View>
           </View>
@@ -145,7 +147,7 @@ export function AirloopChat({ visible, onClose }: Props) {
           {messages.length === 0 ? (
             <View style={s.emptyContainer}>
               <Text style={[s.emptyTitle, { color: c.textSub }]}>
-                Ask Airloop anything about your sleep.
+                Ask R-Lo anything about your sleep.
               </Text>
               <View style={s.suggestions}>
                 {SUGGESTED.map(prompt => (
@@ -175,7 +177,7 @@ export function AirloopChat({ visible, onClose }: Props) {
           <View style={[s.inputBar, { backgroundColor: c.surface, borderTopColor: c.borderSub }]}>
             <TextInput
               style={[s.input, { backgroundColor: c.surface2, color: c.text, borderColor: c.border }]}
-              placeholder="Message Airloop…"
+              placeholder="Message R-Lo…"
               placeholderTextColor={c.textMuted}
               value={input}
               onChangeText={setInput}
@@ -219,7 +221,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
     <View style={[s.bubbleRow, isUser && s.bubbleRowUser]}>
       {!isUser && (
         <View style={[s.bubbleAvatar, { backgroundColor: `${c.accent}33` }]}>
-          <Text style={[s.bubbleAvatarText, { color: c.accent }]}>A</Text>
+          <Text style={[s.bubbleAvatarText, { color: c.accent }]}>R</Text>
         </View>
       )}
       <View style={[
