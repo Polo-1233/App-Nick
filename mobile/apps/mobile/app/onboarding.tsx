@@ -70,7 +70,7 @@ const CIRCLE_SIZE = 230;
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const [page,   setPage]   = useState(0);
   const [saving, setSaving] = useState(false);
@@ -83,8 +83,11 @@ export default function OnboardingScreen() {
   const mascotBreath    = useRef(new Animated.Value(1)).current;
   const mascotBlink     = useRef(new Animated.Value(1)).current;
   const btnPressAnim    = useRef(new Animated.Value(1)).current;
-  const circlePulse1    = useRef(new Animated.Value(1)).current;
-  const circlePulse2    = useRef(new Animated.Value(1)).current;
+  const circlePulse1      = useRef(new Animated.Value(1)).current;
+  const circlePulse2      = useRef(new Animated.Value(1)).current;
+  // Slide 3 — isolated animations (scope: slide only)
+  const slide3MascotScale = useRef(new Animated.Value(1)).current;
+  const slide3GlowOpacity = useRef(new Animated.Value(0.15)).current;
   const fadeAnim0    = useRef(new Animated.Value(0)).current;
   const fadeAnim1    = useRef(new Animated.Value(0)).current;
   const fadeAnim2    = useRef(new Animated.Value(0)).current;
@@ -184,15 +187,34 @@ export default function OnboardingScreen() {
     }
   }, [page, fadeAnim2]);
 
-  // ── Slide 3: fade-in each time the user lands here ────────────────────────
+  // ── Slide 3: fade-in + isolated mascot/glow animations ───────────────────
   useEffect(() => {
-    if (page === 3) {
-      fadeAnim3.setValue(0);
-      Animated.timing(fadeAnim3, {
-        toValue: 1, duration: 700, delay: 80, useNativeDriver: true,
-      }).start();
-    }
-  }, [page, fadeAnim3]);
+    if (page !== 3) return;
+    fadeAnim3.setValue(0);
+    Animated.timing(fadeAnim3, { toValue: 1, duration: 700, delay: 80, useNativeDriver: true }).start();
+
+    // Mascot breathing: scale 1 → 1.03, 2500ms easeInOut loop
+    slide3MascotScale.setValue(1);
+    const mascotLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(slide3MascotScale, { toValue: 1.03, duration: 2500, useNativeDriver: true }),
+        Animated.timing(slide3MascotScale, { toValue: 1.00, duration: 2500, useNativeDriver: true }),
+      ]),
+    );
+    mascotLoop.start();
+
+    // Glow pulse: opacity 0.15 → 0.25, 3000ms loop
+    slide3GlowOpacity.setValue(0.15);
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(slide3GlowOpacity, { toValue: 0.25, duration: 3000, useNativeDriver: true }),
+        Animated.timing(slide3GlowOpacity, { toValue: 0.15, duration: 3000, useNativeDriver: true }),
+      ]),
+    );
+    glowLoop.start();
+
+    return () => { mascotLoop.stop(); glowLoop.stop(); };
+  }, [page, fadeAnim3, slide3MascotScale, slide3GlowOpacity]);
 
   // ── Slide 4: typing indicator → message reveal ────────────────────────────
   useEffect(() => {
@@ -491,39 +513,33 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>}
 
-            {/* ── Slide 3: Meet R-Lo — Duolingo style ──────────────────── */}
+            {/* ── Slide 3: Meet R-Lo ───────────────────────────────────── */}
             {page === 3 && <View style={s.slide3}>
               <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
 
-                {/* Mascot — large, centered, breathing + blink idle */}
+                {/* Mascot — 30% screen height, isolated breathing */}
                 <View style={s.slide3MascotArea}>
                   <Animated.View
                     style={[
                       s.slide3Glow,
-                      {
-                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.13, 0.04] }),
-                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.16] }) }],
-                      },
+                      { opacity: slide3GlowOpacity },
                     ]}
                   />
-                  <Animated.View
-                    style={{
-                      transform: [{ scale: mascotBreath }],
-                      opacity:   mascotBlink,
-                    }}
-                  >
-                    <MascotImage emotion="encourageant" style={s.slide3MascotImg} />
+                  <Animated.View style={{ transform: [{ scale: slide3MascotScale }] }}>
+                    <MascotImage
+                      emotion="encourageant"
+                      style={{ width: windowHeight * 0.30, height: windowHeight * 0.30 }}
+                    />
                   </Animated.View>
                 </View>
 
-                {/* Speech bubble — Duolingo style */}
+                {/* Speech bubble */}
                 <View style={s.slide3BubbleWrap}>
-                  {/* Triangle pointer pointing up toward mascot */}
                   <View style={s.slide3BubbleTip} />
                   <View style={s.slide3Bubble}>
-                    <Text style={s.slide3BubbleName}>R-Lo</Text>
+                    <Text style={s.slide3BubbleHi}>{"Hi, I'm R-Lo."}</Text>
                     <Text style={s.slide3BubbleText}>
-                      {"Hi! I'm your personal sleep coach.\n\nI'll help you align your day\nwith your natural cycles."}
+                      {"Your personal sleep coach.\n\nLet's optimize your sleep."}
                     </Text>
                   </View>
                 </View>
@@ -960,22 +976,19 @@ const s = StyleSheet.create({
     width:          '100%',
     alignItems:     'center',
     justifyContent: 'center',
-    gap:            0,
+    gap:            4,
+    transform:      [{ translateY: -24 }], // optical lift
   },
   slide3MascotArea: {
     alignItems:     'center',
     justifyContent: 'center',
-    marginBottom:   -8,
-  },
-  slide3MascotImg: {
-    width:  148,   // size="xl" était ~130px → +14% (~148px)
-    height: 148,
+    marginBottom:   4,
   },
   slide3Glow: {
     position:        'absolute',
-    width:           260,
-    height:          260,
-    borderRadius:    130,
+    width:           280,
+    height:          280,
+    borderRadius:    140,
     backgroundColor: ACCENT,
   },
 
@@ -998,27 +1011,26 @@ const s = StyleSheet.create({
     backgroundColor:   SURFACE,
     borderRadius:      20,
     paddingHorizontal: 24,
-    paddingVertical:   20,
+    paddingVertical:   22,
     width:             '100%',
     alignItems:        'center',
-    gap:               8,
+    gap:               10,
   },
-  slide3BubbleName: {
-    fontSize:      12,
+  slide3BubbleHi: {
+    fontSize:      20,
     fontFamily:    'Inter-SemiBold',
     fontWeight:    '600',
-    color:         ACCENT,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginTop:     4,   // breathing room above label
+    color:         TEXT,
+    textAlign:     'center',
+    letterSpacing: -0.2,
   },
   slide3BubbleText: {
-    fontSize:   17,
+    fontSize:   16,
     fontFamily: 'Inter-Regular',
     fontWeight: '400',
-    color:      TEXT,
+    color:      TEXT_SUB,
     textAlign:  'center',
-    lineHeight: 27,
+    lineHeight: 26,
   },
 
   // ── Slide 4 — R-Lo focus / home preview ──────────────────────────────────
