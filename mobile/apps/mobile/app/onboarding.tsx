@@ -381,40 +381,55 @@ export default function OnboardingScreen() {
                 </Animated.View>
               </View>
 
-              {/* Breathing circle */}
-              <View style={s.circleCenter}>
+              {/* Circle + R-Lo observer — circle stays primary, R-Lo sits bottom-right */}
+              <View style={s.slide1Anchor}>
+                <View style={s.circleCenter}>
+                  <Animated.View
+                    style={[
+                      s.circleGlow,
+                      {
+                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.08, 0.0] }),
+                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      s.circleRing,
+                      {
+                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.48, 0.78, 0.48] }),
+                        transform: [{ scale: circlePulse1 }],
+                      },
+                    ]}
+                  >
+                    {/* Rhythm lines — faint horizontal markers behind text */}
+                    <View style={[StyleSheet.absoluteFill, s.circleRhythmWrap]} pointerEvents="none">
+                      <View style={s.rhythmLines}>
+                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
+                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }) }]} />
+                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
+                      </View>
+                    </View>
+
+                    {/* Text stanzas */}
+                    <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim1 }]}>
+                      <Text style={s.circleInnerText}>{"Your energy follows\n90-minute cycles."}</Text>
+                      <Text style={s.circleInnerText}>{"Most people\nfight against them."}</Text>
+                    </Animated.View>
+                  </Animated.View>
+                </View>
+
+                {/* R-Lo — small, observing from bottom-right */}
                 <Animated.View
                   style={[
-                    s.circleGlow,
+                    s.slide1Rlo,
                     {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.08, 0.0] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
-                    },
-                  ]}
-                />
-                <Animated.View
-                  style={[
-                    s.circleRing,
-                    {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.48, 0.78, 0.48] }),
-                      transform: [{ scale: circlePulse1 }],
+                      transform: [{ scale: mascotBreath }],
+                      opacity:   mascotBlink,
                     },
                   ]}
                 >
-                  {/* Rhythm lines — faint horizontal markers behind text */}
-                  <View style={[StyleSheet.absoluteFill, s.circleRhythmWrap]} pointerEvents="none">
-                    <View style={s.rhythmLines}>
-                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
-                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }) }]} />
-                      <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
-                    </View>
-                  </View>
-
-                  {/* Text stanzas */}
-                  <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim1 }]}>
-                    <Text style={s.circleInnerText}>{"Your energy follows\n90-minute cycles."}</Text>
-                    <Text style={s.circleInnerText}>{"Most people\nfight against them."}</Text>
-                  </Animated.View>
+                  <MascotImage emotion="Reflexion" style={s.slide1RloImg} />
                 </Animated.View>
               </View>
 
@@ -740,6 +755,23 @@ const s = StyleSheet.create({
     width:          '100%',
     alignItems:     'center',
     justifyContent: 'center',
+  },
+
+  // ── Slide 1: circle + R-Lo observer layout ────────────────────────────────
+  slide1Anchor: {
+    width:          '100%',
+    alignItems:     'center',
+    justifyContent: 'center',
+    position:       'relative',
+  },
+  slide1Rlo: {
+    position: 'absolute',
+    bottom:   -16,
+    right:    '8%',
+  },
+  slide1RloImg: {
+    width:  72,
+    height: 72,
   },
 
   // Turquoise glow — absolute behind the ring, centered via circleCenter
