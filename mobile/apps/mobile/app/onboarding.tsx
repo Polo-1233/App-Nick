@@ -814,10 +814,11 @@ const s = StyleSheet.create({
   // Silver ring — authority slide (slide 2)
   // ── Slide 2 layout ────────────────────────────────────────────────────────
   slide2Content: {
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            28,       // space between title and circle
+    alignItems:        'center',
+    justifyContent:    'center',
+    gap:               44,          // 28 → 44 (+16px gap title/circle)
     paddingHorizontal: 24,
+    marginBottom:      '10%',       // optical centering — shift block upward
   },
   slide2CircleWrap: {
     alignItems:     'center',
@@ -831,6 +832,8 @@ const s = StyleSheet.create({
     backgroundColor: TEXT,
   },
   slide2Inner: {
+    flex:            1,
+    flexDirection:   'column',
     alignItems:      'center',
     justifyContent:  'center',
     paddingHorizontal: 20,
