@@ -76,7 +76,8 @@ export default function OnboardingScreen() {
   const [saving, setSaving] = useState(false);
 
   const isNavigating = useRef(false);
-  const translateX   = useRef(new Animated.Value(0)).current;
+  const translateX        = useRef(new Animated.Value(0)).current; // kept for compat, unused
+  const pageTransition    = useRef(new Animated.Value(1)).current;
   const pulseAnim       = useRef(new Animated.Value(1)).current;
   const breatheAnim     = useRef(new Animated.Value(0)).current;
   const mascotBreath    = useRef(new Animated.Value(1)).current;
@@ -276,11 +277,14 @@ export default function OnboardingScreen() {
     if (isNavigating.current) return;
     isNavigating.current = true;
     Keyboard.dismiss();
-    Animated.timing(translateX, {
-      toValue: -index * windowWidth, duration: 320, useNativeDriver: true,
-    }).start(() => { isNavigating.current = false; });
-    setPage(index);
-  }, [translateX, windowWidth]);
+    // Fade out → swap slide (unmounts previous) → fade in
+    Animated.timing(pageTransition, { toValue: 0, duration: 130, useNativeDriver: true }).start(() => {
+      setPage(index);
+      Animated.timing(pageTransition, { toValue: 1, duration: 260, useNativeDriver: true }).start(() => {
+        isNavigating.current = false;
+      });
+    });
+  }, [pageTransition]);
 
   function handleBack() {
     if (page > 0) goToPage(page - 1);
@@ -347,15 +351,11 @@ export default function OnboardingScreen() {
 
         {/* ── Slides pager ── */}
         <View style={s.pagerClip}>
-          <Animated.View
-            style={[
-              s.pager,
-              { width: windowWidth * TOTAL_PAGES, transform: [{ translateX }] },
-            ]}
-          >
+          {/* Single-slide renderer — cross-fade, no adjacent slide bleed */}
+          <Animated.View style={[s.pager, { opacity: pageTransition }]}>
 
             {/* ── Slide 0: Coach intro — R-Lo + speech bubble ──────────── */}
-            <View style={[s.slideV, { width: windowWidth }]}>
+            {page === 0 && <View style={s.slideV}>
               <Animated.View style={[s.slide0Wrap, { opacity: fadeAnim0 }]}>
 
                 {/* Speech bubble */}
@@ -382,10 +382,10 @@ export default function OnboardingScreen() {
                 </Text>
 
               </Animated.View>
-            </View>
+            </View>}
 
             {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
-            <View style={[s.slideV, { width: windowWidth }]}>
+            {page === 1 && <View style={s.slideV}>
 
               <View style={s.titleArea}>
                 <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
@@ -436,10 +436,10 @@ export default function OnboardingScreen() {
 
               </View>
 
-            </View>
+            </View>}
 
             {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
-            <View style={[s.slideV, { width: windowWidth }]}>
+            {page === 2 && <View style={s.slideV}>
               {/* Title + circle centered together as a unit */}
               <Animated.View style={[s.slide2Content, { opacity: fadeAnim2 }]}>
 
@@ -489,10 +489,10 @@ export default function OnboardingScreen() {
                 </View>
 
               </Animated.View>
-            </View>
+            </View>}
 
             {/* ── Slide 3: Meet R-Lo — Duolingo style ──────────────────── */}
-            <View style={[s.slide3, { width: windowWidth }]}>
+            {page === 3 && <View style={s.slide3}>
               <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
 
                 {/* Mascot — large, centered, breathing + blink idle */}
@@ -529,10 +529,10 @@ export default function OnboardingScreen() {
                 </View>
 
               </Animated.View>
-            </View>
+            </View>}
 
             {/* ── Slide 4: R-Lo focus — home preview + chat ───────────── */}
-            <View style={[s.slide4, { width: windowWidth }]}>
+            {page === 4 && <View style={s.slide4}>
 
               {/* Title — centered in top third */}
               <Animated.View style={[s.slide4Title, { opacity: fadeAnim4 }]}>
@@ -614,7 +614,7 @@ export default function OnboardingScreen() {
                 {[0, 1, 2, 3].map(i => <View key={i} style={s.slide4TabDot} />)}
               </View>
 
-            </View>
+            </View>}
 
           </Animated.View>
         </View>
@@ -667,7 +667,7 @@ const s = StyleSheet.create({
 
   // ── Pager ─────────────────────────────────────────────────────────────────
   pagerClip: { flex: 1, overflow: 'hidden' },
-  pager:     { flex: 1, flexDirection: 'row' },
+  pager:     { flex: 1 },   // single-slide: no row, no fixed width
 
   // ── Footer ────────────────────────────────────────────────────────────────
   footer: {
