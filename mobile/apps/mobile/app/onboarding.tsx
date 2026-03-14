@@ -81,6 +81,7 @@ export default function OnboardingScreen() {
   const mascotBreath    = useRef(new Animated.Value(1)).current;
   const mascotBlink     = useRef(new Animated.Value(1)).current;
   const btnPressAnim    = useRef(new Animated.Value(1)).current;
+  const circlePulse1    = useRef(new Animated.Value(1)).current;
   const fadeAnim0    = useRef(new Animated.Value(0)).current;
   const fadeAnim1    = useRef(new Animated.Value(0)).current;
   const fadeAnim2    = useRef(new Animated.Value(0)).current;
@@ -102,6 +103,18 @@ export default function OnboardingScreen() {
     loop.start();
     return () => loop.stop();
   }, [breatheAnim]);
+
+  // ── Slide 1: circle pulse — slow 90-min cycle metaphor ─────────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(circlePulse1, { toValue: 1.07, duration: 2800, useNativeDriver: true }),
+        Animated.timing(circlePulse1, { toValue: 1.00, duration: 2800, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [circlePulse1]);
 
   // ── Slide 0: mascot idle — breathing + occasional blink ───────────────────
   useEffect(() => {
@@ -363,7 +376,7 @@ export default function OnboardingScreen() {
               <View style={s.titleArea}>
                 <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
                   <Text style={s.slideTitle}>
-                    {"Sleep is the result\nof your entire day"}
+                    {"Sleep is decided\nlong before bedtime"}
                   </Text>
                 </Animated.View>
               </View>
@@ -384,7 +397,7 @@ export default function OnboardingScreen() {
                     s.circleRing,
                     {
                       opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.48, 0.78, 0.48] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.08] }) }],
+                      transform: [{ scale: circlePulse1 }],
                     },
                   ]}
                 >
@@ -399,8 +412,8 @@ export default function OnboardingScreen() {
 
                   {/* Text stanzas */}
                   <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim1 }]}>
-                    <Text style={s.circleInnerText}>{"Your energy follows\nbiological cycles."}</Text>
-                    <Text style={s.circleInnerText}>{"Most people live\nagainst them."}</Text>
+                    <Text style={s.circleInnerText}>{"Your energy follows\n90-minute cycles."}</Text>
+                    <Text style={s.circleInnerText}>{"Most people\nfight against them."}</Text>
                   </Animated.View>
                 </Animated.View>
               </View>
