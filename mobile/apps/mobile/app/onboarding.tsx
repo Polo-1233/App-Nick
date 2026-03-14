@@ -21,6 +21,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Pressable,
   Alert,
@@ -429,7 +430,7 @@ export default function OnboardingScreen() {
                     },
                   ]}
                 >
-                  <MascotImage emotion="Reflexion" style={s.slide1RloImg} />
+                  <Image source={require('../assets/mascot/onboarding2.png')} style={s.slide1RloImg} resizeMode="contain" />
                 </Animated.View>
               </View>
 
