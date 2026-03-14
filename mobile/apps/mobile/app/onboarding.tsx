@@ -420,18 +420,7 @@ export default function OnboardingScreen() {
                   </Animated.View>
                 </View>
 
-                {/* R-Lo — small, observing from bottom-right */}
-                <Animated.View
-                  style={[
-                    s.slide1Rlo,
-                    {
-                      transform: [{ scale: mascotBreath }],
-                      opacity:   mascotBlink,
-                    },
-                  ]}
-                >
-                  <Image source={require('../assets/mascot/onboarding2.png')} style={s.slide1RloImg} resizeMode="contain" />
-                </Animated.View>
+
               </View>
 
             </View>
