@@ -814,13 +814,12 @@ const s = StyleSheet.create({
   // Silver ring — authority slide (slide 2)
   // ── Slide 2 layout ────────────────────────────────────────────────────────
   slide2Content: {
-    alignItems:        'center',
-    justifyContent:    'center',
-    gap:               36,
-    paddingHorizontal: 24,
-    // Optical centering: translate up so the CIRCLE (not the title) sits at ~45% of screen
-    // marginBottom % in RN = relative to WIDTH (not height) — use transform instead
-    transform:         [{ translateY: -52 }],
+    width:          '100%',         // fill parent width — garantit le centrage horizontal
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            36,
+    // paddingHorizontal supprimé — slideV en a déjà un
+    transform:      [{ translateY: -52 }],
   },
   slide2CircleWrap: {
     alignItems:     'center',
