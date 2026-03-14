@@ -680,11 +680,13 @@ const cal = StyleSheet.create({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
-  onComplete: () => void;
+  onComplete:      () => void;
+  onCalendarDone?: () => void; // unused, kept for compat
+  calendarOnly?:   boolean;    // skip to step 12 directly
 }
 
-export function OnboardingPlanOverlay({ onComplete }: Props) {
-  const [step, setStep]       = useState<PlanStep>(10);
+export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Props) {
+  const [step, setStep]       = useState<PlanStep>(calendarOnly ? 12 : 10);
   const [plan, setPlan]       = useState<PlanData>({ onsetDisplay: '23:00', wakeDisplay: '06:30', cycles: 5 });
   const contentAnim           = useRef(new Animated.Value(1)).current;
 
@@ -722,14 +724,13 @@ export function OnboardingPlanOverlay({ onComplete }: Props) {
     return () => clearTimeout(t);
   }, [contentAnim]);
 
-  // ── Step 11 → 12 cross-fade ───────────────────────────────────────────────
+  // ── Step 11 → login (plan reveal done, navigate to login) ────────────────
   const handleContinueToCalendar = useCallback(() => {
-    Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
-      .start(() => {
-        setStep(12);
-        Animated.timing(contentAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
-      });
-  }, [contentAnim]);
+    if (!calendarOnly) {
+      // Phase 'plan': after reveal → login (caller handles navigation)
+      onComplete();
+    }
+  }, [calendarOnly, onComplete]);
 
   // ── Background: fully opaque for 10–11, translucent for 12 ───────────────
   const bgColor = step === 12 ? 'rgba(11,18,32,0.90)' : BG;

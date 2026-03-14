@@ -21,9 +21,10 @@ export const STORAGE_KEYS = {
   USAGE:            `@r90:usage:v${STORAGE_VERSION}`,
   ONBOARDING:       `@r90:onboarding:v${STORAGE_VERSION}`,
   ACQUISITION:      `@r90:acquisitionSource:v1`,
-  CHAT_ONBOARDING:  `@r90:chatOnboarding:v1`,
-  PLAN_ONBOARDING:  `@r90:planOnboarding:v1`,
-  INTRO_COMPLETED:  `@r90:introCompleted:v1`,
+  CHAT_ONBOARDING:   `@r90:chatOnboarding:v1`,
+  PLAN_ONBOARDING:   `@r90:planOnboarding:v1`,
+  INTRO_COMPLETED:   `@r90:introCompleted:v1`,
+  ONBOARDING_PHASE:  `@r90:onboardingPhase:v1`,
 } as const;
 
 /**
@@ -488,4 +489,31 @@ export async function hasCompletedIntro(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ─── Onboarding phase ──────────────────────────────────────────────────────────
+// Controls which step of the full onboarding flow the user is in.
+// 'guided_chat' → questions in Home chat (tabs locked)
+// 'plan'        → plan generation + reveal overlay (post-questions)
+// 'calendar'    → calendar + notifications access (post-login)
+// 'done'        → full app (no onboarding remaining)
+
+export type OnboardingPhase = 'guided_chat' | 'plan' | 'calendar' | 'done';
+
+export async function getOnboardingPhase(): Promise<OnboardingPhase> {
+  try {
+    const v = await AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_PHASE);
+    if (v === 'guided_chat' || v === 'plan' || v === 'calendar') return v;
+    return 'done';
+  } catch { return 'done'; }
+}
+
+export async function setOnboardingPhase(phase: OnboardingPhase): Promise<void> {
+  try {
+    if (phase === 'done') {
+      await AsyncStorage.removeItem(STORAGE_KEYS.ONBOARDING_PHASE);
+    } else {
+      await AsyncStorage.setItem(STORAGE_KEYS.ONBOARDING_PHASE, phase);
+    }
+  } catch { /* silent */ }
 }

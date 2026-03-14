@@ -28,7 +28,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useDayPlanContext }          from '../../lib/day-plan-context';
-import { loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData } from '../../lib/storage';
+import { useOnboardingPhase }         from '../../lib/onboarding-phase-context';
+import {
+  loadProfile, loadWeekHistory, hasCompletedIntro,
+  loadOnboardingData, saveOnboardingData,
+} from '../../lib/storage';
 import { usePremium }                 from '../../lib/use-premium';
 import { useChat, type ChatMessage }  from '../../lib/use-chat';
 import { MascotImage }                from '../ui/MascotImage';
@@ -301,8 +305,14 @@ const hr = StyleSheet.create({
 export default function HomeScreen() {
   const { dayPlan, loading: planLoading, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { recordUsage } = usePremium();
+  const { phase, advance } = useOnboardingPhase();
   const router = useRouter();
   const { messages, isStreaming, sendMessage, injectMessage } = useChat();
+
+  // Guided chat state machine (phase === 'guided_chat')
+  const guidedStep     = useRef<'name' | 'wake' | 'goal' | 'done'>('name');
+  const guidedName     = useRef('');
+  const guidedWake     = useRef(390);
 
   const [input,        setInput]        = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -323,20 +333,26 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  // Auto-greeting: name already collected in /onboarding-chat
+  // ── Greeting / guided questions ─────────────────────────────────────────
   useEffect(() => {
     if (hasGreeted.current) return;
     const t = setTimeout(async () => {
       hasGreeted.current = true;
-      const onboarding = await loadOnboardingData();
-      const name = onboarding?.firstName;
-      const greeting = name
-        ? `Hey ${name}. ${buildProactiveGreeting(insights)}`
-        : buildProactiveGreeting(insights);
-      injectMessage(greeting);
+      if (phase === 'guided_chat') {
+        // First time: guided questions
+        injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.\n\nWhat should I call you?");
+        guidedStep.current = 'name';
+      } else {
+        const onboarding = await loadOnboardingData();
+        const name = onboarding?.firstName;
+        const greeting = name
+          ? `Hey ${name}. ${buildProactiveGreeting(insights)}`
+          : buildProactiveGreeting(insights);
+        injectMessage(greeting);
+      }
     }, 600);
     return () => clearTimeout(t);
-  }, [insights, injectMessage]);
+  }, [phase, insights, injectMessage]);
 
   useEffect(() => {
     if (!needsOnboarding || hasRedirected.current) return;

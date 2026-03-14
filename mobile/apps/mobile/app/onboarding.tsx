@@ -32,7 +32,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { markIntroComplete } from '../lib/storage';
+import { markIntroComplete, setOnboardingPhase } from '../lib/storage';
 import { bootstrapUser } from '../lib/api';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
 import { MascotImage } from '../components/ui/MascotImage';
@@ -294,10 +294,10 @@ export default function OnboardingScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      // Mark intro complete then go to guided R-Lo chat
       await markIntroComplete();
+      await setOnboardingPhase('guided_chat');
       HapticsSuccess();
-      router.replace('/onboarding-chat');
+      router.replace('/(tabs)');
     } catch {
       setSaving(false);
       Alert.alert('Setup failed', 'Could not complete setup. Please try again.');
