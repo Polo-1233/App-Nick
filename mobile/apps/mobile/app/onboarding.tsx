@@ -76,8 +76,11 @@ export default function OnboardingScreen() {
 
   const isNavigating = useRef(false);
   const translateX   = useRef(new Animated.Value(0)).current;
-  const pulseAnim    = useRef(new Animated.Value(1)).current;
-  const breatheAnim  = useRef(new Animated.Value(0)).current;
+  const pulseAnim       = useRef(new Animated.Value(1)).current;
+  const breatheAnim     = useRef(new Animated.Value(0)).current;
+  const mascotBreath    = useRef(new Animated.Value(1)).current;
+  const mascotBlink     = useRef(new Animated.Value(1)).current;
+  const btnPressAnim    = useRef(new Animated.Value(1)).current;
   const fadeAnim0    = useRef(new Animated.Value(0)).current;
   const fadeAnim1    = useRef(new Animated.Value(0)).current;
   const fadeAnim2    = useRef(new Animated.Value(0)).current;
@@ -99,6 +102,32 @@ export default function OnboardingScreen() {
     loop.start();
     return () => loop.stop();
   }, [breatheAnim]);
+
+  // ── Slide 0: mascot idle — breathing + occasional blink ───────────────────
+  useEffect(() => {
+    // Slow breathing scale
+    const breathLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(mascotBreath, { toValue: 1.04, duration: 3200, useNativeDriver: true }),
+        Animated.timing(mascotBreath, { toValue: 1.00, duration: 3200, useNativeDriver: true }),
+      ]),
+    );
+    breathLoop.start();
+
+    // Blink: quick opacity dip every ~4s
+    let blinkTimer: ReturnType<typeof setTimeout>;
+    function scheduleBlink() {
+      blinkTimer = setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(mascotBlink, { toValue: 0.82, duration: 90,  useNativeDriver: true }),
+          Animated.timing(mascotBlink, { toValue: 1.00, duration: 90,  useNativeDriver: true }),
+        ]).start(() => scheduleBlink());
+      }, 3800 + Math.random() * 2000);
+    }
+    scheduleBlink();
+
+    return () => { breathLoop.stop(); clearTimeout(blinkTimer); };
+  }, [mascotBreath, mascotBlink]);
 
   // ── Slide 0: fade-in on first mount ───────────────────────────────────────
   useEffect(() => {
@@ -247,6 +276,11 @@ export default function OnboardingScreen() {
 
   async function handleNext() {
     HapticsLight();
+    // Tap animation: 1 → 0.97 → 1
+    Animated.sequence([
+      Animated.timing(btnPressAnim, { toValue: 0.97, duration: 80,  useNativeDriver: true }),
+      Animated.timing(btnPressAnim, { toValue: 1.00, duration: 120, useNativeDriver: true }),
+    ]).start();
     if (page < TOTAL_PAGES - 1) {
       goToPage(page + 1);
     } else {
@@ -306,12 +340,18 @@ export default function OnboardingScreen() {
                   <View style={s.bubbleTip} />
                 </View>
 
-                {/* R-Lo mascot */}
-                <MascotImage emotion="Fiere" style={s.slide0Mascot} />
+                {/* R-Lo mascot — idle: breathing + blink */}
+                <Animated.View style={{
+                  transform: [{ scale: mascotBreath }],
+                  opacity:   mascotBlink,
+                  marginTop: 14,
+                }}>
+                  <MascotImage emotion="Fiere" style={s.slide0Mascot} />
+                </Animated.View>
 
                 {/* Supporting sentence */}
                 <Text style={s.slide0Sub}>
-                  {"Your body runs on\n90-minute recovery cycles."}
+                  {"Your body works in\n90-minute recovery cycles."}
                 </Text>
 
               </Animated.View>
@@ -539,7 +579,7 @@ export default function OnboardingScreen() {
 
         {/* ── Footer: CTA button ── */}
         <View style={s.footer}>
-          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+          <Animated.View style={{ transform: [{ scale: Animated.multiply(pulseAnim, btnPressAnim) }] }}>
             <Button
               label={nextLabel}
               onPress={handleNext}
@@ -612,47 +652,46 @@ const s = StyleSheet.create({
     paddingBottom: 16,
   },
   bubble: {
-    backgroundColor: '#1A2436',
-    borderRadius:    20,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    alignItems:      'center',
-    marginBottom:    0,
-    // subtle border for premium feel
-    borderWidth:     1,
-    borderColor:     'rgba(77,163,255,0.18)',
+    backgroundColor:  '#1A2436',
+    borderRadius:     20,
+    paddingVertical:  20,
+    paddingHorizontal: 28,   // slightly narrower padding → bubble ~10% narrower
+    alignItems:       'center',
+    alignSelf:        'center',
+    width:            '82%', // explicit 82% width (~10% less than full)
+    borderWidth:      1,
+    borderColor:      'rgba(77,163,255,0.20)',
   },
   bubbleText: {
-    fontSize:   20,
-    fontWeight: '700',
-    color:      '#E6EDF7',
-    textAlign:  'center',
-    lineHeight: 30,
-    letterSpacing: -0.3,
+    fontSize:      22,       // up from 20 → better readability
+    fontWeight:    '700',
+    color:         '#E6EDF7',
+    textAlign:     'center',
+    lineHeight:    32,
+    letterSpacing: -0.4,
   },
   bubbleTip: {
-    position:    'absolute',
-    bottom:      -10,
-    width:       0,
-    height:      0,
-    borderLeftWidth:   10,
-    borderRightWidth:  10,
-    borderTopWidth:    10,
-    borderLeftColor:   'transparent',
-    borderRightColor:  'transparent',
-    borderTopColor:    '#1A2436',
+    position:         'absolute',
+    bottom:           -10,
+    width:            0,
+    height:           0,
+    borderLeftWidth:  10,
+    borderRightWidth: 10,
+    borderTopWidth:   10,
+    borderLeftColor:  'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor:   '#1A2436',
   },
   slide0Mascot: {
-    width:     160,
-    height:    160,
-    marginTop: 14,
+    width:  200,   // up from 160 (+25%)
+    height: 200,
   },
   slide0Sub: {
-    fontSize:  15,
-    color:     '#9FB0C5',
-    textAlign: 'center',
+    fontSize:   15,
+    color:      '#9FB0C5',
+    textAlign:  'center',
     lineHeight: 24,
-    marginTop: 16,
+    marginTop:  16,
   },
 
   // Title — absolute, floats between progress bar and top of circle.
