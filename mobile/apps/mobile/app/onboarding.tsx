@@ -495,23 +495,24 @@ export default function OnboardingScreen() {
             <View style={[s.slide3, { width: windowWidth }]}>
               <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
 
-                {/* Mascot — large, centered, gently breathing */}
+                {/* Mascot — large, centered, breathing + blink idle */}
                 <View style={s.slide3MascotArea}>
                   <Animated.View
                     style={[
                       s.slide3Glow,
                       {
-                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.20, 0.06] }),
+                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.13, 0.04] }),
                         transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.16] }) }],
                       },
                     ]}
                   />
                   <Animated.View
                     style={{
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.04] }) }],
+                      transform: [{ scale: mascotBreath }],
+                      opacity:   mascotBlink,
                     }}
                   >
-                    <MascotImage emotion="encourageant" size="xl" />
+                    <MascotImage emotion="encourageant" style={s.slide3MascotImg} />
                   </Animated.View>
                 </View>
 
@@ -522,7 +523,7 @@ export default function OnboardingScreen() {
                   <View style={s.slide3Bubble}>
                     <Text style={s.slide3BubbleName}>R-Lo</Text>
                     <Text style={s.slide3BubbleText}>
-                      {"Hi! I'm your personal sleep coach.\nI'll help you align your day\nwith your biology."}
+                      {"Hi! I'm your personal sleep coach.\n\nI'll help you align your day\nwith your natural cycles."}
                     </Text>
                   </View>
                 </View>
@@ -964,6 +965,10 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginBottom:   -8,
   },
+  slide3MascotImg: {
+    width:  148,   // size="xl" était ~130px → +14% (~148px)
+    height: 148,
+  },
   slide3Glow: {
     position:        'absolute',
     width:           260,
@@ -1003,6 +1008,7 @@ const s = StyleSheet.create({
     color:         ACCENT,
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginTop:     4,   // breathing room above label
   },
   slide3BubbleText: {
     fontSize:   17,
