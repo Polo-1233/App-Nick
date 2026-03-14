@@ -159,9 +159,22 @@ const b = StyleSheet.create({
 // ─── Compact hero bar (active state) ─────────────────────────────────────────
 
 function CompactHero({ message }: { message: string }) {
+  const pulse = useRef(new Animated.Value(0.8)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.0, duration: 2400, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.8, duration: 2400, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [pulse]);
+
   return (
     <View style={h.bar}>
-      <MascotImage emotion="rassurante" size="sm" style={h.mascot} />
+      <View style={h.avatarWrap}>
+        <Animated.View style={[h.avatarGlow, { opacity: pulse }]} />
+        <MascotImage emotion="rassurante" style={h.mascot} />
+      </View>
       <View style={h.textWrap}>
         <Text style={h.name}>R-Lo</Text>
         <Text style={h.msg} numberOfLines={1}>{message}</Text>
@@ -171,11 +184,13 @@ function CompactHero({ message }: { message: string }) {
 }
 
 const h = StyleSheet.create({
-  bar:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER },
-  mascot:  { width: 36, height: 36 },
-  textWrap:{ flex: 1 },
-  name:    { fontSize: 13, fontWeight: '700', color: ACCENT },
-  msg:     { fontSize: 13, color: TEXT_SUB },
+  bar:        { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BORDER },
+  avatarWrap: { alignItems: 'center', justifyContent: 'center', width: 40, height: 40 },
+  avatarGlow: { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: ACCENT, opacity: 0.15 },
+  mascot:     { width: 36, height: 36 },
+  textWrap:   { flex: 1 },
+  name:       { fontSize: 12, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, textTransform: 'uppercase' },
+  msg:        { fontSize: 14, color: TEXT_SUB, marginTop: 1 },
 });
 
 // ─── State strip (3 chips) ────────────────────────────────────────────────────
@@ -225,52 +240,121 @@ const ss = StyleSheet.create({
   chipValue: { fontSize: 15, fontWeight: '800' },
 });
 
-// ─── Breathing mascot hero (empty state) ─────────────────────────────────────
+// ─── Hero section — R-Lo presence ────────────────────────────────────────────
+// Breathing idle animation (scale + glow pulse). Blue ambient radial glow.
+// Message below the character, no speech bubble card — text floats on dark bg.
+
+const MASCOT_SIZE = 200;
 
 function HeroSection({ message }: { message: string }) {
   const breathe = useRef(new Animated.Value(0)).current;
+  const float   = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    const loop = Animated.loop(
+    // Breathing — slow scale
+    const breath = Animated.loop(
       Animated.sequence([
-        Animated.timing(breathe, { toValue: 1, duration: 3200, useNativeDriver: true }),
-        Animated.timing(breathe, { toValue: 0, duration: 3200, useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 1, duration: 3800, useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 3800, useNativeDriver: true }),
       ])
     );
-    loop.start();
-    return () => loop.stop();
-  }, [breathe]);
+    // Floating — very subtle vertical drift
+    const drift = Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: 1, duration: 2800, useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 2800, useNativeDriver: true }),
+      ])
+    );
+    breath.start();
+    drift.start();
+    return () => { breath.stop(); drift.stop(); };
+  }, [breathe, float]);
 
-  const scale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.05] });
-  const glowOp  = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.06, 0.14] });
+  const scale       = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.04] });
+  const translateY  = float.interpolate({ inputRange: [0, 1], outputRange: [0, -6] });
+  const glowOpacity = breathe.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.28] });
+  const glowScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.15] });
 
   return (
     <View style={hero.wrap}>
-      {/* Ambient glow */}
-      <Animated.View style={[hero.glow, { opacity: glowOp }]} />
-      {/* Mascot */}
-      <Animated.View style={{ transform: [{ scale }] }}>
-        <MascotImage emotion="encourageant" size="xl" />
+      {/* Radial ambient glow — blue, behind mascot */}
+      <Animated.View
+        style={[
+          hero.glow,
+          { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+        ]}
+      />
+      {/* Secondary halo — softer, wider */}
+      <Animated.View
+        style={[
+          hero.glowOuter,
+          { opacity: breathe.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.12] }) },
+        ]}
+      />
+
+      {/* R-Lo mascot — breathing + floating */}
+      <Animated.View
+        style={{
+          transform: [{ scale }, { translateY }],
+          width:  MASCOT_SIZE,
+          height: MASCOT_SIZE,
+        }}
+      >
+        <MascotImage
+          emotion="encourageant"
+          style={{ width: MASCOT_SIZE, height: MASCOT_SIZE }}
+        />
       </Animated.View>
-      {/* Speech bubble */}
-      <View style={hero.bubbleWrap}>
-        <View style={hero.bubbleTip} />
-        <View style={hero.bubble}>
-          <Text style={hero.bubbleName}>R-Lo</Text>
-          <Text style={hero.bubbleMsg}>{message}</Text>
-        </View>
+
+      {/* Coach message — floats directly on dark background */}
+      <View style={hero.msgWrap}>
+        <Text style={hero.msgText}>{message}</Text>
       </View>
     </View>
   );
 }
 
+const GLOW_SIZE = 280;
+
 const hero = StyleSheet.create({
-  wrap:       { alignItems: 'center', paddingTop: 24, paddingHorizontal: 24, marginBottom: 16 },
-  glow:       { position: 'absolute', top: 0, width: 260, height: 260, borderRadius: 130, backgroundColor: ACCENT },
-  bubbleWrap: { alignItems: 'center', width: '100%', marginTop: 4 },
-  bubbleTip:  { width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderBottomWidth: 12, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: CARD },
-  bubble:     { backgroundColor: CARD, borderRadius: 18, paddingHorizontal: 20, paddingVertical: 16, width: '100%', gap: 4 },
-  bubbleName: { fontSize: 11, fontWeight: '700', color: ACCENT, letterSpacing: 0.8, textTransform: 'uppercase' },
-  bubbleMsg:  { fontSize: 16, fontWeight: '500', color: TEXT, lineHeight: 24 },
+  wrap: {
+    alignItems:    'center',
+    paddingTop:    28,
+    paddingBottom: 20,
+    paddingHorizontal: 28,
+  },
+  // Inner radial glow
+  glow: {
+    position:        'absolute',
+    top:             20,
+    width:           GLOW_SIZE,
+    height:          GLOW_SIZE,
+    borderRadius:    GLOW_SIZE / 2,
+    backgroundColor: ACCENT,
+  },
+  // Wider soft halo
+  glowOuter: {
+    position:        'absolute',
+    top:             0,
+    width:           GLOW_SIZE * 1.6,
+    height:          GLOW_SIZE * 1.6,
+    borderRadius:    (GLOW_SIZE * 1.6) / 2,
+    backgroundColor: ACCENT,
+  },
+  // Message — on dark bg, no card
+  msgWrap: {
+    alignItems:    'center',
+    paddingTop:    16,
+    paddingHorizontal: 8,
+  },
+  msgText: {
+    fontSize:      18,
+    fontWeight:    '500',
+    color:         TEXT,
+    textAlign:     'center',
+    lineHeight:    27,
+    letterSpacing: -0.2,
+  },
 });
 
 // ─── Suggestion chips (empty state) ──────────────────────────────────────────
