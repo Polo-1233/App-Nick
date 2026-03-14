@@ -295,50 +295,25 @@ const hr = StyleSheet.create({
   msg:       { fontSize: 17, fontWeight: '500', color: TEXT, textAlign: 'center', lineHeight: 26, letterSpacing: -0.2, paddingTop: 18 },
 });
 
-// ─── Proactive R-Lo greeting (empty state, appears after delay) ───────────────
-function ProactiveMessage({ text, onTap }: { text: string; onTap: (t: string) => void }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(8)).current;
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity,     { toValue: 1, duration: 400, delay: 800, useNativeDriver: true }),
-      Animated.timing(translateY,  { toValue: 0, duration: 400, delay: 800, useNativeDriver: true }),
-    ]).start();
-  }, [opacity, translateY]);
-  return (
-    <Animated.View style={[pm.wrap, { opacity, transform: [{ translateY }] }]}>
-      <View style={pm.row}>
-        <MascotImage emotion="rassurante" style={{ width: 28, height: 28 }} />
-        <Pressable style={pm.bubble} onPress={() => onTap(text)}>
-          <Text style={pm.text}>{text}</Text>
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-}
-const pm = StyleSheet.create({
-  wrap:   { paddingHorizontal: 16, marginBottom: 12 },
-  row:    { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  bubble: { backgroundColor: CARD, borderRadius: 20, borderBottomLeftRadius: 5, paddingVertical: 12, paddingHorizontal: 16, flex: 1 },
-  text:   { fontSize: 14, color: TEXT, lineHeight: 22 },
-});
+
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { dayPlan, loading: planLoading, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { recordUsage } = usePremium();
   const router = useRouter();
-  const { messages, isStreaming, sendMessage } = useChat();
+  const { messages, isStreaming, sendMessage, injectMessage } = useChat();
 
-  const [input,       setInput]       = useState('');
-  const [inputFocused,setInputFocused]= useState(false);
-  const [profile,     setProfile]     = useState<UserProfile | null>(null);
-  const [history,     setHistory]     = useState<NightRecord[]>([]);
-  const [insights,    setInsights]    = useState<ReturnType<typeof computeInsights> | null>(null);
+  const [input,        setInput]        = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
+  const [profile,      setProfile]      = useState<UserProfile | null>(null);
+  const [history,      setHistory]      = useState<NightRecord[]>([]);
+  const [insights,     setInsights]     = useState<ReturnType<typeof computeInsights> | null>(null);
 
-  const listRef         = useRef<FlatList<ChatMessage>>(null);
-  const hasMountedFocus = useRef(false);
-  const hasRedirected   = useRef(false);
+  const listRef           = useRef<FlatList<ChatMessage>>(null);
+  const hasMountedFocus   = useRef(false);
+  const hasRedirected     = useRef(false);
+  const hasGreeted        = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -347,6 +322,17 @@ export default function HomeScreen() {
       if (p && h?.length) setInsights(computeInsights(h, p));
     })();
   }, []);
+
+  // Auto-greeting: R-Lo sends first message after splash, once per session
+  useEffect(() => {
+    if (hasGreeted.current) return;
+    const t = setTimeout(() => {
+      hasGreeted.current = true;
+      const greeting = buildProactiveGreeting(insights);
+      injectMessage(greeting);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [insights, injectMessage]);
 
   useEffect(() => {
     if (!needsOnboarding || hasRedirected.current) return;
@@ -376,8 +362,8 @@ export default function HomeScreen() {
   const canSend    = input.trim().length > 0 && !isStreaming;
   const bedtime    = dayPlan?.cycleWindow?.bedtime ?? null;
   const coachMsg   = buildCoachMessage(insights, history);
-  const proactive  = buildProactiveGreeting(insights);
-  const hasChat    = messages.length > 0;
+  // hasChat = true only when user has sent at least one message (switches to full chat layout)
+  const hasChat    = messages.some(m => m.role === 'user');
 
   return (
     <SafeAreaView style={[sc.root, { backgroundColor: BG }]} edges={['top']}>
@@ -401,7 +387,7 @@ export default function HomeScreen() {
             />
           </>
         ) : (
-          /* ── EMPTY STATE ────────────────────────────────────────────────── */
+          /* ── EMPTY STATE (no user message yet, R-Lo greeting visible) ─── */
           <ScrollView
             style={sc.flex}
             contentContainerStyle={sc.emptyScroll}
@@ -411,8 +397,12 @@ export default function HomeScreen() {
             <HeroSection coachMsg={coachMsg} />
             <StateStrip insights={insights} bedtime={bedtime} />
 
-            {/* Proactive R-Lo greeting — fades in after 800ms */}
-            <ProactiveMessage text={proactive} onTap={send} />
+            {/* Show R-Lo greeting bubble if already injected */}
+            {messages.length > 0 && (
+              <View style={sc.greetingWrap}>
+                {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
+              </View>
+            )}
 
             {/* 3 conversation starters */}
             <View style={sc.sugWrap}>
@@ -493,7 +483,8 @@ const sc = StyleSheet.create({
   flex:       { flex: 1 },
   emptyScroll:{ paddingBottom: 8 },
 
-  listContent:{ padding: 16, paddingBottom: 8, gap: 14 },
+  listContent:  { padding: 16, paddingBottom: 8, gap: 14 },
+  greetingWrap: { paddingHorizontal: 16, paddingBottom: 8 },
 
   sugWrap:  { paddingHorizontal: 16, gap: 8, marginTop: 4 },
   sugTitle: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 2 },

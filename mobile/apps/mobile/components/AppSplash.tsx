@@ -72,8 +72,8 @@ const s = StyleSheet.create({
     height:          220,
     borderRadius:    110,
     borderWidth:     2,
-    borderColor:     'rgba(245,166,35,0.25)',
-    backgroundColor: 'rgba(245,166,35,0.06)',
+    borderColor:     'rgba(77,163,255,0.30)',
+    backgroundColor: 'rgba(77,163,255,0.07)',
   },
   mascot: {
     width:  160,

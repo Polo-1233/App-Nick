@@ -25,10 +25,11 @@ export interface ChatMessage {
 }
 
 export interface UseChatResult {
-  messages:     ChatMessage[];
-  isStreaming:   boolean;
-  sendMessage:   (text: string) => Promise<void>;
-  clearHistory:  () => void;
+  messages:        ChatMessage[];
+  isStreaming:     boolean;
+  sendMessage:     (text: string) => Promise<void>;
+  clearHistory:    () => void;
+  injectMessage:   (content: string) => void; // local R-Lo message, no API call
 }
 
 function uid(): string {
@@ -177,5 +178,11 @@ export function useChat(): UseChatResult {
     setMessages([]);
   }, []);
 
-  return { messages, isStreaming, sendMessage, clearHistory };
+  // Inject a local R-Lo message (no API call — used for proactive greetings)
+  const injectMessage = useCallback((content: string) => {
+    const msg: ChatMessage = { id: uid(), role: 'assistant', content, status: 'done' };
+    setMessages(prev => (prev.length === 0 ? [msg] : prev));
+  }, []);
+
+  return { messages, isStreaming, sendMessage, clearHistory, injectMessage };
 }
