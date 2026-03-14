@@ -31,13 +31,10 @@ export default function TabsLayout() {
   // On mount: determine which onboarding phase (if any) is still pending
   useEffect(() => {
     async function checkOnboarding() {
-      const [chatDone, planDone] = await Promise.all([
-        hasCompletedChatOnboarding(),
-        hasCompletedPlanOnboarding(),
-      ]);
-      if (!chatDone) {
-        setShowChatOnboarding(true);
-      } else if (!planDone) {
+      // Chat onboarding removed — name is collected via real Home chat
+      // Skip directly to plan overlay if not yet done
+      const planDone = await hasCompletedPlanOnboarding();
+      if (!planDone) {
         setShowPlanOnboarding(true);
       }
     }
@@ -60,11 +57,6 @@ export default function TabsLayout() {
         <View style={styles.root}>
           {/* Pager container renders here */}
           <Slot />
-
-          {/* Onboarding conversation overlay — steps 6–9 (R-Lo chat) */}
-          {showChatOnboarding && (
-            <OnboardingChatOverlay onComplete={handleChatOnboardingComplete} />
-          )}
 
           {/* Onboarding plan overlay — steps 10–12 (generation → reveal → calendar) */}
           {showPlanOnboarding && (

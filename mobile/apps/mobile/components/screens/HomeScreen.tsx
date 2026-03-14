@@ -28,7 +28,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useDayPlanContext }          from '../../lib/day-plan-context';
-import { loadProfile, loadWeekHistory, hasCompletedIntro } from '../../lib/storage';
+import { loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData, saveOnboardingData } from '../../lib/storage';
 import { usePremium }                 from '../../lib/use-premium';
 import { useChat, type ChatMessage }  from '../../lib/use-chat';
 import { MascotImage }                from '../ui/MascotImage';
@@ -310,10 +310,11 @@ export default function HomeScreen() {
   const [history,      setHistory]      = useState<NightRecord[]>([]);
   const [insights,     setInsights]     = useState<ReturnType<typeof computeInsights> | null>(null);
 
-  const listRef           = useRef<FlatList<ChatMessage>>(null);
-  const hasMountedFocus   = useRef(false);
-  const hasRedirected     = useRef(false);
-  const hasGreeted        = useRef(false);
+  const listRef              = useRef<FlatList<ChatMessage>>(null);
+  const hasMountedFocus      = useRef(false);
+  const hasRedirected        = useRef(false);
+  const hasGreeted           = useRef(false);
+  const awaitingNameCapture  = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -323,13 +324,20 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  // Auto-greeting: R-Lo sends first message after splash, once per session
+  // Auto-greeting: check if we already know the user's name
   useEffect(() => {
     if (hasGreeted.current) return;
-    const t = setTimeout(() => {
+    const t = setTimeout(async () => {
       hasGreeted.current = true;
-      const greeting = buildProactiveGreeting(insights);
-      injectMessage(greeting);
+      const onboarding = await loadOnboardingData();
+      if (!onboarding?.firstName) {
+        // First time — ask for name in real chat
+        awaitingNameCapture.current = true;
+        injectMessage("Hi, I'm R-Lo. Your personal sleep coach.\nWhat should I call you?");
+      } else {
+        // Already know the name — use contextual greeting
+        injectMessage(buildProactiveGreeting(insights));
+      }
     }, 600);
     return () => clearTimeout(t);
   }, [insights, injectMessage]);
@@ -352,10 +360,19 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [messages]);
 
-  function send(text?: string) {
+  async function send(text?: string) {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
+
+    // Name capture — first user reply when we asked "What should I call you?"
+    if (awaitingNameCapture.current) {
+      awaitingNameCapture.current = false;
+      const firstName = txt.split(/\s+/)[0] ?? txt; // first word only
+      const existing  = await loadOnboardingData();
+      await saveOnboardingData({ ...(existing ?? { wakeTimeMinutes: 390, priority: '', constraint: '' }), firstName });
+    }
+
     void sendMessage(txt);
   }
 
