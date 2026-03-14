@@ -234,8 +234,9 @@ export default function OnboardingScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      await Promise.all([bootstrapUser(), markIntroComplete()]);
-      setSaving(false);
+      // Only mark intro complete here — bootstrapUser() is called after login
+      // (auth is collected in the /login screen for new users)
+      await markIntroComplete();
       HapticsSuccess();
       router.replace('/(tabs)');
     } catch {

@@ -60,7 +60,7 @@ function parseHHMM(str: string, fallback: number): number {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PlanStep  = 10 | 11 | 11.5 | 12;
+type PlanStep  = 10 | 11 | 12;
 type CalPhase  = 'typing' | 'awaiting' | 'reacting' | 'done';
 
 interface PlanData {
@@ -723,15 +723,7 @@ export function OnboardingPlanOverlay({ onComplete }: Props) {
   }, [contentAnim]);
 
   // ── Step 11 → 12 cross-fade ───────────────────────────────────────────────
-  const handleContinueToLogin = useCallback(() => {
-    Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
-      .start(() => {
-        setStep(11.5);
-        Animated.timing(contentAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start();
-      });
-  }, [contentAnim]);
-
-  const handleLoginComplete = useCallback(() => {
+  const handleContinueToCalendar = useCallback(() => {
     Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
       .start(() => {
         setStep(12);
@@ -753,13 +745,7 @@ export function OnboardingPlanOverlay({ onComplete }: Props) {
 
         {step === 11 && (
           <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
-            <PlanRevealStep plan={plan} onContinue={handleContinueToLogin} />
-          </SafeAreaView>
-        )}
-
-        {step === 11.5 && (
-          <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
-            <LoginStep onComplete={handleLoginComplete} />
+            <PlanRevealStep plan={plan} onContinue={handleContinueToCalendar} />
           </SafeAreaView>
         )}
 
