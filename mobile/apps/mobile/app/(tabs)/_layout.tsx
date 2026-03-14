@@ -38,9 +38,17 @@ export default function TabsLayout() {
   // ── Read phase from storage on mount ──────────────────────────────────────
   useEffect(() => {
     getOnboardingPhase().then(p => {
-      setPhaseState(p);
+      // Authenticated users who already have an account should never be
+      // blocked by onboarding overlays. Reset any stale phase to 'done'.
+      if (isAuthenticated && (p === 'plan' || p === 'calendar' || p === 'guided_chat')) {
+        setOnboardingPhase('done');
+        setPhaseState('done');
+      } else {
+        setPhaseState(p);
+      }
       setPhaseReady(true);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Dev safety: reset stale phase on demand ───────────────────────────────
