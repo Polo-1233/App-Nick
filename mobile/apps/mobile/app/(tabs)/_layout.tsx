@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { DayPlanProvider }         from "../../lib/day-plan-context";
 import { ChatProvider }            from "../../lib/chat-context";
@@ -15,19 +15,9 @@ import {
 } from "../../lib/storage";
 import { useAuth } from "../../lib/auth-context";
 
-/**
- * Tab group layout — orchestrates the full post-onboarding flow.
- *
- * Phase machine (stored in AsyncStorage):
- *   guided_chat → questions in Home chat (tabs locked)
- *   plan        → plan generation + reveal overlay
- *   calendar    → calendar + notif access (post-login)
- *   done        → full app
- */
-
 export default function TabsLayout() {
-  const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const router                    = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [chatVisible, setChatVisible] = useState(false);
   const [phase, setPhaseState]        = useState<OnboardingPhase>('done');
@@ -35,12 +25,15 @@ export default function TabsLayout() {
 
   const openChat = useCallback(() => setChatVisible(true), []);
 
-  // ── Read phase from storage on mount ──────────────────────────────────────
+  // ── Read phase ONLY after auth has settled ────────────────────────────────
+  // This prevents the race condition where isAuthenticated=false at mount
+  // causes stale overlay phases to display after auth loads.
   useEffect(() => {
+    if (authLoading) return; // wait for auth to settle
     getOnboardingPhase().then(p => {
-      // Authenticated users who already have an account should never be
-      // blocked by onboarding overlays. Reset any stale phase to 'done'.
-      if (isAuthenticated && (p === 'plan' || p === 'calendar' || p === 'guided_chat')) {
+      // Authenticated users should never be blocked by onboarding overlays.
+      // If any stale phase is found, reset to 'done'.
+      if (isAuthenticated && p !== 'done') {
         setOnboardingPhase('done');
         setPhaseState('done');
       } else {
@@ -48,11 +41,7 @@ export default function TabsLayout() {
       }
       setPhaseReady(true);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Dev safety: reset stale phase on demand ───────────────────────────────
-  // If phase is stuck, call advance('done') from ProfileScreen settings.
+  }, [authLoading, isAuthenticated]);
 
   // ── Phase transition ───────────────────────────────────────────────────────
   const advance = useCallback((next: OnboardingPhase) => {
@@ -71,10 +60,10 @@ export default function TabsLayout() {
     advance('done');
   }, [advance]);
 
-  // ── Tab bar lock (guided_chat phase) ──────────────────────────────────────
-  const tabsLocked = phase === 'guided_chat';
+  // Don't render until both auth + phase are known
+  if (authLoading || !phaseReady) return null;
 
-  if (!phaseReady) return null;
+  const tabsLocked = phase === 'guided_chat';
 
   return (
     <OnboardingPhaseProvider phase={phase} advance={advance}>
@@ -83,12 +72,12 @@ export default function TabsLayout() {
           <View style={st.root}>
             <Slot />
 
-            {/* Tab bar lock overlay — visible but non-interactive */}
+            {/* Tab bar lock — visible but non-interactive during guided chat */}
             {tabsLocked && (
               <View style={st.tabLock} pointerEvents="box-only" />
             )}
 
-            {/* Plan overlay — phase 'plan' (only for new users, pre-login) */}
+            {/* Plan overlay — new users only, pre-login */}
             {phase === 'plan' && !isAuthenticated && (
               <OnboardingPlanOverlay
                 onComplete={handlePlanToLogin}
@@ -96,7 +85,7 @@ export default function TabsLayout() {
               />
             )}
 
-            {/* Calendar step — phase 'calendar' (post-login) */}
+            {/* Calendar step — post-login, authenticated new users */}
             {phase === 'calendar' && isAuthenticated && (
               <OnboardingPlanOverlay
                 onComplete={handleCalendarDone}
@@ -104,12 +93,10 @@ export default function TabsLayout() {
               />
             )}
 
-            {/* Global chat overlay */}
             <AirloopChat
               visible={chatVisible}
               onClose={() => setChatVisible(false)}
             />
-
             <OfflineBanner />
             <RLoToastProvider />
           </View>
@@ -122,12 +109,11 @@ export default function TabsLayout() {
 const st = StyleSheet.create({
   root:    { flex: 1, backgroundColor: '#0A0A0A' },
   tabLock: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
-    height:   84,   // covers tab bar area
-    // semi-transparent to signal "locked" without hiding tabs
+    position:        'absolute',
+    bottom:          0,
+    left:            0,
+    right:           0,
+    height:          84,
     backgroundColor: 'rgba(11,18,32,0.55)',
   },
 });
