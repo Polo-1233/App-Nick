@@ -684,6 +684,7 @@ const s = StyleSheet.create({
     alignItems:        'center',
     justifyContent:    'center',
     paddingHorizontal: 24,
+    overflow:          'hidden',    // clip absolute glows to slide bounds
   },
 
   // ── Slide 0 — conversational coach intro ──────────────────────────────────
@@ -953,6 +954,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 32,
     alignItems:        'center',
     justifyContent:    'center',
+    overflow:          'hidden',    // clip glow to slide bounds
   },
   slide3Content: {
     width:          '100%',
