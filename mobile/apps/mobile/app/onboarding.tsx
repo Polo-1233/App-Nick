@@ -83,6 +83,7 @@ export default function OnboardingScreen() {
   const mascotBlink     = useRef(new Animated.Value(1)).current;
   const btnPressAnim    = useRef(new Animated.Value(1)).current;
   const circlePulse1    = useRef(new Animated.Value(1)).current;
+  const circlePulse2    = useRef(new Animated.Value(1)).current;
   const fadeAnim0    = useRef(new Animated.Value(0)).current;
   const fadeAnim1    = useRef(new Animated.Value(0)).current;
   const fadeAnim2    = useRef(new Animated.Value(0)).current;
@@ -116,6 +117,18 @@ export default function OnboardingScreen() {
     loop.start();
     return () => loop.stop();
   }, [circlePulse1]);
+
+  // ── Slide 2: circle pulse — authority/silver, slow + calm ───────────────────
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(circlePulse2, { toValue: 1.06, duration: 3400, useNativeDriver: true }),
+        Animated.timing(circlePulse2, { toValue: 1.00, duration: 3400, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [circlePulse2]);
 
   // ── Slide 0: mascot idle — breathing + occasional blink ───────────────────
   useEffect(() => {
@@ -427,45 +440,55 @@ export default function OnboardingScreen() {
 
             {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
             <View style={[s.slideV, { width: windowWidth }]}>
+              {/* Title + circle centered together as a unit */}
+              <Animated.View style={[s.slide2Content, { opacity: fadeAnim2 }]}>
 
-              <View style={s.titleArea}>
-                <Animated.View style={[s.titleBlock, { opacity: fadeAnim2 }]}>
-                  <Text style={s.slideTitle}>{"The R90 Method"}</Text>
-                </Animated.View>
-              </View>
+                <Text style={s.slideTitle}>{"The R90 Method"}</Text>
 
-              {/* Silver breathing circle — authority palette */}
-              <View style={s.circleCenter}>
-                <Animated.View
-                  style={[
-                    s.circleGlowSilver,
-                    {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.05, 0.0] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
-                    },
-                  ]}
-                />
-                <Animated.View
-                  style={[
-                    s.circleRingSilver,
-                    {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.28, 0.52, 0.28] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.06] }) }],
-                    },
-                  ]}
-                >
-                  <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim2 }]}>
-                    <Text style={s.circleAuthorLine}>
-                      {'Developed by\n'}
-                      <Text style={s.circleAuthorName}>{'Nick Littlehales.'}</Text>
-                    </Text>
-                    <Text style={s.circleCredential}>
-                      {"Sleep coach to elite athletes\nand high-performance teams."}
-                    </Text>
+                {/* Silver authority circle */}
+                <View style={s.slide2CircleWrap}>
+                  {/* Outer halo — soft atmospheric glow */}
+                  <Animated.View
+                    style={[
+                      s.slide2Halo,
+                      {
+                        opacity:   circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.04, 0.10] }),
+                        transform: [{ scale: circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [1.0, 1.18] }) }],
+                      },
+                    ]}
+                  />
+                  {/* Inner glow */}
+                  <Animated.View
+                    style={[
+                      s.circleGlowSilver,
+                      {
+                        opacity:   circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.0, 0.06] }),
+                        transform: [{ scale: circlePulse2 }],
+                      },
+                    ]}
+                  />
+                  {/* Ring */}
+                  <Animated.View
+                    style={[
+                      s.circleRingSilver,
+                      {
+                        opacity:   circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.35, 0.58] }),
+                        transform: [{ scale: circlePulse2 }],
+                      },
+                    ]}
+                  >
+                    {/* Text — 3-tier hierarchy, all centered */}
+                    <View style={s.slide2Inner}>
+                      <Text style={s.slide2DevelopedBy}>Developed by</Text>
+                      <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
+                      <Text style={s.slide2Credential}>
+                        {"Sleep coach to elite athletes\nand high-performance teams."}
+                      </Text>
+                    </View>
                   </Animated.View>
-                </Animated.View>
-              </View>
+                </View>
 
+              </Animated.View>
             </View>
 
             {/* ── Slide 3: Meet R-Lo — Duolingo style ──────────────────── */}
@@ -789,24 +812,76 @@ const s = StyleSheet.create({
   },
 
   // Silver ring — authority slide (slide 2)
+  // ── Slide 2 layout ────────────────────────────────────────────────────────
+  slide2Content: {
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            28,       // space between title and circle
+    paddingHorizontal: 24,
+  },
+  slide2CircleWrap: {
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  slide2Halo: {
+    position:        'absolute',
+    width:           CIRCLE_SIZE * 1.8,
+    height:          CIRCLE_SIZE * 1.8,
+    borderRadius:    (CIRCLE_SIZE * 1.8) / 2,
+    backgroundColor: TEXT,
+  },
+  slide2Inner: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 20,
+    gap:             10,
+  },
+  slide2DevelopedBy: {
+    fontSize:      12,
+    fontFamily:    'Inter-Regular',
+    fontWeight:    '400',
+    color:         TEXT_MUTED,
+    textAlign:     'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
+  },
+  slide2AuthorName: {
+    fontSize:      22,          // prominent — focal point
+    fontFamily:    'Inter-Bold',
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    letterSpacing: -0.3,
+  },
+  slide2Credential: {
+    fontSize:      13,
+    fontFamily:    'Inter-Regular',
+    fontWeight:    '400',
+    color:         TEXT_SUB,
+    textAlign:     'center',
+    lineHeight:    22,          // slightly increased
+    paddingHorizontal: 8,
+  },
+
+  // Silver ring — CIRCLE_SIZE * 1.1 (+10%)
   circleGlowSilver: {
     position:        'absolute',
-    width:           CIRCLE_SIZE * 1.35,
-    height:          CIRCLE_SIZE * 1.35,
-    borderRadius:    (CIRCLE_SIZE * 1.35) / 2,
+    width:           CIRCLE_SIZE * 1.1 * 1.35,
+    height:          CIRCLE_SIZE * 1.1 * 1.35,
+    borderRadius:    (CIRCLE_SIZE * 1.1 * 1.35) / 2,
     backgroundColor: TEXT,
   },
   circleRingSilver: {
-    width:          CIRCLE_SIZE,
-    height:         CIRCLE_SIZE,
-    borderRadius:   CIRCLE_SIZE / 2,
+    width:          CIRCLE_SIZE * 1.1,
+    height:         CIRCLE_SIZE * 1.1,
+    borderRadius:   (CIRCLE_SIZE * 1.1) / 2,
     borderWidth:    1,
     borderColor:    TEXT,
     justifyContent: 'center',
     alignItems:     'center',
     shadowColor:    TEXT,
-    shadowOpacity:  0.2,
-    shadowRadius:   14,
+    shadowOpacity:  0.25,
+    shadowRadius:   20,
     shadowOffset:   { width: 0, height: 0 },
   },
 
