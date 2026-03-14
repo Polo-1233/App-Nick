@@ -816,9 +816,11 @@ const s = StyleSheet.create({
   slide2Content: {
     alignItems:        'center',
     justifyContent:    'center',
-    gap:               44,          // 28 → 44 (+16px gap title/circle)
+    gap:               36,
     paddingHorizontal: 24,
-    marginBottom:      '10%',       // optical centering — shift block upward
+    // Optical centering: translate up so the CIRCLE (not the title) sits at ~45% of screen
+    // marginBottom % in RN = relative to WIDTH (not height) — use transform instead
+    transform:         [{ translateY: -52 }],
   },
   slide2CircleWrap: {
     alignItems:     'center',
