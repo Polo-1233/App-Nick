@@ -293,46 +293,28 @@ export default function OnboardingScreen() {
             ]}
           >
 
-            {/* ── Slide 0: Premium intro ────────────────────────────────── */}
+            {/* ── Slide 0: Coach intro — R-Lo + speech bubble ──────────── */}
             <View style={[s.slideV, { width: windowWidth }]}>
+              <Animated.View style={[s.slide0Wrap, { opacity: fadeAnim0 }]}>
 
-              {/* Title — centered between header and circle */}
-              <View style={s.titleArea}>
-                <Animated.View style={[s.titleBlock, { opacity: fadeAnim0 }]}>
-                  <Text style={s.slideTitle}>
-                    {"Most sleep problems\naren't sleep problems"}
+                {/* Speech bubble */}
+                <View style={s.bubble}>
+                  <Text style={s.bubbleText}>
+                    {"Most sleep problems\naren't about sleep."}
                   </Text>
-                </Animated.View>
-              </View>
+                  {/* Triangle pointer pointing down toward R-Lo */}
+                  <View style={s.bubbleTip} />
+                </View>
 
-              {/* Breathing circle — vertical center of remaining space */}
-              <View style={s.circleCenter}>
-                {/* Glow orb (absolute, sits behind the ring) */}
-                <Animated.View
-                  style={[
-                    s.circleGlow,
-                    {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.10, 0.0] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
-                    },
-                  ]}
-                />
-                {/* Ring with inner explanatory text */}
-                <Animated.View
-                  style={[
-                    s.circleRing,
-                    {
-                      opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.55, 0.88, 0.55] }),
-                      transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.08] }) }],
-                    },
-                  ]}
-                >
-                  <Animated.Text style={[s.circleInnerText, { opacity: fadeAnim0 }]}>
-                    {"Your body runs on\n90-minute recovery cycles."}
-                  </Animated.Text>
-                </Animated.View>
-              </View>
+                {/* R-Lo mascot */}
+                <MascotImage emotion="Fiere" style={s.slide0Mascot} />
 
+                {/* Supporting sentence */}
+                <Text style={s.slide0Sub}>
+                  {"Your body runs on\n90-minute recovery cycles."}
+                </Text>
+
+              </Animated.View>
             </View>
 
             {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
@@ -620,6 +602,57 @@ const s = StyleSheet.create({
     alignItems:        'center',
     justifyContent:    'center',
     paddingHorizontal: 24,
+  },
+
+  // ── Slide 0 — conversational coach intro ──────────────────────────────────
+  slide0Wrap: {
+    alignItems:    'center',
+    justifyContent:'center',
+    gap:           0,
+    paddingBottom: 16,
+  },
+  bubble: {
+    backgroundColor: '#1A2436',
+    borderRadius:    20,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems:      'center',
+    marginBottom:    0,
+    // subtle border for premium feel
+    borderWidth:     1,
+    borderColor:     'rgba(77,163,255,0.18)',
+  },
+  bubbleText: {
+    fontSize:   20,
+    fontWeight: '700',
+    color:      '#E6EDF7',
+    textAlign:  'center',
+    lineHeight: 30,
+    letterSpacing: -0.3,
+  },
+  bubbleTip: {
+    position:    'absolute',
+    bottom:      -10,
+    width:       0,
+    height:      0,
+    borderLeftWidth:   10,
+    borderRightWidth:  10,
+    borderTopWidth:    10,
+    borderLeftColor:   'transparent',
+    borderRightColor:  'transparent',
+    borderTopColor:    '#1A2436',
+  },
+  slide0Mascot: {
+    width:     160,
+    height:    160,
+    marginTop: 14,
+  },
+  slide0Sub: {
+    fontSize:  15,
+    color:     '#9FB0C5',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginTop: 16,
   },
 
   // Title — absolute, floats between progress bar and top of circle.
