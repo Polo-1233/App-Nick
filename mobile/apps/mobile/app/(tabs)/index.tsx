@@ -1,17 +1,15 @@
 /**
  * Pager container — Revolut-style horizontal swipe navigation.
  *
- * Three pages (Home / Calendar / Profile) rendered side by side inside a
- * ScrollView with pagingEnabled. Pages follow the finger continuously and
- * snap to the nearest page on release.
+ * Four pages: Home / Calendar / Insights / Profile
  *
  * Bottom nav:
- *   - Bubble opacity is driven directly by scrollX (native thread, no JS jank).
+ *   - Bubble opacity driven directly by scrollX (native thread, no JS jank).
  *   - Icon variant (filled/outline) updates on momentum scroll end.
  *   - Colors come from the active theme — adapts to light/dark.
  *   - Tap a tab icon → programmatic scrollTo().
  *
- * All three screens stay mounted (no remount flicker when switching pages).
+ * All screens stay mounted (no remount flicker when switching pages).
  */
 
 import { useRef, useState, useCallback } from "react";
@@ -24,10 +22,11 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
 import HomeScreen     from "../../components/screens/HomeScreen";
 import CalendarScreen from "../../components/screens/CalendarScreen";
+import InsightsScreen from "../../components/screens/InsightsScreen";
 import ProfileScreen  from "../../components/screens/ProfileScreen";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -35,10 +34,9 @@ import ProfileScreen  from "../../components/screens/ProfileScreen";
 const ICON_SIZE        = 22;
 const ICON_AREA_HEIGHT = 54;
 const BUBBLE_SIZE      = 44;
+const PAGE_COUNT       = 4;
 
 // ─── TabIcon ──────────────────────────────────────────────────────────────────
-// anim: 0 = inactive, 1 = active. Driven natively by scrollX interpolation.
-// bubbleColor: themed translucent tint passed from PagerLayout.
 
 type AnimNode = Animated.AnimatedInterpolation<string | number>;
 
@@ -53,16 +51,14 @@ function TabIcon({
 }) {
   const iconOpacity = anim.interpolate({
     inputRange:  [0, 1],
-    outputRange: [0.6, 1],
+    outputRange: [0.5, 1],
   });
 
   return (
     <View style={ti.wrap}>
-      {/* Bubble — themed translucent tint, fades with scroll position */}
       <Animated.View
         style={[ti.bubble, { opacity: anim, backgroundColor: bubbleColor }]}
       />
-      {/* Icon — dims to 0.6 when inactive */}
       <Animated.View style={{ opacity: iconOpacity }}>
         {icon}
       </Animated.View>
@@ -80,7 +76,6 @@ const ti = StyleSheet.create({
   bubble: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: BUBBLE_SIZE / 2,
-    // backgroundColor is injected per-render via prop
   },
 });
 
@@ -103,38 +98,17 @@ export default function PagerLayout() {
     [screenW],
   );
 
-  // Per-icon active animation — interpolated from scroll position on native thread.
-  // Triangle function: each icon peaks at its own page and fades toward neighbours.
-  const anim0 = scrollX.interpolate({
-    inputRange:  [0, screenW],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-  const anim1 = scrollX.interpolate({
-    inputRange:  [0, screenW, 2 * screenW],
-    outputRange: [0, 1, 0],
-    extrapolate: "clamp",
-  });
-  const anim2 = scrollX.interpolate({
-    inputRange:  [screenW, 2 * screenW],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
+  // Per-icon triangle interpolations (peaks at own page, fades to neighbours)
+  const anim0 = scrollX.interpolate({ inputRange: [0, screenW],                  outputRange: [1, 0], extrapolate: "clamp" });
+  const anim1 = scrollX.interpolate({ inputRange: [0, screenW, 2 * screenW],     outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim2 = scrollX.interpolate({ inputRange: [screenW, 2 * screenW, 3 * screenW], outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim3 = scrollX.interpolate({ inputRange: [2 * screenW, 3 * screenW],   outputRange: [0, 1], extrapolate: "clamp" });
 
   const { tabBarBg, tabBarBorder, tabBarBubble, tabBarIcon } = theme.colors;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
 
-      {/*
-        ── Pager: three screens side by side ──
-        MUST be Animated.ScrollView (not plain ScrollView) when using
-        Animated.event with useNativeDriver:true. On RN 0.81+ (new arch/Fabric),
-        Animated.event returns an AnimatedEvent object rather than a plain
-        function. Plain ScrollView tries to call this.props.onScroll(event)
-        directly and throws "onScroll is not a function (it is Object)".
-        Animated.ScrollView wires up the native event driver correctly.
-      */}
       <Animated.ScrollView
         ref={scrollRef}
         horizontal
@@ -149,7 +123,7 @@ export default function PagerLayout() {
         onMomentumScrollEnd={(e) => {
           setActiveIndex(Math.round(e.nativeEvent.contentOffset.x / screenW));
         }}
-        contentContainerStyle={{ width: screenW * 3 }}
+        contentContainerStyle={{ width: screenW * PAGE_COUNT }}
         style={styles.pager}
       >
         <View style={[styles.page, { width: screenW }]}>
@@ -157,6 +131,9 @@ export default function PagerLayout() {
         </View>
         <View style={[styles.page, { width: screenW }]}>
           <CalendarScreen />
+        </View>
+        <View style={[styles.page, { width: screenW }]}>
+          <InsightsScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
@@ -177,41 +154,30 @@ export default function PagerLayout() {
       >
         {/* Home */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(0)}>
-          <TabIcon
-            anim={anim0}
-            bubbleColor={tabBarBubble}
-            icon={
-              <Ionicons
-                name={activeIndex === 0 ? "home" : "home-outline"}
-                size={ICON_SIZE}
-                color={tabBarIcon}
-              />
-            }
-          />
+          <TabIcon anim={anim0} bubbleColor={tabBarBubble} icon={
+            <Ionicons name={activeIndex === 0 ? "home" : "home-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          } />
         </Pressable>
 
         {/* Calendar */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(1)}>
-          <TabIcon
-            anim={anim1}
-            bubbleColor={tabBarBubble}
-            icon={
-              <Ionicons
-                name={activeIndex === 1 ? "calendar" : "calendar-outline"}
-                size={ICON_SIZE}
-                color={tabBarIcon}
-              />
-            }
-          />
+          <TabIcon anim={anim1} bubbleColor={tabBarBubble} icon={
+            <Ionicons name={activeIndex === 1 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          } />
+        </Pressable>
+
+        {/* Insights */}
+        <Pressable style={styles.tabItem} onPress={() => goToPage(2)}>
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble} icon={
+            <Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          } />
         </Pressable>
 
         {/* Profile */}
-        <Pressable style={styles.tabItem} onPress={() => goToPage(2)}>
-          <TabIcon
-            anim={anim2}
-            bubbleColor={tabBarBubble}
-            icon={<Feather name="user" size={ICON_SIZE} color={tabBarIcon} />}
-          />
+        <Pressable style={styles.tabItem} onPress={() => goToPage(3)}>
+          <TabIcon anim={anim3} bubbleColor={tabBarBubble} icon={
+            <Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          } />
         </Pressable>
       </View>
 
@@ -222,22 +188,13 @@ export default function PagerLayout() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    // backgroundColor injected from theme
-  },
-  pager: {
-    flex: 1,
-  },
-  page: {
-    flex:     1,
-    overflow: "hidden",
-  },
-  tabBar: {
+  root:    { flex: 1 },
+  pager:   { flex: 1 },
+  page:    { flex: 1, overflow: "hidden" },
+  tabBar:  {
     flexDirection:  "row",
     borderTopWidth: 1,
     paddingTop:     8,
-    // backgroundColor, borderTopColor, height, paddingBottom injected from theme
   },
   tabItem: {
     flex:           1,
