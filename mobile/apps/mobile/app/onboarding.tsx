@@ -766,12 +766,12 @@ const s = StyleSheet.create({
   },
   slide1Rlo: {
     position: 'absolute',
-    bottom:   -16,
-    right:    '8%',
+    bottom:   -14,
+    right:    '18%',  // closer to circle center, not at screen edge
   },
   slide1RloImg: {
-    width:  72,
-    height: 72,
+    width:  86,   // 72 → 86 (+19%)
+    height: 86,
   },
 
   // Turquoise glow — absolute behind the ring, centered via circleCenter
@@ -829,8 +829,8 @@ const s = StyleSheet.create({
   circleInnerText: {
     fontSize:   14,
     fontFamily: 'Inter-Regular',
-    fontWeight: '400',
-    color:      TEXT_SUB,
+    fontWeight: '500',   // Regular → Medium (+contrast)
+    color:      TEXT,    // TEXT_SUB (#9FB0C5) → TEXT (#E6EDF7) — +13% brightness
     textAlign:  'center',
     lineHeight: 22,
     paddingHorizontal: 20,
