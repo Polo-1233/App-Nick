@@ -50,7 +50,7 @@ interface AVSound {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 5;
+const TOTAL_PAGES = 4;
 
 const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
@@ -216,29 +216,7 @@ export default function OnboardingScreen() {
     return () => { mascotLoop.stop(); glowLoop.stop(); };
   }, [page, fadeAnim3, slide3MascotScale, slide3GlowOpacity]);
 
-  // ── Slide 4: typing indicator → message reveal ────────────────────────────
-  useEffect(() => {
-    if (page !== 4) return;
-    fadeAnim4.setValue(0);
-    messageAnim.setValue(0);
-    dotsAnim.setValue(0);
-
-    Animated.timing(fadeAnim4, {
-      toValue: 1, duration: 500, delay: 100, useNativeDriver: true,
-    }).start();
-
-    const dotsLoop = Animated.loop(
-      Animated.timing(dotsAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-    );
-    dotsLoop.start();
-
-    const timer = setTimeout(() => {
-      dotsLoop.stop();
-      Animated.timing(messageAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, 2100);
-
-    return () => { clearTimeout(timer); dotsLoop.stop(); };
-  }, [page, fadeAnim4, dotsAnim, messageAnim]);
+  
 
   // ── Pulse animation on the final CTA ──────────────────────────────────────
   useEffect(() => {
@@ -345,7 +323,6 @@ export default function OnboardingScreen() {
 
   const nextLabel =
     page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Begin with R-Lo') :
-    page === 3               ? 'Begin with R-Lo' :
     'Continue';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -547,8 +524,8 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>}
 
-            {/* ── Slide 4: R-Lo focus — home preview + chat ───────────── */}
-            {page === 4 && <View style={s.slide4}>
+            {/* slide 4 removed */}
+            {false && <View style={s.slide4}>
 
               {/* Title — centered in top third */}
               <Animated.View style={[s.slide4Title, { opacity: fadeAnim4 }]}>
