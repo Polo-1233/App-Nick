@@ -294,11 +294,10 @@ export default function OnboardingScreen() {
     if (saving) return;
     setSaving(true);
     try {
-      // Only mark intro complete here — bootstrapUser() is called after login
-      // (auth is collected in the /login screen for new users)
+      // Mark intro complete then go to guided R-Lo chat
       await markIntroComplete();
       HapticsSuccess();
-      router.replace('/(tabs)');
+      router.replace('/onboarding-chat');
     } catch {
       setSaving(false);
       Alert.alert('Setup failed', 'Could not complete setup. Please try again.');
