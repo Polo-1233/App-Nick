@@ -178,62 +178,31 @@ const bbl = StyleSheet.create({
   textUser:    { color: '#000' },
 });
 
-// ─── Immersive Header (38%) ────────────────────────────────────────────────────
-function ImmersiveHeader({
+// ─── Top info bar (transparent, overlays the full-page video) ────────────────
+function TopInfoBar({
   name, score, topInset, bedtime, wake,
 }: {
   name: string | null; score: number; topInset: number;
   bedtime: number | null; wake: number | null;
 }) {
   const { line1, line2 } = coachGreeting(name, score);
-
-  // Breathing animation for mascot
-  const breathe = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: 3600, useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: 3600, useNativeDriver: true }),
-    ])).start();
-  }, [breathe]);
-  const mascotScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.05] });
-
   const showPlan = bedtime !== null || wake !== null;
 
   return (
-    <View style={{ height: HEADER_H + topInset, overflow: 'hidden' }}>
-      {/* Background video — looping, muted, autoplay */}
-      <Video
-        source={require('../../assets/header-animation.mp4')}
-        style={StyleSheet.absoluteFill}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-        useNativeControls={false}
-      />
-      {/* Gradient — lighter at top, heavier at bottom */}
-      <LinearGradient
-        colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.45)', 'rgba(11,18,32,0.92)']}
-        locations={[0, 0.45, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Top row — Tonight (left) + Greeting (right) */}
-      <View style={[ih.topRow, { top: topInset + 14 }]}>
-        {showPlan && (
-          <View style={ih.planLabel}>
-            <Text style={ih.planTitle}>Tonight</Text>
-            <Text style={ih.planTimes}>
-              {bedtime !== null ? formatMin(bedtime) : '—'}
-              {'  →  '}
-              {wake !== null ? formatMin(wake) : '—'}
-            </Text>
-          </View>
-        )}
-        <View style={ih.greeting}>
-          <Text style={ih.line1} numberOfLines={1}>{line1}</Text>
-          <Text style={ih.line2} numberOfLines={2}>{line2}</Text>
+    <View style={[ih.topRow, { top: topInset + 14 }]}>
+      {showPlan && (
+        <View style={ih.planLabel}>
+          <Text style={ih.planTitle}>Tonight</Text>
+          <Text style={ih.planTimes}>
+            {bedtime !== null ? formatMin(bedtime) : '—'}
+            {'  →  '}
+            {wake !== null ? formatMin(wake) : '—'}
+          </Text>
         </View>
+      )}
+      <View style={ih.greeting}>
+        <Text style={ih.line1} numberOfLines={1}>{line1}</Text>
+        <Text style={ih.line2} numberOfLines={2}>{line2}</Text>
       </View>
     </View>
   );
@@ -682,8 +651,25 @@ export default function HomeScreen() {
         /* ══ COACH MODE ══════════════════════════════════════════════════════ */
           <View style={sc.flex}>
 
-            {/* 1. Header image */}
-            <ImmersiveHeader
+            {/* Full-page background video */}
+            <Video
+              source={require('../../assets/header-animation.mp4')}
+              style={StyleSheet.absoluteFill}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted
+              useNativeControls={false}
+            />
+            {/* Gradient overlay — keeps text readable */}
+            <LinearGradient
+              colors={['rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)', 'rgba(11,18,32,0.88)']}
+              locations={[0, 0.4, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* Top info bar */}
+            <TopInfoBar
               name={userName}
               score={energyScore}
               topInset={insets.top}
@@ -815,10 +801,11 @@ export default function HomeScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const sc = StyleSheet.create({
   root:        { flex: 1, backgroundColor: BG },
+  coachRoot:   { flex: 1 },
   flex:        { flex: 1 },
   chatContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
 
-  composer:    { backgroundColor: BG },
+  composer:    { backgroundColor: 'transparent' },
   inputRow:    { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
   inputWrap:   { flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
   input:       { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
