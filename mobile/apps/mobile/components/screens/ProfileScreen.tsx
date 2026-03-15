@@ -54,7 +54,8 @@ const C = {
   bg:        '#0B1220',
   card:      '#1A2436',
   surface2:  '#243046',
-  accent:    '#4DA3FF',
+  accent:          '#4DA3FF',
+  accentSecondary: '#4DA3FF',
   text:      '#E6EDF7',
   textSub:   '#9FB0C5',
   textMuted: '#6B7F99',
@@ -84,6 +85,60 @@ const APPEARANCE_LABEL: Record<ThemeMode, string> = {
   light:  'Light',
   dark:   'Dark',
 };
+
+// ─── Data Security Modal ──────────────────────────────────────────────────────
+function DataSecurityModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const BULLETS = [
+    'Encrypted recovery data',
+    'Private sleep insights',
+    'Secure account protection',
+  ];
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={dm.backdrop} onPress={onClose} />
+      <View style={dm.sheet}>
+        <View style={dm.handle} />
+
+        <View style={dm.iconWrap}>
+          <Ionicons name="shield-checkmark" size={36} color={C.accentSecondary} />
+        </View>
+
+        <Text style={dm.title}>Your data is secure</Text>
+
+        <Text style={dm.body}>
+          Your sleep and recovery data are encrypted and stored securely.
+          R-Lo never sells or shares your personal data.
+        </Text>
+
+        <View style={dm.bullets}>
+          {BULLETS.map(b => (
+            <View key={b} style={dm.bulletRow}>
+              <Ionicons name="checkmark-circle" size={16} color={C.success} />
+              <Text style={dm.bulletText}>{b}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Pressable style={dm.closeBtn} onPress={onClose}>
+          <Text style={dm.closeBtnText}>Got it</Text>
+        </Pressable>
+      </View>
+    </Modal>
+  );
+}
+const dm = StyleSheet.create({
+  backdrop:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 16 },
+  handle:      { width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginBottom: 24 },
+  iconWrap:    { width: 64, height: 64, borderRadius: 32, backgroundColor: `${C.accentSecondary}15`, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 },
+  title:       { fontSize: 22, fontWeight: '700', color: C.text, textAlign: 'center', marginBottom: 12 },
+  body:        { fontSize: 15, color: C.textSub, lineHeight: 24, textAlign: 'center', marginBottom: 24 },
+  bullets:     { gap: 12, marginBottom: 32 },
+  bulletRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bulletText:  { fontSize: 15, color: C.text, fontWeight: '500' },
+  closeBtn:    { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  closeBtnText:{ fontSize: 16, fontWeight: '700', color: '#000' },
+});
 
 // ─── Settings Modal ───────────────────────────────────────────────────────────
 
@@ -322,7 +377,8 @@ export default function ProfileScreen() {
 
   const [profile,      setProfile]      = useState<UserProfile | null>(null);
   const [displayName,  setDisplayName]  = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings,  setShowSettings]  = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
   const [windDownEnabled,      setWindDownEnabled]      = useState(false);
   const [windDownMusicEnabled, setWindDownMusicEnabled] = useState(false);
 
@@ -385,6 +441,12 @@ export default function ProfileScreen() {
       onPress: () => setShowSettings(true),
     },
     {
+      icon:    'shield-checkmark-outline',
+      label:   'Your data is secure',
+      sub:     'Your recovery data is encrypted and private.',
+      onPress: () => setShowDataModal(true),
+    },
+    {
       icon:    'headset-outline',
       label:   'Support',
       sub:     'Help and resources',
@@ -402,7 +464,7 @@ export default function ProfileScreen() {
             <Text style={s.avatarText}>{avatarLetter}</Text>
           </View>
           <Text style={s.name}>{displayName}</Text>
-          <Text style={s.nameSub}>R-Lo user</Text>
+          <Text style={s.nameSub}>R90 rhythm active</Text>
         </View>
 
         {/* ── 2. Premium card ── */}
@@ -438,6 +500,11 @@ export default function ProfileScreen() {
 
         <Text style={s.version}>R90 Navigator v0.1.0</Text>
       </ScrollView>
+
+      <DataSecurityModal
+        visible={showDataModal}
+        onClose={() => setShowDataModal(false)}
+      />
 
       {showSettings && (
         <SettingsModal
