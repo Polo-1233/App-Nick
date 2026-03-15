@@ -215,4 +215,33 @@ export async function fetchUpcomingCalendarEvents(client, userId, hoursAhead = 4
         return [];
     return data;
 }
+/**
+ * Fetch recent weekly summaries (most recent first).
+ */
+export async function fetchWeeklySummaries(client, userId, limit = 4) {
+    const { data, error } = await client
+        .from("weekly_summaries")
+        .select("*")
+        .eq("user_id", userId)
+        .order("week_start", { ascending: false })
+        .limit(limit);
+    if (error || !data)
+        return [];
+    return data;
+}
+/**
+ * Fetch the latest weekly report for a user.
+ */
+export async function fetchLatestWeeklyReport(client, userId) {
+    const { data, error } = await client
+        .from("weekly_reports")
+        .select("*")
+        .eq("user_id", userId)
+        .order("week_start", { ascending: false })
+        .limit(1)
+        .single();
+    if (error || !data)
+        return null;
+    return data;
+}
 //# sourceMappingURL=queries.js.map

@@ -19,6 +19,7 @@ import {
 import { SafeAreaView }           from 'react-native-safe-area-context';
 import { Ionicons }               from '@expo/vector-icons';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
+import { getWeeklySummaries, type WeeklySummaryResponse } from '../../lib/api';
 import {
   computeInsights,
   type InsightsData,
@@ -239,6 +240,8 @@ export default function InsightsScreen() {
   const [loading,  setLoading]  = useState(true);
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [profile,  setProfile]  = useState<UserProfile | null>(null);
+  const [weekSummary, setWeekSummary] = useState<WeeklySummaryResponse | null>(null);
+  const [prevWeekSummary, setPrevWeekSummary] = useState<WeeklySummaryResponse | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -251,6 +254,18 @@ export default function InsightsScreen() {
       setLoading(false);
     }
     void load();
+    // Fetch weekly summaries from backend
+    (async () => {
+      try {
+        const res = await getWeeklySummaries(2);
+        if (res.ok && res.data?.summaries) {
+          if (res.data.summaries.length > 0) setWeekSummary(res.data.summaries[0]);
+          if (res.data.summaries.length > 1) setPrevWeekSummary(res.data.summaries[1]);
+        }
+      } catch {
+        // Non-critical
+      }
+    })();
   }, []);
 
   if (loading) {
@@ -271,6 +286,40 @@ export default function InsightsScreen() {
           <Text style={s.headerTitle}>Insights</Text>
           <Text style={s.headerSub}>Your recovery at a glance</Text>
         </View>
+
+        {/* This week summary from backend */}
+        {weekSummary && (
+          <View style={s.weekCard}>
+            <Text style={s.cardLabel}>This week</Text>
+            <View style={s.weekRow}>
+              <Text style={[s.weekAvg, { color: weekSummary.on_track ? C.success : C.warning }]}>
+                {weekSummary.avg_cycles !== null ? weekSummary.avg_cycles.toFixed(1) : '—'}
+              </Text>
+              <Text style={s.weekAvgUnit}> avg cycles</Text>
+              {prevWeekSummary?.avg_cycles !== null && weekSummary.avg_cycles !== null && prevWeekSummary && (
+                <Text style={[s.weekDelta, {
+                  color: weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? C.success : C.error,
+                }]}>
+                  {weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? ' ↑' : ' ↓'}
+                </Text>
+              )}
+            </View>
+            {weekSummary.on_track !== null && (
+              <View style={[s.weekBadge, { backgroundColor: weekSummary.on_track ? `${C.success}20` : `${C.warning}20` }]}>
+                <Text style={[s.weekBadgeText, { color: weekSummary.on_track ? C.success : C.warning }]}>
+                  {weekSummary.on_track ? 'On track' : 'Behind target'}
+                </Text>
+              </View>
+            )}
+            {weekSummary.patterns_detected.length > 0 && (
+              <View style={s.weekPatterns}>
+                {weekSummary.patterns_detected.slice(0, 2).map((p, i) => (
+                  <Text key={i} style={s.weekPattern}>• {p}</Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {!insights ? <EmptyState /> : (
           <>
@@ -373,6 +422,17 @@ const s = StyleSheet.create({
   // Predictive insight
   predictiveBox:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: `${C.accent}12`, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: `${C.accent}25` },
   predictiveText: { fontSize: 13, color: C.textSub, lineHeight: 20, flex: 1 },
+
+  // This week card
+  weekCard:      { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 12, gap: 10 },
+  weekRow:       { flexDirection: 'row', alignItems: 'baseline' },
+  weekAvg:       { fontSize: 36, fontWeight: '900', lineHeight: 42 },
+  weekAvgUnit:   { fontSize: 14, color: C.textSub, fontWeight: '600' },
+  weekDelta:     { fontSize: 18, fontWeight: '800', marginLeft: 4 },
+  weekBadge:     { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  weekBadgeText: { fontSize: 12, fontWeight: '700' },
+  weekPatterns:  { marginTop: 4, gap: 4 },
+  weekPattern:   { fontSize: 13, color: C.textSub, lineHeight: 19 },
 
   // Empty
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },

@@ -23,6 +23,7 @@ import http from "node:http";
 import fs from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { runMigrations } from "./db/migrate.js";
+import { scheduleWeeklyReport } from "./services/weekly-report-cron.js";
 import { authenticate, authenticateSignup } from "./middleware/auth.js";
 import type { AuthContext, SignupAuthContext } from "./middleware/auth.js";
 import {
@@ -53,6 +54,14 @@ import {
   calendarSyncHandler,
   calendarUpcomingHandler,
 } from "./handlers/calendar-context-handler.js";
+import {
+  calculateSummaryHandler,
+  recentSummariesHandler,
+} from "./handlers/summary-handler.js";
+import {
+  generateReportHandler,
+  latestReportHandler,
+} from "./handlers/report-handler.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,6 +119,10 @@ const routes: AnyRoute[] = [
   { method: "DELETE", path: "/events/life",        handler: deleteLifeEventHandler },
   { method: "POST",   path: "/calendar/sync",      handler: calendarSyncHandler },
   { method: "GET",    path: "/calendar/upcoming",   handler: calendarUpcomingHandler },
+  { method: "POST",   path: "/summaries/calculate", handler: calculateSummaryHandler },
+  { method: "GET",    path: "/summaries/recent",    handler: recentSummariesHandler },
+  { method: "POST",   path: "/reports/generate",    handler: generateReportHandler },
+  { method: "GET",    path: "/reports/weekly/latest", handler: latestReportHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
@@ -260,11 +273,13 @@ runMigrations().then(() => {
       console.log(`  ${r.method.padEnd(4)} ${r.path}`);
     }
     console.log();
+    scheduleWeeklyReport();
   });
 }).catch(err => {
   console.error("[server] Migration runner failed:", err);
   // Start anyway — migrations are non-blocking
   server.listen(PORT, HOST, () => {
     console.log(`\nR90 backend listening on http://${HOST}:${PORT} (migrations skipped)`);
+    scheduleWeeklyReport();
   });
 });

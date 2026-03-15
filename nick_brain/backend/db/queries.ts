@@ -192,6 +192,34 @@ export interface CalendarEventRow {
   synced_at:       string;
 }
 
+// ─── weekly_summaries ────────────────────────────────────────────────────────
+
+export interface WeeklySummaryRow {
+  id:                string;
+  user_id:           string;
+  week_start:        string;
+  week_end:          string;
+  avg_cycles:        number | null;
+  total_cycles:      number | null;
+  target_cycles:     number | null;
+  on_track:          boolean | null;
+  deficit:           number | null;
+  mood_avg:          number | null;
+  stress_avg:        number | null;
+  notable_events:    unknown[];
+  patterns_detected: string[];
+  created_at:        string;
+  updated_at:        string;
+}
+
+export interface WeeklyReportRow {
+  id:           string;
+  user_id:      string;
+  week_start:   string;
+  content:      string;
+  generated_at: string;
+}
+
 // ─── Query functions ──────────────────────────────────────────────────────────
 
 export async function fetchUser(
@@ -452,4 +480,42 @@ export async function fetchUpcomingCalendarEvents(
 
   if (error || !data) return [];
   return data as CalendarEventRow[];
+}
+
+/**
+ * Fetch recent weekly summaries (most recent first).
+ */
+export async function fetchWeeklySummaries(
+  client: AppClient,
+  userId: string,
+  limit = 4,
+): Promise<WeeklySummaryRow[]> {
+  const { data, error } = await client
+    .from("weekly_summaries")
+    .select("*")
+    .eq("user_id", userId)
+    .order("week_start", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as WeeklySummaryRow[];
+}
+
+/**
+ * Fetch the latest weekly report for a user.
+ */
+export async function fetchLatestWeeklyReport(
+  client: AppClient,
+  userId: string,
+): Promise<WeeklyReportRow | null> {
+  const { data, error } = await client
+    .from("weekly_reports")
+    .select("*")
+    .eq("user_id", userId)
+    .order("week_start", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return data as WeeklyReportRow;
 }

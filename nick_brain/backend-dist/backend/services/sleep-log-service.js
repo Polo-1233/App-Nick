@@ -7,6 +7,7 @@ import { cyclesFromFormula, timeToMinutes } from "../../engine/arp-config.js";
 import { fetchUserProfile } from "../db/queries.js";
 import { upsertSleepLog } from "../db/mutations.js";
 import { runAndPersistEngine } from "./engine-service.js";
+import { calculateWeeklySummary, getWeekStart } from "./weekly-summary-service.js";
 /**
  * Submit a sleep log for a user.
  *
@@ -56,6 +57,14 @@ export async function submitSleepLog(client, userId, input) {
     }
     // ── Run engine ────────────────────────────────────────────────────────────
     const engineOutput = await runAndPersistEngine(client, userId);
+    // ── Trigger weekly summary calculation (fire-and-forget) ────────────────
+    setImmediate(() => {
+        const logDate = new Date(input.date);
+        const weekStart = getWeekStart(logDate);
+        calculateWeeklySummary(client, userId, weekStart).catch(err => {
+            console.error("[sleep-log] Weekly summary calc failed:", err instanceof Error ? err.message : err);
+        });
+    });
     return {
         ok: true,
         data: {

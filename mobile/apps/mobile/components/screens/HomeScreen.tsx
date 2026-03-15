@@ -15,7 +15,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Modal,
   Animated, Dimensions, Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +25,7 @@ import { LinearGradient }                   from 'expo-linear-gradient';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDayPlanContext }       from '../../lib/day-plan-context';
-import { getUpcomingEvents, type CalendarEventResponse } from '../../lib/api';
+import { getUpcomingEvents, getLatestWeeklyReport, type CalendarEventResponse } from '../../lib/api';
 import { useOnboardingPhase }      from '../../lib/onboarding-phase-context';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
@@ -474,6 +474,10 @@ export default function HomeScreen() {
   // Calendar banner
   const [bannerEvent,    setBannerEvent]   = useState<CalendarEventResponse | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Weekly report banner
+  const [reportContent, setReportContent] = useState<string | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportBannerDismissed, setReportBannerDismissed] = useState(false);
 
   // Guided
   const [guidedStep,      setGuidedStep]      = useState<GuidedStep>('wake');
@@ -514,6 +518,26 @@ export default function HomeScreen() {
         const travel = priority.find(e => e.event_type_hint === 'travel');
         const important = priority.find(e => e.event_type_hint === 'important');
         setBannerEvent(travel ?? important ?? null);
+      } catch {
+        // Non-critical
+      }
+    })();
+  }, [phase]);
+
+  // Fetch weekly report banner (Monday only)
+  useEffect(() => {
+    if (phase !== 'done') return;
+    const isMonday = new Date().getDay() === 1;
+    if (!isMonday) return;
+    (async () => {
+      try {
+        const res = await getLatestWeeklyReport();
+        if (res.ok && res.data?.report) {
+          const reportAge = Date.now() - new Date(res.data.report.generated_at).getTime();
+          if (reportAge < 24 * 60 * 60 * 1000) {
+            setReportContent(res.data.report.content);
+          }
+        }
       } catch {
         // Non-critical
       }
@@ -685,6 +709,33 @@ export default function HomeScreen() {
                 </View>
               </Pressable>
             )}
+
+            {/* Weekly report banner */}
+            {reportContent && !reportBannerDismissed && (
+              <Pressable style={bn.wrap} onPress={() => setShowReportModal(true)}>
+                <View style={bn.content}>
+                  <Text style={bn.text}>{'📊 Your weekly sleep report is ready. Tap to read.'}</Text>
+                  <Pressable onPress={() => setReportBannerDismissed(true)} hitSlop={8}>
+                    <Ionicons name="close" size={16} color={MUTED} />
+                  </Pressable>
+                </View>
+              </Pressable>
+            )}
+
+            {/* Weekly report modal */}
+            <Modal visible={showReportModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowReportModal(false)}>
+              <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: TEXT }}>Weekly Report</Text>
+                  <Pressable onPress={() => setShowReportModal(false)} style={{ padding: 6, borderRadius: 20, backgroundColor: SURFACE2 }}>
+                    <Ionicons name="close" size={20} color={SUB} />
+                  </Pressable>
+                </View>
+                <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+                  <Text style={{ fontSize: 15, color: TEXT, lineHeight: 24 }}>{reportContent}</Text>
+                </ScrollView>
+              </SafeAreaView>
+            </Modal>
 
             {/* 2. Chat area */}
             <ScrollView

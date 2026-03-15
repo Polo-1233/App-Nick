@@ -159,6 +159,30 @@ export interface CalendarEventRow {
     event_type_hint: string;
     synced_at: string;
 }
+export interface WeeklySummaryRow {
+    id: string;
+    user_id: string;
+    week_start: string;
+    week_end: string;
+    avg_cycles: number | null;
+    total_cycles: number | null;
+    target_cycles: number | null;
+    on_track: boolean | null;
+    deficit: number | null;
+    mood_avg: number | null;
+    stress_avg: number | null;
+    notable_events: unknown[];
+    patterns_detected: string[];
+    created_at: string;
+    updated_at: string;
+}
+export interface WeeklyReportRow {
+    id: string;
+    user_id: string;
+    week_start: string;
+    content: string;
+    generated_at: string;
+}
 export declare function fetchUser(client: AppClient, userId: string): Promise<UserRow | null>;
 export declare function fetchUserProfile(client: AppClient, userId: string): Promise<UserProfileRow | null>;
 export declare function fetchARPConfig(client: AppClient, userId: string): Promise<ARPConfigRow | null>;
@@ -197,3 +221,11 @@ export declare function fetchRecentLifeEvents(client: AppClient, userId: string,
  * Fetch upcoming calendar events within the next N hours.
  */
 export declare function fetchUpcomingCalendarEvents(client: AppClient, userId: string, hoursAhead?: number): Promise<CalendarEventRow[]>;
+/**
+ * Fetch recent weekly summaries (most recent first).
+ */
+export declare function fetchWeeklySummaries(client: AppClient, userId: string, limit?: number): Promise<WeeklySummaryRow[]>;
+/**
+ * Fetch the latest weekly report for a user.
+ */
+export declare function fetchLatestWeeklyReport(client: AppClient, userId: string): Promise<WeeklyReportRow | null>;

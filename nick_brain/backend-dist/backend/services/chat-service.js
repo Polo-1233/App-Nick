@@ -17,7 +17,8 @@ import { assembleEngineContext } from "../context/assembler.js";
 import { runEngineSafe } from "../../engine/engine-runner.js";
 import { buildHomeScreenPayload } from "../payloads/home-screen.js";
 import { loadRecentMessages, saveExchange, dailySessionId, } from "../db/chat-messages.js";
-import { fetchRecentLifeEvents, fetchUpcomingCalendarEvents } from "../db/queries.js";
+import { fetchRecentLifeEvents, fetchUpcomingCalendarEvents, fetchWeeklySummaries, fetchLatestWeeklyReport, } from "../db/queries.js";
+import { detectPatterns } from "./pattern-detector.js";
 // ─── 5. Input moderation / validation ────────────────────────────────────────
 const MAX_INPUT_LENGTH = 1000;
 const MAX_HISTORY_TURNS = 12;
@@ -54,10 +55,11 @@ function validateInput(raw) {
     return { ok: true, message: sanitized };
 }
 async function buildStructuredContext(client, userId) {
-    const [ctx, lifeEvents, calendarEvents] = await Promise.all([
+    const [ctx, lifeEvents, calendarEvents, weeklySummaries] = await Promise.all([
         assembleEngineContext(client, userId),
         fetchRecentLifeEvents(client, userId),
         fetchUpcomingCalendarEvents(client, userId, 48),
+        fetchWeeklySummaries(client, userId, 4),
     ]);
     const output = runEngineSafe(ctx);
     const home = buildHomeScreenPayload(output, ctx);
@@ -94,6 +96,14 @@ async function buildStructuredContext(client, userId) {
             date: e.event_date,
             notes: e.notes,
         })),
+        // Phase 3 — long-term patterns
+        four_week_avg: weeklySummaries.length > 0
+            ? Math.round(weeklySummaries.reduce((sum, s) => sum + (s.avg_cycles ?? 0), 0) / weeklySummaries.length * 10) / 10
+            : null,
+        on_track_rate: weeklySummaries.length > 0
+            ? `${weeklySummaries.filter(s => s.on_track).length}/${weeklySummaries.length} weeks`
+            : "unknown",
+        long_term_patterns: detectPatterns(weeklySummaries),
         // Phase 2 — calendar events
         calendar_events: calendarEvents.map(e => {
             const eventDate = new Date(e.start_time).toISOString().slice(0, 10);
@@ -179,6 +189,20 @@ function formatContextSections(ctx) {
         for (const ev of ctx.life_events) {
             const rel = ev.date >= today ? `upcoming (${ev.date})` : `recent (${ev.date})`;
             lines.push(`${ev.type}: "${ev.title}" — ${rel}${ev.notes ? ` — ${ev.notes}` : ""}`);
+        }
+        lines.push("");
+    }
+    // Phase 3 — Long-term patterns
+    if (ctx.four_week_avg !== null || ctx.long_term_patterns.length > 0) {
+        lines.push("[LONG_TERM_PATTERNS]");
+        if (ctx.four_week_avg !== null)
+            lines.push(`4-week avg: ${ctx.four_week_avg} cycles/night`);
+        lines.push(`on_track_rate: ${ctx.on_track_rate}`);
+        if (ctx.long_term_patterns.length > 0) {
+            lines.push("patterns:");
+            for (const p of ctx.long_term_patterns) {
+                lines.push(`- ${p}`);
+            }
         }
         lines.push("");
     }
@@ -332,6 +356,27 @@ export async function streamChatResponse(client, userId, input, res) {
     const historyMessages = persistedHistory.length > 0
         ? persistedHistory.map(m => ({ role: m.role, content: m.content }))
         : (input.history ?? []).slice(-MAX_HISTORY_TURNS);
+    // ── Report rerouting: check if user is asking for their weekly report ──
+    const reportKeywords = /\b(bilan|rapport|weekly report|semaine|cette semaine|my week|week report)\b/i;
+    if (reportKeywords.test(cleanMessage)) {
+        try {
+            const report = await fetchLatestWeeklyReport(client, userId);
+            if (report) {
+                const reportAge = Date.now() - new Date(report.generated_at).getTime();
+                if (reportAge < 7 * 86_400_000) {
+                    // Stream the report directly without calling OpenAI
+                    const fullReply = `Here's your weekly report:\n\n${report.content}`;
+                    const sessionId = input.session_id ?? dailySessionId();
+                    saveExchange(client, userId, sessionId, cleanMessage, fullReply).catch(() => { });
+                    await fakeStreamResponse(res, fullReply);
+                    return;
+                }
+            }
+        }
+        catch {
+            // Fall through to normal chat flow
+        }
+    }
     // ── 4. Build structured context from engine ────────────────────────────
     let contextSections = "[CURRENT_STATE]\nContext unavailable — respond based on general R90 principles.";
     try {
@@ -357,26 +402,30 @@ export async function streamChatResponse(client, userId, input, res) {
             console.warn("[chat-service] persist failed:", err instanceof Error ? err.message : err);
         });
     }
-    // ── Stream the response as SSE (fake-stream character-by-character) ────
+    // ── Stream the response as SSE ───────────────────────────────────────
+    await fakeStreamResponse(res, assistantReply);
+}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+/**
+ * Fake-stream a response over SSE (word-by-word with 18ms delay).
+ */
+async function fakeStreamResponse(res, text) {
     res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
         "Access-Control-Allow-Origin": "*",
     });
-    // Send in word-sized chunks to simulate streaming feel
-    const words = assistantReply.split(/(\s+)/);
+    const words = text.split(/(\s+)/);
     for (const chunk of words) {
         if (chunk) {
             res.write(`data: ${JSON.stringify({ delta: chunk })}\n\n`);
-            // Small delay between chunks for a natural feel
             await new Promise(r => setTimeout(r, 18));
         }
     }
     res.write("data: [DONE]\n\n");
     res.end();
 }
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function sendSseError(res, message) {
     if (!res.headersSent) {
         res.writeHead(200, {

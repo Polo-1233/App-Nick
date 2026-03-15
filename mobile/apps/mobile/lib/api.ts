@@ -411,3 +411,33 @@ export interface CalendarEventResponse {
 export async function getUpcomingEvents(hours = 24): Promise<ApiResponse<{ events: CalendarEventResponse[] }>> {
   return request('GET', `/calendar/upcoming?hours=${hours}`);
 }
+
+// ─── /summaries ──────────────────────────────────────────────────────────────
+
+export interface WeeklySummaryResponse {
+  week_start:        string;
+  week_end:          string;
+  avg_cycles:        number | null;
+  total_cycles:      number | null;
+  target_cycles:     number | null;
+  on_track:          boolean | null;
+  deficit:           number | null;
+  patterns_detected: string[];
+}
+
+export async function getWeeklySummaries(limit = 4): Promise<ApiResponse<{ summaries: WeeklySummaryResponse[] }>> {
+  return request('GET', `/summaries/recent?limit=${limit}`);
+}
+
+// ─── /reports ────────────────────────────────────────────────────────────────
+
+export interface WeeklyReportResponse {
+  user_id:      string;
+  week_start:   string;
+  content:      string;
+  generated_at: string;
+}
+
+export async function getLatestWeeklyReport(): Promise<ApiResponse<{ report: WeeklyReportResponse | null }>> {
+  return request('GET', '/reports/weekly/latest');
+}

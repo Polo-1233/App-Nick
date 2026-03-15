@@ -21,6 +21,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import { runMigrations } from "./db/migrate.js";
+import { scheduleWeeklyReport } from "./services/weekly-report-cron.js";
 import { authenticate, authenticateSignup } from "./middleware/auth.js";
 import { submitSleepLogHandler, submitDailyLogHandler, submitCheckInHandler, } from "./handlers/log-handlers.js";
 import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./handlers/payload-handlers.js";
@@ -29,6 +30,8 @@ import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
 import { deleteAccountHandler } from "./handlers/account-handlers.js";
 import { updateLifestyleHandler, getLifeEventsHandler, createLifeEventHandler, deleteLifeEventHandler, } from "./handlers/lifestyle-handlers.js";
 import { calendarSyncHandler, calendarUpcomingHandler, } from "./handlers/calendar-context-handler.js";
+import { calculateSummaryHandler, recentSummariesHandler, } from "./handlers/summary-handler.js";
+import { generateReportHandler, latestReportHandler, } from "./handlers/report-handler.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
     // Signup - uses authenticateSignup (no existing users row required)
@@ -52,6 +55,10 @@ const routes = [
     { method: "DELETE", path: "/events/life", handler: deleteLifeEventHandler },
     { method: "POST", path: "/calendar/sync", handler: calendarSyncHandler },
     { method: "GET", path: "/calendar/upcoming", handler: calendarUpcomingHandler },
+    { method: "POST", path: "/summaries/calculate", handler: calculateSummaryHandler },
+    { method: "GET", path: "/summaries/recent", handler: recentSummariesHandler },
+    { method: "POST", path: "/reports/generate", handler: generateReportHandler },
+    { method: "GET", path: "/reports/weekly/latest", handler: latestReportHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */
@@ -188,12 +195,14 @@ runMigrations().then(() => {
             console.log(`  ${r.method.padEnd(4)} ${r.path}`);
         }
         console.log();
+        scheduleWeeklyReport();
     });
 }).catch(err => {
     console.error("[server] Migration runner failed:", err);
     // Start anyway — migrations are non-blocking
     server.listen(PORT, HOST, () => {
         console.log(`\nR90 backend listening on http://${HOST}:${PORT} (migrations skipped)`);
+        scheduleWeeklyReport();
     });
 });
 //# sourceMappingURL=server.js.map
