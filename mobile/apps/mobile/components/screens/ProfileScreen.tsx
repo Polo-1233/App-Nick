@@ -447,6 +447,12 @@ export default function ProfileScreen() {
       onPress: () => router.push('/account'),
     },
     {
+      icon:    'shield-checkmark-outline',
+      label:   'Your data is secure',
+      sub:     'Your recovery data is encrypted and private.',
+      onPress: () => setShowDataModal(true),
+    },
+    {
       icon:    'headset-outline',
       label:   'Support',
       sub:     'Help and resources',
