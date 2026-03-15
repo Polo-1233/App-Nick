@@ -217,13 +217,13 @@ const ih = StyleSheet.create({
     gap:             12,
   },
   planLabel: {
+    flex:              1,
     backgroundColor:   'rgba(11,18,32,0.55)',
     borderRadius:      10,
     paddingHorizontal: 12,
     paddingVertical:   7,
     borderWidth:       1,
     borderColor:       'rgba(255,255,255,0.10)',
-    flexShrink:        0,
   },
   planTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
   planTimes: { fontSize: 13, fontWeight: '700', color: '#FFF' },
@@ -237,8 +237,8 @@ const ih = StyleSheet.create({
     borderWidth:       1,
     borderColor:       'rgba(255,255,255,0.10)',
   },
-  line1: { fontSize: 18, fontWeight: '800', color: '#FFF', lineHeight: 24, marginBottom: 3, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4, textAlign: 'right' },
-  line2: { fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 17, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, textAlign: 'right' },
+  line1: { fontSize: 13, fontWeight: '700', color: '#FFF', lineHeight: 18, marginBottom: 2, textAlign: 'right' },
+  line2: { fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 15, textAlign: 'right' },
 });
 
 // ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
