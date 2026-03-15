@@ -441,10 +441,10 @@ export default function ProfileScreen() {
       onPress: () => setShowSettings(true),
     },
     {
-      icon:    'shield-checkmark-outline',
-      label:   'Your data is secure',
-      sub:     'Your recovery data is encrypted and private.',
-      onPress: () => setShowDataModal(true),
+      icon:    'person-circle-outline',
+      label:   'Account',
+      sub:     'Manage your account and subscription',
+      onPress: () => router.push('/account'),
     },
     {
       icon:    'headset-outline',
@@ -470,7 +470,7 @@ export default function ProfileScreen() {
         {/* ── 2. Premium card ── */}
         <PremiumCard
           isPremium={isPremium}
-          onPress={() => { HapticsLight(); router.push('/subscription'); }}
+          onPress={() => { HapticsLight(); router.push(isPremium ? '/premium' : '/subscription'); }}
         />
 
         {/* ── 3. Account menu ── */}
