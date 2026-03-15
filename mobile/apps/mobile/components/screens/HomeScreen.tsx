@@ -51,7 +51,7 @@ const BORDER  = 'rgba(255,255,255,0.06)';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const HEADER_H   = Math.round(SCREEN_H * 0.38);
-const PANEL_H    = 220; // expandable panel height
+const PANEL_H    = 160; // expandable panel height
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMin(m: number): string {
@@ -332,11 +332,11 @@ const panel = StyleSheet.create({
   tabActive:    { backgroundColor: ACCENT },
   tabLabel:     { fontSize: 13, fontWeight: '600', color: MUTED },
   tabLabelActive:{ color: '#000' },
-  scroll:       { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
-  card:         { width: 140, backgroundColor: SURFACE2, borderRadius: 16, padding: 14, gap: 8, alignItems: 'flex-start' },
-  icon:         { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  cardTitle:    { fontSize: 13, fontWeight: '700', color: TEXT, lineHeight: 18 },
-  cardSub:      { fontSize: 11, color: MUTED, lineHeight: 15 },
+  scroll:       { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  card:         { width: 130, backgroundColor: SURFACE2, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, gap: 6, alignItems: 'flex-start' },
+  icon:         { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cardTitle:    { fontSize: 12, fontWeight: '700', color: TEXT, lineHeight: 16 },
+  cardSub:      { fontSize: 11, color: MUTED, lineHeight: 14 },
 });
 
 // ─── Toggle buttons (below input) ─────────────────────────────────────────────
