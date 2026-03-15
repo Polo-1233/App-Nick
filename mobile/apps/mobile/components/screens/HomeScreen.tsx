@@ -200,10 +200,6 @@ function TopInfoBar({
           </Text>
         </View>
       )}
-      <View style={ih.greeting}>
-        <Text style={ih.line1} numberOfLines={1}>{line1}</Text>
-        <Text style={ih.line2} numberOfLines={2}>{line2}</Text>
-      </View>
     </View>
   );
 }
@@ -213,11 +209,9 @@ const ih = StyleSheet.create({
     left:            16,
     right:           16,
     flexDirection:   'row',
-    alignItems:      'stretch',
-    gap:             12,
   },
   planLabel: {
-    flex:              1,
+    alignSelf:         'flex-start',
     backgroundColor:   'rgba(11,18,32,0.55)',
     borderRadius:      10,
     paddingHorizontal: 12,
