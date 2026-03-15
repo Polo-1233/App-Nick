@@ -1,20 +1,23 @@
 /**
- * subscription.tsx — Revolut/Netflix-style horizontal snap pager
+ * subscription.tsx — Calm-style vertical paywall
  *
- * 3 slides: Free · Premium Monthly · Premium Yearly
- * Cards peek (~88% width), snap to center, scale+opacity focus animation.
- * Starts on slide 1 (Premium Monthly).
+ * Single scrollable page:
+ *   1. Header     — title + subtitle
+ *   2. Benefits   — 4 key outcomes
+ *   3. Toggle     — Monthly / Yearly
+ *   4. Pricing    — 2 cards (yearly highlighted)
+ *   5. CTA        — "Start free trial"
+ *   6. Footer     — trial + cancel copy
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   ScrollView,
-  Animated,
-  Dimensions,
+  Switch,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -25,232 +28,43 @@ import { purchasePackage, restorePurchases, getCurrentOffering } from '../lib/pu
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { HapticsLight }   from '../utils/haptics';
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-const { width: SW } = Dimensions.get('window');
-const CARD_W  = SW * 0.82;          // 82 % — adjacent card peek
-const GAP     = 14;
-const SNAP    = CARD_W + GAP;
-const INSET   = (SW - CARD_W) / 2;  // center first card
-
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:       '#0B1220',
-  card:     '#1A2436',
-  cardPrem: '#0E1E35',
-  surface2: '#243046',
-  accent:   '#F5A623',
-  blue:     '#4DA3FF',
-  text:     '#E6EDF7',
-  textSub:  '#9FB0C5',
-  muted:    '#6B7F99',
-  success:  '#3DDC97',
-  border:   'rgba(255,255,255,0.07)',
+  bg:      '#0B1220',
+  card:    '#1A2436',
+  cardHL:  '#0E1E35',   // yearly highlighted card
+  surface: '#243046',
+  accent:  '#F5A623',   // orange — CTA only
+  blue:    '#4DA3FF',
+  text:    '#E6EDF7',
+  sub:     '#9FB0C5',
+  muted:   '#6B7F99',
+  success: '#3DDC97',
+  border:  'rgba(255,255,255,0.08)',
 };
 
-// ─── Slide data ───────────────────────────────────────────────────────────────
-const SLIDES = [
-  { id: 'free' },
-  { id: 'monthly' },
-  { id: 'yearly' },
-] as const;
-type SlideId = typeof SLIDES[number]['id'];
-
-const FREE_FEATURES = [
-  { icon: 'moon-outline',        text: 'Sleep planning'   },
-  { icon: 'chatbubble-outline',  text: 'R-Lo coaching'    },
-  { icon: 'sync-outline',        text: 'Cycle tracking'   },
+// ─── Benefits ─────────────────────────────────────────────────────────────────
+const BENEFITS = [
+  { icon: 'sync-outline',           text: 'Understand your sleep cycles'  },
+  { icon: 'moon-outline',           text: 'Know exactly when to sleep'    },
+  { icon: 'flash-outline',          text: 'Recover faster from fatigue'   },
+  { icon: 'airplane-outline',       text: 'Fix jet lag automatically'     },
 ];
-const PREMIUM_FEATURES = [
-  { icon: 'analytics-outline',      text: 'Understand your sleep cycles' },
-  { icon: 'trending-up-outline',    text: 'Weekly recovery insights'     },
-  { icon: 'airplane-outline',       text: 'Recover faster from jet lag'  },
-  { icon: 'calendar-outline',       text: 'Auto-adapt your schedule'     },
-  { icon: 'battery-charging-outline', text: 'Fatigue analysis'           },
-  { icon: 'checkmark-circle-outline', text: 'Everything in Free'         },
-];
-
-// ─── Feature row ─────────────────────────────────────────────────────────────
-function FRow({ icon, text, premium }: { icon: string; text: string; premium?: boolean }) {
-  return (
-    <View style={fr.row}>
-      <Ionicons name={icon as any} size={14} color={premium ? C.blue : C.success} />
-      <Text style={[fr.text, { color: premium ? C.text : C.textSub }]}>{text}</Text>
-    </View>
-  );
-}
-const fr = StyleSheet.create({
-  row:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
-  text: { fontSize: 14, flex: 1, lineHeight: 20 },
-});
-
-// ─── Card: Free ───────────────────────────────────────────────────────────────
-function FreeCard() {
-  return (
-    <View style={cd.card}>
-      <View style={cd.badgeFree}><Text style={cd.badgeFreeText}>Free plan</Text></View>
-      <Text style={cd.planName}>Free</Text>
-      <Text style={cd.freePrice}>Always free</Text>
-      <View style={cd.divider} />
-      <View style={cd.features}>
-        {FREE_FEATURES.map(f => <FRow key={f.text} icon={f.icon} text={f.text} />)}
-      </View>
-    </View>
-  );
-}
-
-// ─── Card: Premium ────────────────────────────────────────────────────────────
-function PremiumCard({
-  type, isPremium, loading, onPurchase,
-}: {
-  type: 'monthly' | 'yearly';
-  isPremium: boolean;
-  loading: boolean;
-  onPurchase: (type: 'monthly' | 'yearly') => void;
-}) {
-  const isYearly = type === 'yearly';
-  return (
-    <View style={cd.cardPrem}>
-      {/* Badge */}
-      <View style={cd.badgePrem}>
-        <Ionicons name={isYearly ? 'ribbon-outline' : 'star-outline'} size={11} color={C.accent} />
-        <Text style={cd.badgePremText}>{isYearly ? 'Best value' : 'Most popular'}</Text>
-      </View>
-
-      <Text style={[cd.planName, { color: C.blue }]}>Premium</Text>
-
-      {/* Price */}
-      <View style={cd.priceBlock}>
-        {isYearly ? (
-          <>
-            <View style={cd.priceRow}>
-              <Text style={cd.priceMain}>$3.25</Text>
-              <Text style={cd.pricePeriod}> / month</Text>
-            </View>
-            <Text style={cd.priceSub}>$39 / year  ·  Save 33%</Text>
-          </>
-        ) : (
-          <>
-            <View style={cd.priceRow}>
-              <Text style={cd.priceMain}>$4.99</Text>
-              <Text style={cd.pricePeriod}> / month</Text>
-            </View>
-            <Text style={cd.priceSub}>Billed monthly</Text>
-          </>
-        )}
-      </View>
-
-      <View style={cd.divider} />
-
-      <View style={cd.features}>
-        {PREMIUM_FEATURES.map(f => <FRow key={f.text} icon={f.icon} text={f.text} premium />)}
-      </View>
-
-      {isPremium ? (
-        <View style={cd.activeRow}>
-          <Ionicons name="checkmark-circle" size={18} color={C.success} />
-          <Text style={cd.activeTxt}>Premium active</Text>
-        </View>
-      ) : (
-        <Pressable
-          style={[cd.cta, loading && { opacity: 0.6 }]}
-          onPress={() => onPurchase(type)}
-          disabled={loading}
-        >
-          {loading
-            ? <ActivityIndicator color="#0B1220" size="small" />
-            : <Text style={cd.ctaTxt}>Start Premium</Text>
-          }
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
-// ─── Card styles (shared base) ────────────────────────────────────────────────
-const CARD_H_MIN = 480;
-const cd = StyleSheet.create({
-  card: {
-    width:           CARD_W,
-    minHeight:       CARD_H_MIN,
-    backgroundColor: C.card,
-    borderRadius:    24,
-    padding:         24,
-    borderWidth:     1,
-    borderColor:     C.border,
-  },
-  cardPrem: {
-    width:           CARD_W,
-    minHeight:       CARD_H_MIN,
-    backgroundColor: C.cardPrem,
-    borderRadius:    24,
-    padding:         24,
-    borderWidth:     1.5,
-    borderColor:     `${C.blue}35`,
-  },
-  badgeFree:     { alignSelf: 'flex-start', backgroundColor: C.surface2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 12 },
-  badgeFreeText: { fontSize: 11, fontWeight: '600', color: C.muted },
-  badgePrem:     { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', backgroundColor: `${C.accent}18`, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 12, borderWidth: 1, borderColor: `${C.accent}35` },
-  badgePremText: { fontSize: 11, fontWeight: '700', color: C.accent },
-  planName:      { fontSize: 28, fontWeight: '900', color: C.text, marginBottom: 4 },
-  freePrice:     { fontSize: 15, color: C.muted, marginBottom: 14 },
-  priceBlock:    { marginBottom: 16 },
-  priceRow:      { flexDirection: 'row', alignItems: 'baseline' },
-  priceMain:     { fontSize: 36, fontWeight: '900', color: C.text },
-  pricePeriod:   { fontSize: 15, color: C.textSub, fontWeight: '500' },
-  priceSub:      { fontSize: 12, color: C.muted, marginTop: 4 },
-  divider:       { height: 1, backgroundColor: C.border, marginBottom: 16 },
-  features:      { gap: 0, flex: 1 },
-  activeRow:     { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingTop: 20 },
-  activeTxt:     { fontSize: 14, fontWeight: '600', color: C.success },
-  cta:           { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 20 },
-  ctaTxt:        { fontSize: 16, fontWeight: '700', color: '#0B1220' },
-});
-
-// ─── Pagination dots ──────────────────────────────────────────────────────────
-function Dots({ scrollX }: { scrollX: Animated.Value }) {
-  return (
-    <View style={dt.row}>
-      {SLIDES.map((_, i) => {
-        const inputRange = [(i - 1) * SNAP, i * SNAP, (i + 1) * SNAP];
-        const width = scrollX.interpolate({ inputRange, outputRange: [6, 20, 6], extrapolate: 'clamp' });
-        const opacity = scrollX.interpolate({ inputRange, outputRange: [0.4, 1, 0.4], extrapolate: 'clamp' });
-        const bg = i === 0
-          ? C.textSub    // free = grey
-          : C.accent;    // premium = orange
-        return (
-          <Animated.View key={i} style={[dt.dot, { width, opacity, backgroundColor: bg }]} />
-        );
-      })}
-    </View>
-  );
-}
-const dt = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 16 },
-  dot: { height: 6, borderRadius: 3 },
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function SubscriptionScreen() {
   const router                         = useRouter();
   const { isPremium, refresh }         = usePremiumGate();
-  const [loading, setLoading]          = useState(false);
-  const scrollRef                      = useRef<ScrollView>(null);
-  const scrollX                        = useRef(new Animated.Value(SNAP)).current; // start on slide 1
-
-  // Start on Premium Monthly (index 1)
-  const onReady = useCallback(() => {
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({ x: SNAP, animated: false });
-    }, 30);
-  }, []);
+  const [yearly,   setYearly]          = useState(true);
+  const [loading,  setLoading]         = useState(false);
 
   // ── Purchase ─────────────────────────────────────────────────────────────
-  async function handlePurchase(type: 'monthly' | 'yearly') {
+  async function handlePurchase() {
     HapticsLight();
     setLoading(true);
     try {
       const { offering } = await getCurrentOffering();
-      const pkgType = type === 'yearly' ? 'ANNUAL' : 'MONTHLY';
+      const pkgType = yearly ? 'ANNUAL' : 'MONTHLY';
       const pkg = offering?.availablePackages.find((p: any) => p.packageType === pkgType)
                ?? offering?.availablePackages[0];
       if (!pkg) { Alert.alert('Not available', 'No plans available right now.'); return; }
@@ -278,89 +92,180 @@ export default function SubscriptionScreen() {
       if (result.ok) { await refresh(); Alert.alert('Restored', 'Your purchases have been restored.'); }
       else Alert.alert('Nothing to restore', 'No previous purchases found.');
     } catch {
-      Alert.alert('Error', 'Could not restore. Please try again.');
+      Alert.alert('Error', 'Could not restore.');
     } finally {
       setLoading(false);
     }
   }
 
-  // ── Slide render ─────────────────────────────────────────────────────────
-  function renderSlide(id: SlideId, index: number) {
-    const inputRange = [(index - 1) * SNAP, index * SNAP, (index + 1) * SNAP];
-    const scale   = scrollX.interpolate({ inputRange, outputRange: [0.95, 1, 0.95], extrapolate: 'clamp' });
-    const opacity = scrollX.interpolate({ inputRange, outputRange: [0.72, 1, 0.72], extrapolate: 'clamp' });
-
-    return (
-      <Animated.View key={id} style={[sl.wrapper, { transform: [{ scale }], opacity }]}>
-        {id === 'free'    && <FreeCard />}
-        {id === 'monthly' && (
-          <PremiumCard type="monthly" isPremium={isPremium} loading={loading} onPurchase={handlePurchase} />
-        )}
-        {id === 'yearly'  && (
-          <PremiumCard type="yearly"  isPremium={isPremium} loading={loading} onPurchase={handlePurchase} />
-        )}
-      </Animated.View>
-    );
-  }
-
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={C.textSub} />
-        </Pressable>
-      </View>
-
-      {/* Title */}
-      <Text style={s.title}>Upgrade your{'\n'}sleep recovery</Text>
-      <Text style={s.sub}>Swipe to compare plans</Text>
-
-      {/* Snap pager */}
-      <Animated.ScrollView
-        ref={scrollRef as any}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={SNAP}
-        decelerationRate="fast"
-        contentContainerStyle={[sl.container, { paddingHorizontal: INSET }]}
-        onLayout={onReady}
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false },
-        )}
-        style={s.pager}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.scroll}
+        bounces={false}
       >
-        {SLIDES.map(({ id }, i) => renderSlide(id, i))}
-      </Animated.ScrollView>
 
-      {/* Pagination dots */}
-      <Dots scrollX={scrollX} />
+        {/* ── Close button ── */}
+        <Pressable onPress={() => router.back()} hitSlop={12} style={s.closeBtn}>
+          <Ionicons name="close" size={20} color={C.sub} />
+        </Pressable>
 
-      {/* Restore */}
-      <Pressable style={s.restoreBtn} onPress={() => { void handleRestore(); }} disabled={loading}>
-        <Text style={s.restoreTxt}>Restore purchase</Text>
-      </Pressable>
+        {/* ── 1. Header ── */}
+        <View style={s.header}>
+          <Text style={s.title}>Your sleep plan{'\n'}is ready</Text>
+          <Text style={s.subtitle}>Unlock your AI sleep coach</Text>
+        </View>
 
+        {/* ── 2. Benefits ── */}
+        <View style={s.benefits}>
+          {BENEFITS.map(({ icon, text }) => (
+            <View key={text} style={s.benefitRow}>
+              <View style={s.benefitIcon}>
+                <Ionicons name={icon as any} size={18} color={C.blue} />
+              </View>
+              <Text style={s.benefitText}>{text}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* ── 3. Toggle ── */}
+        <View style={s.toggleRow}>
+          <Text style={[s.toggleLabel, !yearly && s.toggleLabelActive]}>Monthly</Text>
+          <Switch
+            value={yearly}
+            onValueChange={v => { HapticsLight(); setYearly(v); }}
+            trackColor={{ false: C.surface, true: C.blue }}
+            thumbColor={C.text}
+            style={s.switch}
+          />
+          <Text style={[s.toggleLabel, yearly && s.toggleLabelActive]}>Yearly</Text>
+          {yearly && (
+            <View style={s.savePill}>
+              <Text style={s.savePillText}>Save 33%</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── 4. Pricing cards ── */}
+        <View style={s.cards}>
+
+          {/* Monthly */}
+          <Pressable
+            style={[s.card, !yearly && s.cardSelected]}
+            onPress={() => { HapticsLight(); setYearly(false); }}
+          >
+            <View style={s.cardTop}>
+              <Text style={s.planName}>Monthly</Text>
+              {!yearly && <View style={s.selectedDot} />}
+            </View>
+            <Text style={s.planPrice}>$4.99<Text style={s.planPer}> / mo</Text></Text>
+            <Text style={s.planNote}>Cancel anytime</Text>
+          </Pressable>
+
+          {/* Yearly — highlighted */}
+          <Pressable
+            style={[s.card, s.cardYearly, yearly && s.cardSelected]}
+            onPress={() => { HapticsLight(); setYearly(true); }}
+          >
+            <View style={s.cardTop}>
+              <Text style={[s.planName, { color: C.blue }]}>Yearly</Text>
+              <View style={s.bestBadge}>
+                <Text style={s.bestBadgeText}>Best value</Text>
+              </View>
+            </View>
+            <Text style={s.planPrice}>$3.25<Text style={s.planPer}> / mo</Text></Text>
+            <Text style={s.planYearlyTotal}>$39 / year</Text>
+            <Text style={s.planNote}>Save 33% vs monthly</Text>
+          </Pressable>
+
+        </View>
+
+        {/* ── 5. CTA ── */}
+        {isPremium ? (
+          <View style={s.activeBox}>
+            <Ionicons name="checkmark-circle" size={20} color={C.success} />
+            <Text style={s.activeTxt}>Premium is active</Text>
+          </View>
+        ) : (
+          <Pressable
+            style={[s.cta, loading && { opacity: 0.6 }]}
+            onPress={() => { void handlePurchase(); }}
+            disabled={loading}
+          >
+            {loading
+              ? <ActivityIndicator color="#0B1220" />
+              : <Text style={s.ctaTxt}>Start free trial</Text>
+            }
+          </Pressable>
+        )}
+
+        {/* ── 6. Footer ── */}
+        <Text style={s.footer}>
+          {yearly
+            ? 'Free for 7 days, then $39/year. Cancel anytime.'
+            : 'Free for 7 days, then $4.99/month. Cancel anytime.'}
+        </Text>
+
+        <Pressable style={s.restoreBtn} onPress={() => { void handleRestore(); }} disabled={loading}>
+          <Text style={s.restoreTxt}>Restore purchase</Text>
+        </Pressable>
+
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const sl = StyleSheet.create({
-  container: { gap: GAP, alignItems: 'flex-start' },
-  wrapper:   { /* scale/opacity applied inline */ },
-});
-
 const s = StyleSheet.create({
-  root:       { flex: 1, backgroundColor: C.bg },
-  header:     { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  backBtn:    { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
-  title:      { fontSize: 30, fontWeight: '900', color: C.text, lineHeight: 36, paddingHorizontal: 16, marginTop: 16, marginBottom: 6 },
-  sub:        { fontSize: 13, color: C.muted, paddingHorizontal: 16, marginBottom: 20 },
-  pager:      { flexGrow: 0 },
-  restoreBtn: { alignItems: 'center', paddingVertical: 12 },
+  root:   { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingHorizontal: 24, paddingBottom: 32 },
+
+  closeBtn: { alignSelf: 'flex-end', marginTop: 8, padding: 4 },
+
+  // Header
+  header:   { marginTop: 12, marginBottom: 32 },
+  title:    { fontSize: 32, fontWeight: '900', color: C.text, lineHeight: 40, marginBottom: 10 },
+  subtitle: { fontSize: 17, color: C.sub, lineHeight: 24 },
+
+  // Benefits
+  benefits:    { gap: 16, marginBottom: 36 },
+  benefitRow:  { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  benefitIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: `${C.blue}15`, alignItems: 'center', justifyContent: 'center' },
+  benefitText: { fontSize: 16, color: C.text, fontWeight: '500', flex: 1, lineHeight: 22 },
+
+  // Toggle
+  toggleRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 20 },
+  toggleLabel:      { fontSize: 15, color: C.muted, fontWeight: '500' },
+  toggleLabelActive:{ color: C.text, fontWeight: '700' },
+  switch:           { transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] },
+  savePill:         { backgroundColor: `${C.success}20`, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: `${C.success}40` },
+  savePillText:     { fontSize: 11, fontWeight: '700', color: C.success },
+
+  // Cards
+  cards:        { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  card:         { flex: 1, backgroundColor: C.card, borderRadius: 18, padding: 18, borderWidth: 2, borderColor: 'transparent', gap: 6 },
+  cardYearly:   { backgroundColor: C.cardHL },
+  cardSelected: { borderColor: C.blue },
+  cardTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  planName:     { fontSize: 16, fontWeight: '700', color: C.text },
+  planPrice:    { fontSize: 26, fontWeight: '900', color: C.text },
+  planPer:      { fontSize: 14, fontWeight: '500', color: C.sub },
+  planYearlyTotal: { fontSize: 13, color: C.muted, marginTop: -2 },
+  planNote:     { fontSize: 12, color: C.muted, marginTop: 2 },
+  selectedDot:  { width: 10, height: 10, borderRadius: 5, backgroundColor: C.blue },
+  bestBadge:    { backgroundColor: `${C.blue}20`, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: `${C.blue}40` },
+  bestBadgeText:{ fontSize: 10, fontWeight: '700', color: C.blue },
+
+  // CTA
+  cta:    { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 18, alignItems: 'center', marginBottom: 16 },
+  ctaTxt: { fontSize: 17, fontWeight: '800', color: '#0B1220', letterSpacing: 0.2 },
+
+  activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingVertical: 18, marginBottom: 16 },
+  activeTxt: { fontSize: 15, fontWeight: '600', color: C.success },
+
+  // Footer
+  footer:     { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 20, marginBottom: 16 },
+  restoreBtn: { alignItems: 'center', paddingVertical: 8 },
   restoreTxt: { fontSize: 13, color: C.muted },
 });
