@@ -44,7 +44,7 @@ interface ApiResponse<T> {
 }
 
 async function request<T>(
-  method: 'GET' | 'POST' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body?: unknown,
   skipAuth = false,
@@ -350,4 +350,49 @@ export async function healthCheck(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+// ─── /profile/lifestyle ───────────────────────────────────────────────────────
+
+export interface LifestyleInput {
+  stress_level?:       string;
+  sleep_environment?:  string;
+  exercise_frequency?: string;
+  alcohol_use?:        string;
+  work_start_time?:    string | null;
+}
+
+export async function updateLifestyle(input: LifestyleInput): Promise<ApiResponse<{ ok: boolean }>> {
+  return request('PUT', '/profile/lifestyle', input);
+}
+
+// ─── /events/life ─────────────────────────────────────────────────────────────
+
+export interface LifeEvent {
+  id:         string;
+  event_type: string;
+  title:      string;
+  event_date: string;
+  end_date:   string | null;
+  notes:      string | null;
+  created_at: string;
+}
+
+export interface LifeEventInput {
+  event_type: string;
+  title:      string;
+  event_date: string;
+  end_date?:  string | null;
+  notes?:     string | null;
+}
+
+export async function getLifeEvents(): Promise<ApiResponse<{ events: LifeEvent[] }>> {
+  return request('GET', '/events/life');
+}
+
+export async function createLifeEvent(input: LifeEventInput): Promise<ApiResponse<{ ok: boolean; id: string }>> {
+  return request('POST', '/events/life', input);
+}
+
+export async function deleteLifeEvent(id: string): Promise<ApiResponse<{ ok: boolean }>> {
+  return request('DELETE', `/events/life?id=${id}`);
 }

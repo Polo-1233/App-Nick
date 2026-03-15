@@ -17,6 +17,7 @@ import { assembleEngineContext } from "../context/assembler.js";
 import { runEngineSafe } from "../../engine/engine-runner.js";
 import { buildHomeScreenPayload } from "../payloads/home-screen.js";
 import { loadRecentMessages, saveExchange, dailySessionId, } from "../db/chat-messages.js";
+import { fetchRecentLifeEvents } from "../db/queries.js";
 // ─── 5. Input moderation / validation ────────────────────────────────────────
 const MAX_INPUT_LENGTH = 1000;
 const MAX_HISTORY_TURNS = 12;
@@ -53,11 +54,15 @@ function validateInput(raw) {
     return { ok: true, message: sanitized };
 }
 async function buildStructuredContext(client, userId) {
-    const ctx = await assembleEngineContext(client, userId);
+    const [ctx, lifeEvents] = await Promise.all([
+        assembleEngineContext(client, userId),
+        fetchRecentLifeEvents(client, userId),
+    ]);
     const output = runEngineSafe(ctx);
     const home = buildHomeScreenPayload(output, ctx);
     const wb = home.weekly_balance;
     const recentLogs = ctx.sleep_logs.slice(0, 3).map(l => `${l.date}: ${l.cycles_completed ?? "?"} cycles`);
+    const profile = ctx.profile;
     return {
         today: ctx.today,
         arp_time: ctx.profile.arp_time ?? null,
@@ -75,6 +80,19 @@ async function buildStructuredContext(client, userId) {
         recent_logs: recentLogs,
         gate_blocked: output.gate_blocked,
         gate_reason: output.gate_reason ?? null,
+        // Phase 1 — lifestyle
+        stress_level: profile.stress_level ?? null,
+        sleep_environment: profile.sleep_environment ?? null,
+        exercise_frequency: profile.exercise_frequency ?? null,
+        alcohol_use: profile.alcohol_use ?? null,
+        work_start_time: profile.work_start_time ?? null,
+        // Phase 1 — life events
+        life_events: lifeEvents.map(e => ({
+            type: e.event_type,
+            title: e.title,
+            date: e.event_date,
+            notes: e.notes,
+        })),
     };
 }
 /**
@@ -123,6 +141,32 @@ function formatContextSections(ctx) {
     }
     if (ctx.primary_rec) {
         lines.push(`primary_recommendation: ${ctx.primary_rec}`);
+    }
+    lines.push("");
+    // Phase 1 — Lifestyle context
+    if (ctx.stress_level || ctx.sleep_environment || ctx.exercise_frequency || ctx.alcohol_use || ctx.work_start_time) {
+        lines.push("[LIFESTYLE]");
+        if (ctx.stress_level)
+            lines.push(`baseline_stress: ${ctx.stress_level}`);
+        if (ctx.sleep_environment)
+            lines.push(`sleep_environment: ${ctx.sleep_environment}`);
+        if (ctx.exercise_frequency)
+            lines.push(`exercise_frequency: ${ctx.exercise_frequency}`);
+        if (ctx.alcohol_use)
+            lines.push(`alcohol_use: ${ctx.alcohol_use}`);
+        if (ctx.work_start_time)
+            lines.push(`work_start_time: ${ctx.work_start_time}`);
+        lines.push("");
+    }
+    // Phase 1 — Life events
+    if (ctx.life_events.length > 0) {
+        lines.push("[LIFE_EVENTS]");
+        const today = new Date().toISOString().slice(0, 10);
+        for (const ev of ctx.life_events) {
+            const rel = ev.date >= today ? `upcoming (${ev.date})` : `recent (${ev.date})`;
+            lines.push(`${ev.type}: "${ev.title}" — ${rel}${ev.notes ? ` — ${ev.notes}` : ""}`);
+        }
+        lines.push("");
     }
     return lines.join("\n");
 }

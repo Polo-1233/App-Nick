@@ -26,6 +26,7 @@ import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./han
 import { createUserHandler, updateProfileHandler, updateEnvironmentHandler, recommendationActionHandler, } from "./handlers/profile-handlers.js";
 import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
 import { deleteAccountHandler } from "./handlers/account-handlers.js";
+import { updateLifestyleHandler, getLifeEventsHandler, createLifeEventHandler, deleteLifeEventHandler, } from "./handlers/lifestyle-handlers.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
     // Signup - uses authenticateSignup (no existing users row required)
@@ -43,6 +44,10 @@ const routes = [
     { method: "POST", path: "/chat", handler: chatHandler },
     { method: "GET", path: "/chat/history", handler: chatHistoryHandler },
     { method: "DELETE", path: "/account", handler: deleteAccountHandler },
+    { method: "PUT", path: "/profile/lifestyle", handler: updateLifestyleHandler },
+    { method: "GET", path: "/events/life", handler: getLifeEventsHandler },
+    { method: "POST", path: "/events/life", handler: createLifeEventHandler },
+    { method: "DELETE", path: "/events/life", handler: deleteLifeEventHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */

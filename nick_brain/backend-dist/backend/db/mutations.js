@@ -424,4 +424,42 @@ export async function upsertEnvironment(client, userId, input) {
     }
     return true;
 }
+export async function updateLifestyleProfile(client, userId, input) {
+    const { error } = await client
+        .from("user_profiles")
+        .update({
+        ...input,
+        lifestyle_updated_at: new Date().toISOString(),
+    })
+        .eq("user_id", userId);
+    if (error) {
+        console.error("[mutations] updateLifestyleProfile failed:", error.message);
+        return false;
+    }
+    return true;
+}
+export async function createLifeEvent(client, userId, input) {
+    const { data, error } = await client
+        .from("life_events")
+        .insert({ user_id: userId, ...input })
+        .select("id")
+        .single();
+    if (error || !data) {
+        console.error("[mutations] createLifeEvent failed:", error?.message);
+        return null;
+    }
+    return data;
+}
+export async function deleteLifeEvent(client, userId, eventId) {
+    const { error } = await client
+        .from("life_events")
+        .delete()
+        .eq("id", eventId)
+        .eq("user_id", userId); // ownership check
+    if (error) {
+        console.error("[mutations] deleteLifeEvent failed:", error.message);
+        return false;
+    }
+    return true;
+}
 //# sourceMappingURL=mutations.js.map

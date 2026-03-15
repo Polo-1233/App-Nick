@@ -36,6 +36,22 @@ export interface UserProfileRow {
     user_reported_screen_use: boolean;
     profile_version: number;
     updated_at: string;
+    stress_level: string | null;
+    sleep_environment: string | null;
+    exercise_frequency: string | null;
+    alcohol_use: string | null;
+    work_start_time: string | null;
+    lifestyle_updated_at: string | null;
+}
+export interface LifeEventRow {
+    id: string;
+    user_id: string;
+    event_type: string;
+    title: string;
+    event_date: string;
+    end_date: string | null;
+    notes: string | null;
+    created_at: string;
 }
 export interface ARPConfigRow {
     id: string;
@@ -83,6 +99,8 @@ export interface DailyLogRow {
     morning_light_achieved: boolean | null;
     evening_light_managed: boolean | null;
     subjective_energy_midday: number | null;
+    mood_score: number | null;
+    stress_score: number | null;
 }
 export interface WeeklyBalanceRow {
     id: string;
@@ -158,3 +176,8 @@ export declare function fetchEnvironmentContext(client: AppClient, userId: strin
  * Fetch all recommendation cooldowns for a user.
  */
 export declare function fetchCooldowns(client: AppClient, userId: string): Promise<RecommendationCooldownRow[]>;
+/**
+ * Fetch recent life events for a user (last 14 days + next 7 days).
+ * Used to inject upcoming/recent events into the LLM context.
+ */
+export declare function fetchRecentLifeEvents(client: AppClient, userId: string, lookbackDays?: number, lookaheadDays?: number): Promise<LifeEventRow[]>;

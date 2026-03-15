@@ -72,3 +72,22 @@ export declare function createEvent(client: AppClient, userId: string, input: Ev
 } | null>;
 export declare function resolveEvent(client: AppClient, userId: string, eventId: string): Promise<boolean>;
 export declare function upsertEnvironment(client: AppClient, userId: string, input: EnvironmentInput): Promise<boolean>;
+export interface LifestyleInput {
+    stress_level?: string;
+    sleep_environment?: string;
+    exercise_frequency?: string;
+    alcohol_use?: string;
+    work_start_time?: string | null;
+}
+export declare function updateLifestyleProfile(client: AppClient, userId: string, input: LifestyleInput): Promise<boolean>;
+export interface LifeEventInput {
+    event_type: string;
+    title: string;
+    event_date: string;
+    end_date?: string | null;
+    notes?: string | null;
+}
+export declare function createLifeEvent(client: AppClient, userId: string, input: LifeEventInput): Promise<{
+    id: string;
+} | null>;
+export declare function deleteLifeEvent(client: AppClient, userId: string, eventId: string): Promise<boolean>;

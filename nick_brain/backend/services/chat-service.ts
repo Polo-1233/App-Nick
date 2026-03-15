@@ -25,6 +25,7 @@ import {
   dailySessionId,
   type ChatMessageRow,
 } from "../db/chat-messages.js";
+import { fetchRecentLifeEvents } from "../db/queries.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,13 +103,24 @@ interface StructuredContext {
   recent_logs:    string[];
   gate_blocked:   boolean;
   gate_reason:    string | null;
+  // Phase 1 — lifestyle
+  stress_level:        string | null;
+  sleep_environment:   string | null;
+  exercise_frequency:  string | null;
+  alcohol_use:         string | null;
+  work_start_time:     string | null;
+  // Phase 1 — life events
+  life_events:         Array<{ type: string; title: string; date: string; notes: string | null }>;
 }
 
 async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
-  const ctx    = await assembleEngineContext(client, userId);
+  const [ctx, lifeEvents] = await Promise.all([
+    assembleEngineContext(client, userId),
+    fetchRecentLifeEvents(client, userId),
+  ]);
   const output = runEngineSafe(ctx);
   const home   = buildHomeScreenPayload(output, ctx);
 
@@ -116,6 +128,14 @@ async function buildStructuredContext(
   const recentLogs = ctx.sleep_logs.slice(0, 3).map(l =>
     `${l.date}: ${l.cycles_completed ?? "?"} cycles`
   );
+
+  const profile = ctx.profile as typeof ctx.profile & {
+    stress_level?: string | null;
+    sleep_environment?: string | null;
+    exercise_frequency?: string | null;
+    alcohol_use?: string | null;
+    work_start_time?: string | null;
+  };
 
   return {
     today:         ctx.today,
@@ -136,6 +156,19 @@ async function buildStructuredContext(
     recent_logs:   recentLogs,
     gate_blocked:  output.gate_blocked,
     gate_reason:   output.gate_reason ?? null,
+    // Phase 1 — lifestyle
+    stress_level:       profile.stress_level ?? null,
+    sleep_environment:  profile.sleep_environment ?? null,
+    exercise_frequency: profile.exercise_frequency ?? null,
+    alcohol_use:        profile.alcohol_use ?? null,
+    work_start_time:    profile.work_start_time ?? null,
+    // Phase 1 — life events
+    life_events: lifeEvents.map(e => ({
+      type:  e.event_type,
+      title: e.title,
+      date:  e.event_date,
+      notes: e.notes,
+    })),
   };
 }
 
@@ -188,6 +221,29 @@ function formatContextSections(ctx: StructuredContext): string {
   }
   if (ctx.primary_rec) {
     lines.push(`primary_recommendation: ${ctx.primary_rec}`);
+  }
+  lines.push("");
+
+  // Phase 1 — Lifestyle context
+  if (ctx.stress_level || ctx.sleep_environment || ctx.exercise_frequency || ctx.alcohol_use || ctx.work_start_time) {
+    lines.push("[LIFESTYLE]");
+    if (ctx.stress_level)       lines.push(`baseline_stress: ${ctx.stress_level}`);
+    if (ctx.sleep_environment)  lines.push(`sleep_environment: ${ctx.sleep_environment}`);
+    if (ctx.exercise_frequency) lines.push(`exercise_frequency: ${ctx.exercise_frequency}`);
+    if (ctx.alcohol_use)        lines.push(`alcohol_use: ${ctx.alcohol_use}`);
+    if (ctx.work_start_time)    lines.push(`work_start_time: ${ctx.work_start_time}`);
+    lines.push("");
+  }
+
+  // Phase 1 — Life events
+  if (ctx.life_events.length > 0) {
+    lines.push("[LIFE_EVENTS]");
+    const today = new Date().toISOString().slice(0, 10);
+    for (const ev of ctx.life_events) {
+      const rel = ev.date >= today ? `upcoming (${ev.date})` : `recent (${ev.date})`;
+      lines.push(`${ev.type}: "${ev.title}" — ${rel}${ev.notes ? ` — ${ev.notes}` : ""}`);
+    }
+    lines.push("");
   }
 
   return lines.join("\n");

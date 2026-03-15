@@ -435,6 +435,18 @@ export default function ProfileScreen() {
       onPress: () => router.push('/sleep-history'),
     },
     {
+      icon:    'fitness-outline',
+      label:   'Lifestyle profile',
+      sub:     'Stress, environment, exercise, alcohol',
+      onPress: () => router.push('/lifestyle'),
+    },
+    {
+      icon:    'calendar-outline',
+      label:   'Life events',
+      sub:     'Travel, illness, important days',
+      onPress: () => router.push('/life-events'),
+    },
+    {
       icon:    'settings-outline',
       label:   'Settings',
       sub:     'Notifications, calendar, account',

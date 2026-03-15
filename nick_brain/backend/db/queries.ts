@@ -53,6 +53,26 @@ export interface UserProfileRow {
   user_reported_screen_use: boolean;
   profile_version: number;
   updated_at: string;
+  // Phase 1 — lifestyle fields
+  stress_level:        string | null;
+  sleep_environment:   string | null;
+  exercise_frequency:  string | null;
+  alcohol_use:         string | null;
+  work_start_time:     string | null;
+  lifestyle_updated_at: string | null;
+}
+
+// ─── life_events ──────────────────────────────────────────────────────────────
+
+export interface LifeEventRow {
+  id:         string;
+  user_id:    string;
+  event_type: string;
+  title:      string;
+  event_date: string;
+  end_date:   string | null;
+  notes:      string | null;
+  created_at: string;
 }
 
 export interface ARPConfigRow {
@@ -103,6 +123,9 @@ export interface DailyLogRow {
   morning_light_achieved: boolean | null;
   evening_light_managed: boolean | null;
   subjective_energy_midday: number | null;
+  // Phase 1 — subjective tracking
+  mood_score:   number | null;
+  stress_score: number | null;
 }
 
 export interface WeeklyBalanceRow {
@@ -366,4 +389,29 @@ export async function fetchCooldowns(
 
   if (error || !data) return [];
   return data as RecommendationCooldownRow[];
+}
+
+/**
+ * Fetch recent life events for a user (last 14 days + next 7 days).
+ * Used to inject upcoming/recent events into the LLM context.
+ */
+export async function fetchRecentLifeEvents(
+  client: AppClient,
+  userId: string,
+  lookbackDays = 14,
+  lookaheadDays = 7,
+): Promise<LifeEventRow[]> {
+  const past   = new Date(); past.setDate(past.getDate() - lookbackDays);
+  const future = new Date(); future.setDate(future.getDate() + lookaheadDays);
+
+  const { data, error } = await client
+    .from("life_events")
+    .select("id, user_id, event_type, title, event_date, end_date, notes, created_at")
+    .eq("user_id", userId)
+    .gte("event_date", past.toISOString().slice(0, 10))
+    .lte("event_date", future.toISOString().slice(0, 10))
+    .order("event_date", { ascending: true });
+
+  if (error || !data) return [];
+  return data as LifeEventRow[];
 }

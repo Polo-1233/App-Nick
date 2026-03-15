@@ -559,3 +559,79 @@ export async function upsertEnvironment(
   }
   return true;
 }
+
+// ─── Lifestyle profile ────────────────────────────────────────────────────────
+
+export interface LifestyleInput {
+  stress_level?:       string;
+  sleep_environment?:  string;
+  exercise_frequency?: string;
+  alcohol_use?:        string;
+  work_start_time?:    string | null;
+}
+
+export async function updateLifestyleProfile(
+  client: AppClient,
+  userId: string,
+  input: LifestyleInput,
+): Promise<boolean> {
+  const { error } = await client
+    .from("user_profiles")
+    .update({
+      ...input,
+      lifestyle_updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("[mutations] updateLifestyleProfile failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// ─── Life events ──────────────────────────────────────────────────────────────
+
+export interface LifeEventInput {
+  event_type: string;
+  title:      string;
+  event_date: string;
+  end_date?:  string | null;
+  notes?:     string | null;
+}
+
+export async function createLifeEvent(
+  client: AppClient,
+  userId: string,
+  input: LifeEventInput,
+): Promise<{ id: string } | null> {
+  const { data, error } = await client
+    .from("life_events")
+    .insert({ user_id: userId, ...input })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("[mutations] createLifeEvent failed:", error?.message);
+    return null;
+  }
+  return data as { id: string };
+}
+
+export async function deleteLifeEvent(
+  client: AppClient,
+  userId: string,
+  eventId: string,
+): Promise<boolean> {
+  const { error } = await client
+    .from("life_events")
+    .delete()
+    .eq("id", eventId)
+    .eq("user_id", userId); // ownership check
+
+  if (error) {
+    console.error("[mutations] deleteLifeEvent failed:", error.message);
+    return false;
+  }
+  return true;
+}

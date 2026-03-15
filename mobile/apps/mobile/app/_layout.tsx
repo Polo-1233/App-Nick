@@ -190,6 +190,8 @@ function RootLayoutInner() {
         <Stack.Screen name="support"          options={{ headerShown: false }} />
         <Stack.Screen name="account"          options={{ headerShown: false }} />
         <Stack.Screen name="premium"          options={{ headerShown: false }} />
+        <Stack.Screen name="lifestyle"        options={{ headerShown: false }} />
+        <Stack.Screen name="life-events"      options={{ headerShown: false }} />
         <Stack.Screen name="permissions"      options={{ headerShown: false, gestureEnabled: false }} />
 
       </Stack>

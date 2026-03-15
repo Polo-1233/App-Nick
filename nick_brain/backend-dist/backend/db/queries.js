@@ -178,4 +178,24 @@ export async function fetchCooldowns(client, userId) {
         return [];
     return data;
 }
+/**
+ * Fetch recent life events for a user (last 14 days + next 7 days).
+ * Used to inject upcoming/recent events into the LLM context.
+ */
+export async function fetchRecentLifeEvents(client, userId, lookbackDays = 14, lookaheadDays = 7) {
+    const past = new Date();
+    past.setDate(past.getDate() - lookbackDays);
+    const future = new Date();
+    future.setDate(future.getDate() + lookaheadDays);
+    const { data, error } = await client
+        .from("life_events")
+        .select("id, user_id, event_type, title, event_date, end_date, notes, created_at")
+        .eq("user_id", userId)
+        .gte("event_date", past.toISOString().slice(0, 10))
+        .lte("event_date", future.toISOString().slice(0, 10))
+        .order("event_date", { ascending: true });
+    if (error || !data)
+        return [];
+    return data;
+}
 //# sourceMappingURL=queries.js.map
