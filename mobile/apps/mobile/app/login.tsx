@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,6 +25,8 @@ import { useTheme } from '../lib/theme-context';
 import { MascotImage } from '../components/ui/MascotImage';
 import { Button } from '../components/ui/Button';
 import { PERMISSION_KEYS } from '../lib/storage';
+import { signInWithGoogle } from '../lib/supabase';
+import { bootstrapUser } from '../lib/api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -36,7 +39,30 @@ export default function LoginScreen() {
   const [password,     setPassword]     = useState('');
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
+  const [focusedField,  setFocusedField]  = useState<'email' | 'password' | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithGoogle();
+      if (!result.ok) {
+        if (result.error !== 'cancelled') {
+          setError(result.error ?? 'Google Sign-In failed.');
+        }
+        return;
+      }
+      // Bootstrap user row (idempotent — safe to call on every login)
+      if (result.session?.access_token) {
+        await bootstrapUser(result.session.access_token).catch(() => {});
+      }
+      const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
+      router.replace(shown ? '/(tabs)' : '/permissions');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
@@ -148,6 +174,30 @@ export default function LoginScreen() {
             loading={loading}
           />
 
+          {/* Divider */}
+          <View style={s.divider}>
+            <View style={[s.dividerLine, { backgroundColor: c.borderSub }]} />
+            <Text style={[s.dividerText, { color: c.textMuted }]}>or</Text>
+            <View style={[s.dividerLine, { backgroundColor: c.borderSub }]} />
+          </View>
+
+          {/* Google Sign-In */}
+          <Pressable
+            style={[s.googleBtn, { backgroundColor: c.surface2, borderColor: c.borderSub }]}
+            onPress={() => { void handleGoogleSignIn(); }}
+            disabled={googleLoading}
+          >
+            {googleLoading
+              ? <ActivityIndicator size="small" color={c.textSub} />
+              : (
+                <>
+                  <Text style={s.googleIcon}>G</Text>
+                  <Text style={[s.googleLabel, { color: c.text }]}>Continue with Google</Text>
+                </>
+              )
+            }
+          </Pressable>
+
           {/* Error message */}
           {error ? (
             <Text style={[s.errorText, { color: c.error }]}>{error}</Text>
@@ -216,5 +266,38 @@ const s = StyleSheet.create({
   errorText: {
     fontSize:  13,
     textAlign: 'center',
+  },
+  divider: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            10,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex:   1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+  },
+  googleBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    justifyContent:    'center',
+    gap:               10,
+    borderWidth:       1,
+    borderRadius:      12,
+    paddingVertical:   14,
+    paddingHorizontal: 16,
+    minHeight:         50,
+  },
+  googleIcon: {
+    fontSize:   17,
+    fontWeight: '700',
+    color:      '#4285F4',
+  },
+  googleLabel: {
+    fontSize:   16,
+    fontWeight: '600',
   },
 });

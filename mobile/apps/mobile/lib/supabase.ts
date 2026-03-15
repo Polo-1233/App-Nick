@@ -14,6 +14,11 @@
 
 import { createClient, type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+
+// Required for Expo to properly close the auth browser on iOS
+WebBrowser.maybeCompleteAuthSession();
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -129,6 +134,73 @@ export async function getAccessToken(): Promise<string | null> {
   }
 
   return data.session.access_token;
+}
+
+/**
+ * Sign in with Google via OAuth (Supabase + expo-auth-session).
+ *
+ * Flow:
+ *   1. Get OAuth URL from Supabase (PKCE)
+ *   2. Open in system browser (WebBrowser.openAuthSessionAsync)
+ *   3. Google redirects back to r90://auth/callback?code=xxx
+ *   4. Exchange code for Supabase session
+ *   5. Session is active → onAuthStateChange fires automatically
+ */
+export async function signInWithGoogle(): Promise<AuthResult> {
+  const redirectTo = makeRedirectUri({ scheme: 'r90', path: 'auth/callback' });
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+    },
+  });
+
+  if (error || !data.url) {
+    return { ok: false, error: error?.message ?? 'Google Sign-In failed' };
+  }
+
+  // Open Google login in system browser
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    return { ok: false, error: 'cancelled' };
+  }
+  if (result.type !== 'success') {
+    return { ok: false, error: 'Google Sign-In was interrupted' };
+  }
+
+  // Extract code from callback URL (PKCE flow)
+  const callbackUrl = result.url;
+  const code = new URL(callbackUrl).searchParams.get('code');
+
+  if (code) {
+    const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+    if (sessionError || !sessionData.session) {
+      return { ok: false, error: sessionError?.message ?? 'Failed to complete Google Sign-In' };
+    }
+    return { ok: true, user: sessionData.session.user, session: sessionData.session };
+  }
+
+  // Fallback: try access_token in URL hash (implicit flow)
+  const hash  = callbackUrl.split('#')[1] ?? '';
+  const params = new URLSearchParams(hash);
+  const accessToken  = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+
+  if (accessToken && refreshToken) {
+    const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+      access_token:  accessToken,
+      refresh_token: refreshToken,
+    });
+    if (sessionError || !sessionData.session) {
+      return { ok: false, error: sessionError?.message ?? 'Failed to set session' };
+    }
+    return { ok: true, user: sessionData.session.user, session: sessionData.session };
+  }
+
+  return { ok: false, error: 'No authentication data received from Google' };
 }
 
 /**
