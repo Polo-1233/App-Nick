@@ -78,22 +78,21 @@ function coachGreeting(name: string | null, score: number) {
 
 // ─── Suggestions ─────────────────────────────────────────────────────────────
 const SUGGESTIONS = [
-  { icon: 'stats-chart-outline', label: 'How am I doing this week',    prompt: 'How am I doing this week?' },
-  { icon: 'moon-outline',        label: 'What should I do before bed', prompt: 'What should I do before bed?' },
-  { icon: 'bed-outline',         label: 'I slept late',                prompt: 'I slept later than usual last night' },
-  { icon: 'calendar-outline',    label: 'Plan tonight',                prompt: 'Help me plan my sleep for tonight' },
-  { icon: 'sunny-outline',       label: 'I woke early',                prompt: 'I woke up earlier than my anchor time' },
+  { icon: 'stats-chart-outline', color: '#4DA3FF', label: 'Analyze my week',        sub: 'See your recovery trend',        prompt: 'How am I doing this week?' },
+  { icon: 'moon-outline',        color: '#9B59B6', label: 'Prepare tonight',        sub: "Plan tonight's sleep window",    prompt: 'Help me plan my sleep for tonight' },
+  { icon: 'bed-outline',         color: '#F5A623', label: 'I slept late',           sub: 'Adjust for a late night',        prompt: 'I slept later than usual last night' },
+  { icon: 'refresh-outline',     color: '#3DDC97', label: 'Adjust my rhythm',       sub: 'Recalibrate your schedule',      prompt: 'Help me adjust my sleep rhythm' },
+  { icon: 'flash-outline',       color: '#F87171', label: 'Improve recovery',       sub: 'Faster bounce-back tips',        prompt: 'How can I improve my recovery?' },
 ];
 
 // ─── Modes ────────────────────────────────────────────────────────────────────
 const MODES = [
-  { icon: 'airplane-outline',       label: 'Jet lag recovery',          color: '#4DA3FF', prompt: 'Help me recover from jet lag' },
-  { icon: 'book-outline',           label: 'Learning mode',             color: '#9B59B6', prompt: 'Optimize my sleep for learning and memory' },
-  { icon: 'flash-outline',          label: 'Fatigue recovery',          color: '#F5A623', prompt: 'I am exhausted, help me recover fast' },
-  { icon: 'bed-outline',            label: 'Optimize mattress',         color: '#3DDC97', prompt: 'Help me optimize my sleep environment and mattress' },
-  { icon: 'home-outline',           label: 'Sleep environment',         color: '#3DDC97', prompt: 'How can I improve my sleep environment?' },
-  { icon: 'globe-outline',          label: 'Travel sleep plan',         color: '#4DA3FF', prompt: 'I am travelling soon, help me plan my sleep' },
-  { icon: 'moon-outline',           label: 'Night shift adjustment',    color: '#F87171', prompt: 'I work night shifts, help me adjust my sleep' },
+  { icon: 'airplane-outline', color: '#4DA3FF', label: 'Jet lag recovery',           sub: 'Reset after time zones',         prompt: 'Help me recover from jet lag' },
+  { icon: 'book-outline',     color: '#9B59B6', label: 'Learning mode',              sub: 'Sleep for memory & focus',       prompt: 'Optimize my sleep for learning and memory' },
+  { icon: 'globe-outline',    color: '#3DDC97', label: 'Travel recovery',            sub: 'Maintain rhythm while travelling',prompt: 'I am travelling soon, help me plan my sleep' },
+  { icon: 'home-outline',     color: '#F5A623', label: 'Sleep environment',          sub: 'Optimize your room setup',       prompt: 'How can I improve my sleep environment?' },
+  { icon: 'flash-outline',    color: '#F87171', label: 'Fatigue reset',              sub: 'Recover when exhausted',         prompt: 'I am exhausted, help me recover fast' },
+  { icon: 'moon-outline',     color: '#6B7F99', label: 'Night shift',                sub: 'Adjust for irregular hours',     prompt: 'I work night shifts, help me adjust my sleep' },
 ];
 
 // ─── Guided mode options ──────────────────────────────────────────────────────
@@ -248,65 +247,48 @@ const seg = StyleSheet.create({
   labelActive: { color: TEXT },
 });
 
-// ─── 3. Suggestions tab ───────────────────────────────────────────────────────
-function SuggestionsTab({ onPress, disabled }: { onPress: (p: string) => void; disabled?: boolean }) {
-  return (
-    <View style={st.wrap}>
-      {SUGGESTIONS.map(({ icon, label, prompt }) => (
-        <Pressable
-          key={label}
-          style={({ pressed }) => [st.row, (pressed || disabled) && { opacity: 0.6 }]}
-          onPress={() => onPress(prompt)}
-          disabled={disabled}
-        >
-          <View style={st.iconWrap}>
-            <Ionicons name={icon as any} size={18} color={ACCENT} />
-          </View>
-          <Text style={st.label}>{label}</Text>
-          <Ionicons name="chevron-forward" size={14} color={MUTED} />
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-const st = StyleSheet.create({
-  wrap:    { marginHorizontal: 16, marginTop: 8, backgroundColor: CARD, borderRadius: 18, overflow: 'hidden' },
-  row:     { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER },
-  iconWrap:{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${ACCENT}15`, alignItems: 'center', justifyContent: 'center' },
-  label:   { flex: 1, fontSize: 15, color: TEXT, fontWeight: '500' },
-});
+// ─── 3 & 4. Shared horizontal carousel ───────────────────────────────────────
+type CarouselItem = { icon: string; color: string; label: string; sub: string; prompt: string };
 
-// ─── 4. Modes tab ─────────────────────────────────────────────────────────────
-function ModesTab({ onPress, disabled }: { onPress: (p: string) => void; disabled?: boolean }) {
+function CoachCardCarousel({ items, onPress, disabled }: {
+  items:    CarouselItem[];
+  onPress:  (p: string) => void;
+  disabled?: boolean;
+}) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={mt.scroll}
-      style={mt.scroller}
+      contentContainerStyle={cc.scroll}
+      style={cc.scroller}
+      decelerationRate="fast"
+      snapToInterval={154}   // card width + gap
+      snapToAlignment="start"
     >
-      {MODES.map(({ icon, label, color, prompt }) => (
+      {items.map(({ icon, color, label, sub, prompt }) => (
         <Pressable
           key={label}
-          style={({ pressed }) => [mt.card, (pressed || disabled) && { opacity: 0.7 }]}
+          style={({ pressed }) => [cc.card, (pressed || disabled) && { opacity: 0.7 }]}
           onPress={() => onPress(prompt)}
           disabled={disabled}
         >
-          <View style={[mt.iconCircle, { backgroundColor: `${color}18`, borderColor: `${color}30` }]}>
+          <View style={[cc.iconCircle, { backgroundColor: `${color}15`, borderColor: `${color}28` }]}>
             <Ionicons name={icon as any} size={22} color={color} />
           </View>
-          <Text style={mt.label}>{label}</Text>
+          <Text style={cc.title}>{label}</Text>
+          <Text style={cc.sub} numberOfLines={2}>{sub}</Text>
         </Pressable>
       ))}
     </ScrollView>
   );
 }
-const mt = StyleSheet.create({
-  scroller:   { marginTop: 12 },
-  scroll:     { paddingHorizontal: 16, paddingVertical: 4, gap: 10 },
-  card:       { width: 130, backgroundColor: CARD, borderRadius: 18, padding: 18, gap: 12, alignItems: 'flex-start' },
-  iconCircle: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  label:      { fontSize: 13, fontWeight: '600', color: TEXT, lineHeight: 18 },
+const cc = StyleSheet.create({
+  scroller: { marginTop: 12 },
+  scroll:   { paddingHorizontal: 16, paddingBottom: 4, gap: 10 },
+  card:     { width: 144, backgroundColor: CARD, borderRadius: 18, padding: 18, gap: 10, alignItems: 'flex-start' },
+  iconCircle:{ width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  title:    { fontSize: 14, fontWeight: '700', color: TEXT, lineHeight: 20 },
+  sub:      { fontSize: 12, color: MUTED, lineHeight: 17 },
 });
 
 // ─── 5. Tonight widget (pinned above input) ───────────────────────────────────
@@ -551,10 +533,11 @@ export default function HomeScreen() {
               {showSegmented && (
                 <>
                   <SegmentedControl active={activeTab} onChange={setActiveTab} />
-                  {activeTab === 'suggestions'
-                    ? <SuggestionsTab onPress={send} disabled={isStreaming} />
-                    : <ModesTab onPress={send} disabled={isStreaming} />
-                  }
+                  <CoachCardCarousel
+                    items={activeTab === 'suggestions' ? SUGGESTIONS : MODES}
+                    onPress={send}
+                    disabled={isStreaming}
+                  />
                 </>
               )}
 
