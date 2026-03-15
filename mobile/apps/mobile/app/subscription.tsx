@@ -1,86 +1,251 @@
 /**
- * subscription.tsx — Premium subscription screen
+ * subscription.tsx — Premium paywall
  *
- * Revolut-style horizontal slides: Free ← → Premium
- * Starts on Premium slide (index 1).
- * Keeps RevenueCat purchase logic intact.
+ * Revolut-style: Free + Premium side by side on one screen.
+ * Monthly / Yearly toggle on Premium card.
+ * Yearly highlighted as best value.
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView }  from 'react-native-safe-area-context';
+import { useRouter }     from 'expo-router';
+import { Ionicons }      from '@expo/vector-icons';
 import { purchasePackage, restorePurchases, getCurrentOffering } from '../lib/purchases';
 import { usePremiumGate } from '../lib/use-premium-gate';
-import { HapticsLight } from '../utils/haptics';
+import { HapticsLight }  from '../utils/haptics';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-
+// ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
   bg:        '#0B1220',
   card:      '#1A2436',
+  cardPrem:  '#142035',   // slightly deeper blue for premium card
   surface2:  '#243046',
-  accent:    '#F5A623',
+  accent:    '#F5A623',   // orange — button only
+  blue:      '#4DA3FF',
   text:      '#E6EDF7',
   textSub:   '#9FB0C5',
   textMuted: '#6B7F99',
   success:   '#3DDC97',
-  error:     '#F87171',
+  border:    'rgba(255,255,255,0.07)',
 };
 
-const FREE_FEATURES    = ['Sleep planning', 'R-Lo coaching', 'Cycle tracking'];
-const PREMIUM_FEATURES = ['Advanced sleep analysis', 'Jet lag optimization', 'Auto schedule adaptation', 'Fatigue analysis', 'Everything in Free'];
+// ─── Feature lists ────────────────────────────────────────────────────────────
+const FREE_FEATURES = [
+  { icon: 'moon-outline',          text: 'Sleep planning'           },
+  { icon: 'chatbubble-outline',    text: 'R-Lo coaching'            },
+  { icon: 'sync-outline',          text: 'Cycle tracking'           },
+];
 
-function FeatureRow({ text, accent }: { text: string; accent?: boolean }) {
+const PREMIUM_FEATURES = [
+  { icon: 'analytics-outline',     text: 'Understand your sleep cycles'     },
+  { icon: 'trending-up-outline',   text: 'Weekly recovery insights'          },
+  { icon: 'airplane-outline',      text: 'Recover faster from jet lag'       },
+  { icon: 'calendar-outline',      text: 'Auto-adapt your schedule'          },
+  { icon: 'battery-charging-outline', text: 'Fatigue analysis'              },
+  { icon: 'checkmark-circle-outline', text: 'Everything in Free'            },
+];
+
+// ─── Feature row ─────────────────────────────────────────────────────────────
+function FeatureRow({ icon, text, isPremium }: { icon: string; text: string; isPremium?: boolean }) {
   return (
     <View style={f.row}>
-      <View style={[f.dot, { backgroundColor: accent ? C.accent : C.success }]} />
-      <Text style={[f.text, { color: accent ? C.text : C.textSub }]}>{text}</Text>
+      <Ionicons name={icon as any} size={15} color={isPremium ? C.blue : C.success} />
+      <Text style={[f.text, { color: isPremium ? C.text : C.textSub }]}>{text}</Text>
     </View>
   );
 }
 const f = StyleSheet.create({
-  row:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  dot:  { width: 6, height: 6, borderRadius: 3 },
-  text: { fontSize: 15, fontWeight: '400' },
+  row:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  text: { fontSize: 14, fontWeight: '400', flex: 1, lineHeight: 20 },
 });
 
+// ─── Plan card ────────────────────────────────────────────────────────────────
+type BillingCycle = 'monthly' | 'yearly';
+
+function FreeCard() {
+  return (
+    <View style={p.card}>
+      <View style={p.badgeFree}>
+        <Text style={p.badgeFreeText}>Current plan</Text>
+      </View>
+      <Text style={p.planName}>Free</Text>
+      <Text style={p.freePriceLine}>Always free</Text>
+      <View style={p.divider} />
+      <View style={p.features}>
+        {FREE_FEATURES.map(({ icon, text }) => (
+          <FeatureRow key={text} icon={icon} text={text} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function PremiumCard({
+  billing, setBilling, isPremium, loading, onPurchase,
+}: {
+  billing:    BillingCycle;
+  setBilling: (b: BillingCycle) => void;
+  isPremium:  boolean;
+  loading:    boolean;
+  onPurchase: () => void;
+}) {
+  const isYearly     = billing === 'yearly';
+  const monthlyPrice = '$4.99';
+  const yearlyTotal  = '$39';
+  const yearlyMonthly= '$3.25';
+
+  return (
+    <View style={p.cardPremium}>
+      {/* Best value label */}
+      <View style={p.badgePremium}>
+        <Ionicons name="star" size={10} color={C.accent} />
+        <Text style={p.badgePremiumText}>Best value</Text>
+      </View>
+
+      <Text style={[p.planName, { color: C.blue }]}>Premium</Text>
+
+      {/* Billing toggle */}
+      <View style={p.toggle}>
+        <Pressable
+          style={[p.toggleBtn, !isYearly && p.toggleBtnActive]}
+          onPress={() => { HapticsLight(); setBilling('monthly'); }}
+        >
+          <Text style={[p.toggleBtnText, !isYearly && p.toggleBtnTextActive]}>Monthly</Text>
+        </Pressable>
+        <Pressable
+          style={[p.toggleBtn, isYearly && p.toggleBtnActive]}
+          onPress={() => { HapticsLight(); setBilling('yearly'); }}
+        >
+          <Text style={[p.toggleBtnText, isYearly && p.toggleBtnTextActive]}>Yearly</Text>
+          {isYearly && (
+            <View style={p.saveBadge}>
+              <Text style={p.saveBadgeText}>–33%</Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+
+      {/* Price */}
+      {isYearly ? (
+        <View style={p.priceBlock}>
+          <View style={p.priceRow}>
+            <Text style={p.priceMain}>{yearlyMonthly}</Text>
+            <Text style={p.pricePeriod}> / month</Text>
+          </View>
+          <Text style={p.priceSub}>Billed yearly ({yearlyTotal})</Text>
+        </View>
+      ) : (
+        <View style={p.priceBlock}>
+          <View style={p.priceRow}>
+            <Text style={p.priceMain}>{monthlyPrice}</Text>
+            <Text style={p.pricePeriod}> / month</Text>
+          </View>
+          <Text style={p.priceSub}>Billed monthly</Text>
+        </View>
+      )}
+
+      <View style={p.divider} />
+
+      <View style={p.features}>
+        {PREMIUM_FEATURES.map(({ icon, text }) => (
+          <FeatureRow key={text} icon={icon} text={text} isPremium />
+        ))}
+      </View>
+
+      {isPremium ? (
+        <View style={p.activeBox}>
+          <Ionicons name="checkmark-circle" size={18} color={C.success} />
+          <Text style={p.activeTxt}>Premium is active</Text>
+        </View>
+      ) : (
+        <Pressable style={[p.ctaBtn, loading && { opacity: 0.6 }]} onPress={onPurchase} disabled={loading}>
+          {loading
+            ? <ActivityIndicator color="#0B1220" />
+            : <Text style={p.ctaBtnText}>Get Premium</Text>
+          }
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+const p = StyleSheet.create({
+  // Free card
+  card: {
+    backgroundColor: C.card,
+    borderRadius:    20,
+    padding:         20,
+    borderWidth:     1,
+    borderColor:     C.border,
+  },
+  // Premium card
+  cardPremium: {
+    backgroundColor: C.cardPrem,
+    borderRadius:    20,
+    padding:         20,
+    borderWidth:     1.5,
+    borderColor:     `${C.blue}35`,
+  },
+
+  badgeFree:     { alignSelf: 'flex-start', backgroundColor: C.surface2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 },
+  badgeFreeText: { fontSize: 11, fontWeight: '600', color: C.textMuted },
+
+  badgePremium:     { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: `${C.accent}18`, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8, borderWidth: 1, borderColor: `${C.accent}35` },
+  badgePremiumText: { fontSize: 11, fontWeight: '600', color: C.accent },
+
+  planName:     { fontSize: 26, fontWeight: '900', color: C.text, marginBottom: 12 },
+  freePriceLine:{ fontSize: 14, color: C.textMuted, marginBottom: 12 },
+
+  // Toggle
+  toggle:          { flexDirection: 'row', backgroundColor: C.surface2, borderRadius: 12, padding: 3, marginBottom: 16 },
+  toggleBtn:       { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 10, gap: 6 },
+  toggleBtnActive: { backgroundColor: C.card },
+  toggleBtnText:      { fontSize: 13, fontWeight: '600', color: C.textMuted },
+  toggleBtnTextActive:{ fontSize: 13, fontWeight: '700', color: C.text },
+  saveBadge:     { backgroundColor: `${C.success}20`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  saveBadgeText: { fontSize: 10, fontWeight: '700', color: C.success },
+
+  // Price block
+  priceBlock: { marginBottom: 16 },
+  priceRow:   { flexDirection: 'row', alignItems: 'baseline' },
+  priceMain:  { fontSize: 34, fontWeight: '900', color: C.text },
+  pricePeriod:{ fontSize: 15, color: C.textSub, fontWeight: '500' },
+  priceSub:   { fontSize: 12, color: C.textMuted, marginTop: 3 },
+
+  divider:  { height: 1, backgroundColor: C.border, marginBottom: 14 },
+  features: { gap: 2 },
+
+  activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingTop: 14 },
+  activeTxt: { fontSize: 14, fontWeight: '600', color: C.success },
+
+  ctaBtn:     { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 16 },
+  ctaBtnText: { fontSize: 16, fontWeight: '700', color: '#0B1220' },
+});
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 export default function SubscriptionScreen() {
-  const router    = useRouter();
+  const router = useRouter();
   const { isPremium, refresh: refreshPremium } = usePremiumGate();
-  const scrollRef = useRef<ScrollView>(null);
-  const [activeSlide, setActiveSlide] = useState(1); // Start on Premium
-  const [loading, setLoading]         = useState(false);
-
-  // Scroll to Premium on mount
-  const onScrollViewReady = useCallback(() => {
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({ x: SCREEN_W, animated: false });
-    }, 50);
-  }, []);
-
-  function handleScroll(e: any) {
-    const x = e.nativeEvent.contentOffset.x;
-    setActiveSlide(x < SCREEN_W / 2 ? 0 : 1);
-  }
+  const [billing,  setBilling]  = useState<BillingCycle>('yearly');
+  const [loading,  setLoading]  = useState(false);
 
   async function handlePurchase() {
     HapticsLight();
     setLoading(true);
     try {
       const offeringResult = await getCurrentOffering();
-      const offering = offeringResult.offering;
-      const pkg = offering?.availablePackages.find((p: any) => p.packageType === 'MONTHLY')
+      const offering       = offeringResult.offering;
+      const pkgType        = billing === 'yearly' ? 'ANNUAL' : 'MONTHLY';
+      const pkg = offering?.availablePackages.find((p: any) => p.packageType === pkgType)
                ?? offering?.availablePackages[0];
       if (!pkg) { Alert.alert('Not available', 'No subscription plans available right now.'); return; }
       const result = await purchasePackage(pkg);
@@ -104,12 +269,8 @@ export default function SubscriptionScreen() {
     setLoading(true);
     try {
       const result = await restorePurchases();
-      if (result.ok) {
-        await refreshPremium();
-        Alert.alert('Restored', 'Your purchases have been restored.');
-      } else {
-        Alert.alert('Nothing to restore', 'No previous purchases found.');
-      }
+      if (result.ok) { await refreshPremium(); Alert.alert('Restored', 'Your purchases have been restored.'); }
+      else Alert.alert('Nothing to restore', 'No previous purchases found.');
     } catch {
       Alert.alert('Error', 'Could not restore. Please try again.');
     } finally {
@@ -119,161 +280,55 @@ export default function SubscriptionScreen() {
 
   return (
     <SafeAreaView style={s.root} edges={['top', 'bottom']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={C.textSub} />
-        </Pressable>
-        <Text style={s.headerTitle}>Choose your plan</Text>
-        <View style={{ width: 38 }} />
-      </View>
-
-      <Text style={s.headerSub}>Simple, transparent pricing.</Text>
-
-      {/* Slides */}
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        onLayout={onScrollViewReady}
-        style={s.slider}
-        contentContainerStyle={{ width: SCREEN_W * 2 }}
-      >
-        {/* Slide 0 — Free */}
-        <View style={[s.slide, { width: SCREEN_W }]}>
-          <View style={s.planCard}>
-            <View style={s.planBadge}>
-              <Text style={s.planBadgeText}>Current plan</Text>
-            </View>
-            <Text style={s.planName}>Free</Text>
-            <View style={s.featuresBox}>
-              {FREE_FEATURES.map(t => <FeatureRow key={t} text={t} />)}
-            </View>
-          </View>
+        {/* Header */}
+        <View style={s.header}>
+          <Pressable onPress={() => router.back()} hitSlop={8} style={s.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={C.textSub} />
+          </Pressable>
         </View>
 
-        {/* Slide 1 — Premium */}
-        <View style={[s.slide, { width: SCREEN_W }]}>
-          <View style={[s.planCard, s.planCardPremium]}>
-            <View style={[s.planBadge, { backgroundColor: `${C.accent}20`, borderColor: `${C.accent}40` }]}>
-              <Ionicons name="star" size={11} color={C.accent} style={{ marginRight: 4 }} />
-              <Text style={[s.planBadgeText, { color: C.accent }]}>Recommended</Text>
-            </View>
-            <Text style={[s.planName, { color: C.accent }]}>Premium</Text>
-            <View style={s.priceRow}>
-              <Text style={s.priceMain}>€4.99</Text>
-              <Text style={s.pricePeriod}>/month</Text>
-            </View>
-            <Text style={s.priceAlt}>or €39.99/year — save 33%</Text>
-            <View style={s.featuresBox}>
-              {PREMIUM_FEATURES.map(t => <FeatureRow key={t} text={t} accent />)}
-            </View>
+        {/* Headline */}
+        <Text style={s.title}>Upgrade your{'\n'}sleep recovery</Text>
+        <Text style={s.sub}>Simple, transparent pricing.</Text>
 
-            {isPremium ? (
-              <View style={[s.activeBox]}>
-                <Ionicons name="checkmark-circle" size={20} color={C.success} />
-                <Text style={[s.activeTxt]}>Premium is active</Text>
-              </View>
-            ) : (
-              <Pressable
-                style={[s.ctaBtn, loading && { opacity: 0.6 }]}
-                onPress={() => { void handlePurchase(); }}
-                disabled={loading}
-              >
-                {loading
-                  ? <ActivityIndicator color="#0B1220" />
-                  : <Text style={s.ctaBtnText}>Get Premium</Text>
-                }
-              </Pressable>
-            )}
-
-            <Pressable
-              style={s.restoreBtn}
-              onPress={() => { void handleRestore(); }}
-              disabled={loading}
-            >
-              <Text style={s.restoreBtnText}>Restore purchase</Text>
-            </Pressable>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Dots */}
-      <View style={s.dots}>
-        {[0, 1].map(i => (
-          <Pressable
-            key={i}
-            style={[s.dot, activeSlide === i && s.dotActive]}
-            onPress={() => {
-              scrollRef.current?.scrollTo({ x: i * SCREEN_W, animated: true });
-            }}
+        {/* Cards */}
+        <View style={s.cards}>
+          <FreeCard />
+          <PremiumCard
+            billing={billing}
+            setBilling={setBilling}
+            isPremium={isPremium}
+            loading={loading}
+            onPurchase={() => { void handlePurchase(); }}
           />
-        ))}
-      </View>
+        </View>
 
+        {/* Restore */}
+        <Pressable style={s.restoreBtn} onPress={() => { void handleRestore(); }} disabled={loading}>
+          <Text style={s.restoreBtnText}>Restore purchase</Text>
+        </Pressable>
+
+        <View style={{ height: 16 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Screen styles ────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: C.bg },
-  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  backBtn:     { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.text },
-  headerSub:   { fontSize: 14, color: C.textSub, textAlign: 'center', marginBottom: 16 },
+  root:   { flex: 1, backgroundColor: C.bg },
+  scroll: { paddingHorizontal: 16 },
 
-  slider: { flex: 1 },
+  header:  { paddingTop: 8, paddingBottom: 4 },
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
 
-  slide: {
-    paddingHorizontal: 20,
-    justifyContent:    'center',
-  },
-  planCard: {
-    backgroundColor: C.card,
-    borderRadius:    24,
-    padding:         24,
-    gap:             12,
-  },
-  planCardPremium: {
-    borderWidth: 1,
-    borderColor: `${C.accent}30`,
-  },
-  planBadge: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    alignSelf:        'flex-start',
-    borderRadius:     20,
-    paddingHorizontal: 10,
-    paddingVertical:   4,
-    backgroundColor:  C.surface2,
-    borderWidth:      1,
-    borderColor:      C.surface2,
-  },
-  planBadgeText: { fontSize: 11, fontWeight: '600', color: C.textSub },
+  title: { fontSize: 32, fontWeight: '900', color: C.text, lineHeight: 38, marginTop: 20, marginBottom: 6 },
+  sub:   { fontSize: 14, color: C.textSub, marginBottom: 24 },
 
-  planName: { fontSize: 40, fontWeight: '900', color: C.text },
+  cards: { gap: 16 },
 
-  priceRow:    { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  priceMain:   { fontSize: 32, fontWeight: '800', color: C.text },
-  pricePeriod: { fontSize: 16, color: C.textSub },
-  priceAlt:    { fontSize: 13, color: C.textMuted, marginTop: -6 },
-
-  featuresBox: { gap: 2, marginTop: 4 },
-
-  ctaBtn:     { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 8 },
-  ctaBtnText: { fontSize: 16, fontWeight: '700', color: '#0B1220' },
-
-  activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', marginTop: 8 },
-  activeTxt: { fontSize: 15, fontWeight: '600', color: C.success },
-
-  restoreBtn:     { alignItems: 'center', paddingVertical: 10 },
+  restoreBtn:     { alignItems: 'center', paddingVertical: 20 },
   restoreBtnText: { fontSize: 13, color: C.textMuted },
-
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: 16 },
-  dot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: C.surface2 },
-  dotActive: { width: 20, backgroundColor: C.accent },
 });
