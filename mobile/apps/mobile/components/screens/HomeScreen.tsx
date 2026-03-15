@@ -292,7 +292,7 @@ function ExpandablePanel({
   );
 }
 const panel = StyleSheet.create({
-  wrap:         { backgroundColor: CARD, borderTopWidth: 1, borderTopColor: BORDER, overflow: 'hidden' },
+  wrap:         { overflow: 'hidden' },
   tabRow:       { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 8 },
   tab:          { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: SURFACE2 },
   tabActive:    { backgroundColor: ACCENT },
