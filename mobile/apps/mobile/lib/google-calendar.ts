@@ -166,7 +166,7 @@ export async function getGoogleConnectionState(): Promise<GoogleConnectionState>
  */
 export async function connectGoogleCalendar(): Promise<GoogleAuthResult> {
   try {
-    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'r90navigator' });
+    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'r90' });
 
     const request = new AuthSession.AuthRequest({
       clientId:    CLIENT_ID,
