@@ -223,64 +223,56 @@ const ih = StyleSheet.create({
   line2:      { fontSize: 15, color: 'rgba(255,255,255,0.80)', lineHeight: 22, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 });
 
-// ─── 2. Tonight widget ────────────────────────────────────────────────────────
+// ─── 2. Tonight widget — compact single line ──────────────────────────────────
 function TonightWidget({ bedtime, wake }: { bedtime: number | null; wake: number | null }) {
   if (bedtime === null && wake === null) return null;
   return (
     <View style={tw.card}>
       <Text style={tw.label}>Tonight</Text>
       <View style={tw.row}>
-        <View style={tw.item}>
-          <Ionicons name="moon-outline" size={18} color={ACCENT} />
-          <View>
-            <Text style={tw.time}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
-            <Text style={tw.sub}>Bedtime</Text>
-          </View>
-        </View>
-        <Ionicons name="arrow-forward-outline" size={15} color={MUTED} style={{ paddingHorizontal: 6 }} />
-        <View style={tw.item}>
-          <Ionicons name="sunny-outline" size={18} color={WARNING} />
-          <View>
-            <Text style={tw.time}>{wake !== null ? formatMin(wake) : '—'}</Text>
-            <Text style={tw.sub}>Wake time</Text>
-          </View>
-        </View>
+        <Ionicons name="moon-outline" size={14} color={ACCENT} />
+        <Text style={tw.time}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
+        <Text style={tw.arrow}>→</Text>
+        <Ionicons name="sunny-outline" size={14} color={WARNING} />
+        <Text style={tw.time}>{wake !== null ? formatMin(wake) : '—'}</Text>
       </View>
     </View>
   );
 }
 const tw = StyleSheet.create({
-  card:  { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 14 },
-  label: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
-  row:   { flexDirection: 'row', alignItems: 'center' },
-  item:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  time:  { fontSize: 22, fontWeight: '800', color: TEXT },
-  sub:   { fontSize: 12, color: MUTED, marginTop: 2 },
+  card:  { backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  label: { fontSize: 12, fontWeight: '600', color: MUTED },
+  row:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  time:  { fontSize: 15, fontWeight: '700', color: TEXT },
+  arrow: { fontSize: 14, color: MUTED, marginHorizontal: 2 },
 });
 
-// ─── 4. Quick actions ─────────────────────────────────────────────────────────
+// ─── 4. Conversation suggestions ─────────────────────────────────────────────
 function QuickActions({ onPress, disabled }: { onPress: (p: string) => void; disabled?: boolean }) {
   return (
     <View style={qa.wrap}>
-      {QUICK_ACTIONS.map(({ icon, label, prompt }) => (
-        <Pressable
-          key={label}
-          style={({ pressed }) => [qa.chip, (pressed || disabled) && { opacity: 0.6 }]}
-          onPress={() => onPress(prompt)}
-          disabled={disabled}
-        >
-          <Ionicons name={icon as any} size={14} color={ACCENT} />
-          <Text style={qa.text}>{label}</Text>
-          <Ionicons name="chevron-forward" size={12} color={MUTED} />
-        </Pressable>
-      ))}
+      <Text style={qa.label}>Suggested</Text>
+      <View style={qa.chips}>
+        {QUICK_ACTIONS.map(({ label, prompt }) => (
+          <Pressable
+            key={label}
+            style={({ pressed }) => [qa.chip, (pressed || disabled) && { opacity: 0.55 }]}
+            onPress={() => onPress(prompt)}
+            disabled={disabled}
+          >
+            <Text style={qa.text}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
 const qa = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, gap: 8 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13 },
-  text: { fontSize: 14, color: SUB, flex: 1 },
+  wrap:  { paddingHorizontal: 16, paddingBottom: 28 },
+  label: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 10 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip:  { backgroundColor: SURFACE2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: BORDER },
+  text:  { fontSize: 13, color: SUB, fontWeight: '500' },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
