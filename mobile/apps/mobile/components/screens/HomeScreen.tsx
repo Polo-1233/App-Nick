@@ -803,7 +803,7 @@ const sc = StyleSheet.create({
   root:        { flex: 1, backgroundColor: BG },
   coachRoot:   { flex: 1 },
   flex:        { flex: 1 },
-  chatContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
+  chatContent: { flexGrow: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
 
   composer:    { backgroundColor: 'transparent' },
   inputRow:    { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
