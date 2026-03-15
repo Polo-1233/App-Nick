@@ -186,12 +186,12 @@ function RootLayoutInner() {
         <Stack.Screen name="checkin"     options={{ headerShown: false }} />
         <Stack.Screen name="subscription"     options={{ headerShown: false }} />
         <Stack.Screen name="sleep-history"    options={{ headerShown: false }} />
-        <Stack.Screen name="learning"         options={{ headerShown: false }} />
+
         <Stack.Screen name="support"          options={{ headerShown: false }} />
         <Stack.Screen name="account"          options={{ headerShown: false }} />
         <Stack.Screen name="premium"          options={{ headerShown: false }} />
         <Stack.Screen name="permissions"      options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="onboarding-chat"  options={{ headerShown: false, gestureEnabled: false }} />
+
       </Stack>
     </>
   );
