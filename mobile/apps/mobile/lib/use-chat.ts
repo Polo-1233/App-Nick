@@ -115,8 +115,9 @@ export function useChat(): UseChatResult {
           }
 
           if (result.error) {
+            const userMsg = "R-Lo is unavailable right now. Try again in a moment.";
             setMessages(prev => prev.map(m =>
-              m.id === assistantId ? { ...m, content: result.error!, status: "error" as const } : m
+              m.id === assistantId ? { ...m, content: userMsg, status: "error" as const } : m
             ));
             reject(new Error(result.error));
           }
@@ -132,15 +133,15 @@ export function useChat(): UseChatResult {
         xhr.onload = () => {
           // Catch case where [DONE] was in the last chunk but onprogress already fired
           if (xhr.status !== 200) {
-            let errMsg = `HTTP ${xhr.status}`;
-            try {
-              const body = JSON.parse(xhr.responseText) as { error?: string };
-              if (body.error) errMsg = body.error;
-            } catch { /* ignore */ }
+            // Map raw HTTP errors to user-friendly messages (never show "Unauthorized" etc.)
+            let errMsg = "R-Lo is unavailable right now. Try again in a moment.";
+            if (xhr.status === 0 || xhr.status >= 500) {
+              errMsg = "Network error — backend unreachable.";
+            }
             setMessages(prev => prev.map(m =>
               m.id === assistantId ? { ...m, content: errMsg, status: "error" as const } : m
             ));
-            reject(new Error(errMsg));
+            reject(new Error(`HTTP ${xhr.status}`));
             return;
           }
           // Ensure final state is "done"

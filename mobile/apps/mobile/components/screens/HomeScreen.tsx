@@ -301,6 +301,21 @@ const hr = StyleSheet.create({
 
 
 
+// ─── Wake + Goal options (guided mode) ───────────────────────────────────────
+const WAKE_OPTS = [
+  { label: '05:00', value: 300 }, { label: '05:30', value: 330 },
+  { label: '06:00', value: 360 }, { label: '06:30', value: 390 },
+  { label: '07:00', value: 420 }, { label: '07:30', value: 450 },
+  { label: '08:00', value: 480 }, { label: '08:30', value: 510 },
+  { label: '09:00', value: 540 },
+];
+const GOAL_OPTS = [
+  { label: 'Better recovery',     value: 'recovery'    },
+  { label: 'More energy',         value: 'energy'      },
+  { label: 'Fall asleep faster',  value: 'sleep_speed' },
+  { label: 'Consistent schedule', value: 'consistency' },
+];
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { dayPlan, loading: planLoading, needsOnboarding, refreshPlan } = useDayPlanContext();
@@ -310,9 +325,11 @@ export default function HomeScreen() {
   const { messages, isStreaming, sendMessage, injectMessage } = useChat();
 
   // Guided chat state machine (phase === 'guided_chat')
-  const guidedStep     = useRef<'name' | 'wake' | 'goal' | 'done'>('name');
-  const guidedName     = useRef('');
-  const guidedWake     = useRef(390);
+  const guidedStep = useRef<'name' | 'wake' | 'goal' | 'done'>('name');
+  const guidedName = useRef('');
+  const guidedWake = useRef(390);
+  const [guidedChips, setGuidedChips] = useState<'wake' | 'goal' | null>(null);
+  const guidedTyping = useRef(false);
 
   const [input,        setInput]        = useState('');
   const [inputFocused, setInputFocused] = useState(false);
@@ -333,13 +350,79 @@ export default function HomeScreen() {
     })();
   }, []);
 
+  // ── Guided: R-Lo "types" then injects a message ──────────────────────────
+  function rloSay(text: string, delayMs = 900): Promise<void> {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        injectMessage(text);
+        resolve();
+      }, delayMs);
+    });
+  }
+
+  // ── Guided state machine — local only, no backend ────────────────────────
+  async function handleGuidedAnswer(txt: string) {
+    if (guidedTyping.current) return;
+    guidedTyping.current = true;
+    setInput('');
+
+    if (guidedStep.current === 'name') {
+      const firstName = txt.trim().split(/\s+/)[0] ?? txt.trim();
+      guidedName.current = firstName;
+      guidedStep.current = 'wake';
+      await rloSay(
+        `Nice to meet you, ${firstName}! 👋\n\nI'll build your schedule around your natural 90-minute cycles.\n\nWhen do you usually wake up?`,
+        800,
+      );
+      setGuidedChips('wake');
+
+    } else if (guidedStep.current === 'wake') {
+      // text answer fallback — shouldn't normally reach here (chips handle this)
+      const match = WAKE_OPTS.find(o => o.label === txt);
+      await handleGuidedWakePick(match?.value ?? 390, txt);
+
+    } else if (guidedStep.current === 'goal') {
+      const match = GOAL_OPTS.find(o => o.label === txt);
+      await handleGuidedGoalPick(match?.value ?? 'recovery', txt);
+    }
+
+    guidedTyping.current = false;
+  }
+
+  async function handleGuidedWakePick(minutes: number, label: string) {
+    guidedWake.current = minutes;
+    guidedStep.current = 'goal';
+    setGuidedChips(null);
+    injectMessage(label); // show user's choice as a chat bubble
+    await rloSay("Perfect.\n\nWhat's your main goal right now?", 700);
+    setGuidedChips('goal');
+    guidedTyping.current = false;
+  }
+
+  async function handleGuidedGoalPick(value: string, label: string) {
+    guidedStep.current = 'done';
+    setGuidedChips(null);
+    injectMessage(label);
+    await rloSay("Great. Let me build your R90 recovery rhythm.", 700);
+
+    // Save locally
+    await saveOnboardingData({
+      firstName:       guidedName.current,
+      wakeTimeMinutes: guidedWake.current,
+      priority:        value,
+      constraint:      '',
+    });
+    // Advance to plan overlay
+    setTimeout(() => advance('plan'), 1400);
+    guidedTyping.current = false;
+  }
+
   // ── Greeting / guided questions ─────────────────────────────────────────
   useEffect(() => {
     if (hasGreeted.current) return;
     const t = setTimeout(async () => {
       hasGreeted.current = true;
       if (phase === 'guided_chat') {
-        // First time: guided questions
         injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.\n\nWhat should I call you?");
         guidedStep.current = 'name';
       } else {
@@ -374,29 +457,115 @@ export default function HomeScreen() {
 
   function send(text?: string) {
     const txt = (text ?? input).trim();
-    if (!txt || isStreaming) return;
+    if (!txt) return;
+    // In guided mode: handle locally, never call backend
+    if (phase === 'guided_chat') {
+      void handleGuidedAnswer(txt);
+      return;
+    }
+    if (isStreaming) return;
     setInput('');
     void sendMessage(txt);
   }
 
-  const canSend    = input.trim().length > 0 && !isStreaming;
-  const bedtime    = dayPlan?.cycleWindow?.bedtime ?? null;
-  const coachMsg   = buildCoachMessage(insights, history);
-  // hasChat = true only when user has sent at least one message (switches to full chat layout)
-  const hasChat    = messages.some(m => m.role === 'user');
+  const isGuidedMode = phase === 'guided_chat';
+  const canSend      = input.trim().length > 0 && (!isStreaming || isGuidedMode);
+  const bedtime      = dayPlan?.cycleWindow?.bedtime ?? null;
+  const coachMsg     = buildCoachMessage(insights, history);
+  const hasChat      = messages.some(m => m.role === 'user');
 
   return (
     <SafeAreaView style={[sc.root, { backgroundColor: BG }]} edges={['top']}>
       <KeyboardAvoidingView style={sc.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-        {hasChat ? (
-          /* ── ACTIVE STATE ───────────────────────────────────────────────── */
+        {/* ── GUIDED SETUP MODE ─────────────────────────────────────────── */}
+        {isGuidedMode ? (
+          <>
+            {/* Minimal header */}
+            <View style={sc.guidedHeader}>
+              <MascotImage emotion="encourageant" style={{ width: 34, height: 34 }} />
+              <View>
+                <Text style={sc.guidedHeaderName}>R-Lo</Text>
+                <Text style={sc.guidedHeaderSub}>Your personal sleep coach</Text>
+              </View>
+            </View>
+
+            {/* Chat messages */}
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={m => m.id}
+              contentContainerStyle={sc.listContent}
+              renderItem={({ item }) => <ChatBubble msg={item} />}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {/* Wake time chips */}
+            {guidedChips === 'wake' && (
+              <View style={sc.chipsWrap}>
+                {WAKE_OPTS.map(({ label, value }) => (
+                  <Pressable
+                    key={label}
+                    style={({ pressed }) => [sc.chip, pressed && { opacity: 0.7 }]}
+                    onPress={() => { void handleGuidedWakePick(value, label); }}
+                  >
+                    <Text style={sc.chipText}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Goal chips */}
+            {guidedChips === 'goal' && (
+              <View style={sc.chipsWrap}>
+                {GOAL_OPTS.map(({ label, value }) => (
+                  <Pressable
+                    key={label}
+                    style={({ pressed }) => [sc.chip, sc.chipWide, pressed && { opacity: 0.7 }]}
+                    onPress={() => { void handleGuidedGoalPick(value, label); }}
+                  >
+                    <Text style={sc.chipText}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Name input (only on first step) */}
+            {guidedStep.current === 'name' && !guidedChips && (
+              <View style={[sc.composer, { borderTopColor: BORDER }]}>
+                <View style={sc.inputRow}>
+                  <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
+                    <TextInput
+                      style={sc.input}
+                      placeholder="Your name…"
+                      placeholderTextColor={MUTED}
+                      value={input}
+                      onChangeText={setInput}
+                      onSubmitEditing={() => send()}
+                      onFocus={() => setInputFocused(true)}
+                      onBlur={() => setInputFocused(false)}
+                      returnKeyType="send"
+                      autoFocus
+                      autoCapitalize="words"
+                    />
+                  </View>
+                  <Pressable
+                    style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]}
+                    onPress={() => send()}
+                    disabled={!canSend}
+                  >
+                    <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </>
+        ) : hasChat ? (
+          /* ── ACTIVE CHAT STATE ──────────────────────────────────────────── */
           <>
             <CompactHero msg={coachMsg} />
             <StateStrip insights={insights} bedtime={bedtime} />
-
             {isStreaming && <ThinkingBar />}
-
             <FlatList
               ref={listRef}
               data={messages}
@@ -407,7 +576,7 @@ export default function HomeScreen() {
             />
           </>
         ) : (
-          /* ── EMPTY STATE (no user message yet, R-Lo greeting visible) ─── */
+          /* ── EMPTY STATE ────────────────────────────────────────────────── */
           <ScrollView
             style={sc.flex}
             contentContainerStyle={sc.emptyScroll}
@@ -416,15 +585,11 @@ export default function HomeScreen() {
           >
             <HeroSection coachMsg={coachMsg} />
             <StateStrip insights={insights} bedtime={bedtime} />
-
-            {/* Show R-Lo greeting bubble if already injected */}
             {messages.length > 0 && (
               <View style={sc.greetingWrap}>
                 {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
               </View>
             )}
-
-            {/* 3 conversation starters */}
             <View style={sc.sugWrap}>
               <Text style={sc.sugTitle}>Start a conversation</Text>
               {SUGGESTIONS.map(({ icon, text }) => (
@@ -441,56 +606,50 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        {/* ── COMPOSER ──────────────────────────────────────────────────────── */}
-        <View style={[sc.composer, { borderTopColor: BORDER }]}>
-
-          {/* 3 quick chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={sc.quickRow} style={sc.quickScroll}>
-            {QUICK_ACTIONS.map(({ icon, label, prompt }) => (
+        {/* ── COMPOSER (normal mode only) ───────────────────────────────────── */}
+        {!isGuidedMode && (
+          <View style={[sc.composer, { borderTopColor: BORDER }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={sc.quickRow} style={sc.quickScroll}>
+              {QUICK_ACTIONS.map(({ icon, label, prompt }) => (
+                <Pressable
+                  key={label}
+                  style={({ pressed }) => [sc.quickChip, pressed && { opacity: 0.7 }]}
+                  onPress={() => send(prompt)}
+                  disabled={isStreaming}
+                >
+                  <Ionicons name={icon as any} size={13} color={SUB} />
+                  <Text style={sc.quickLabel}>{label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <View style={sc.inputRow}>
+              <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
+                <TextInput
+                  style={sc.input}
+                  placeholder="Message R-Lo…"
+                  placeholderTextColor={MUTED}
+                  value={input}
+                  onChangeText={setInput}
+                  onSubmitEditing={() => send()}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  returnKeyType="send"
+                  multiline
+                  maxLength={500}
+                  editable={!isStreaming}
+                />
+              </View>
               <Pressable
-                key={label}
-                style={({ pressed }) => [sc.quickChip, pressed && { opacity: 0.7 }]}
-                onPress={() => send(prompt)}
-                disabled={isStreaming}
+                style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]}
+                onPress={() => send()}
+                disabled={!canSend}
               >
-                <Ionicons name={icon as any} size={13} color={SUB} />
-                <Text style={sc.quickLabel}>{label}</Text>
+                <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
               </Pressable>
-            ))}
-          </ScrollView>
-
-          {/* Input row */}
-          <View style={sc.inputRow}>
-            <View style={[
-              sc.inputWrap,
-              inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 },
-            ]}>
-              <TextInput
-                style={sc.input}
-                placeholder="Message R-Lo…"
-                placeholderTextColor={MUTED}
-                value={input}
-                onChangeText={setInput}
-                onSubmitEditing={() => send()}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                returnKeyType="send"
-                multiline
-                maxLength={500}
-                editable={!isStreaming}
-              />
             </View>
-            <Pressable
-              style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]}
-              onPress={() => send()}
-              disabled={!canSend}
-            >
-              <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
-            </Pressable>
           </View>
-
-        </View>
+        )}
 
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -521,4 +680,13 @@ const sc = StyleSheet.create({
   inputWrap:  { flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
   input:      { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
   sendBtn:    { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+
+  // Guided mode
+  guidedHeader:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
+  guidedHeaderName:{ fontSize: 16, fontWeight: '700', color: TEXT },
+  guidedHeaderSub: { fontSize: 12, color: MUTED },
+  chipsWrap:       { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  chip:            { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: `${ACCENT}40` },
+  chipWide:        { flexGrow: 1 },
+  chipText:        { fontSize: 14, color: TEXT, fontWeight: '500', textAlign: 'center' },
 });
