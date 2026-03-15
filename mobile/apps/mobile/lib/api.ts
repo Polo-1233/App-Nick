@@ -44,7 +44,7 @@ interface ApiResponse<T> {
 }
 
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'DELETE',
   path: string,
   body?: unknown,
   skipAuth = false,
@@ -328,6 +328,17 @@ export async function actionRecommendation(
     recommendation_id: recommendationId,
     action,
   });
+}
+
+// ─── /account ─────────────────────────────────────────────────────────────────
+
+/**
+ * Permanently delete the authenticated user's account and all data.
+ * Backend: DELETE /account → deletes users row (CASCADE) + Supabase auth user.
+ * The app must sign out and reset state after this returns ok.
+ */
+export async function deleteAccount(): Promise<ApiResponse<{ ok: boolean }>> {
+  return request('DELETE', '/account');
 }
 
 // ─── /health ──────────────────────────────────────────────────────────────────

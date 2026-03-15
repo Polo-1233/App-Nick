@@ -25,6 +25,8 @@ import { useAuth }             from '../lib/auth-context';
 import { usePremiumGate }      from '../lib/use-premium-gate';
 import { loadOnboardingData }  from '../lib/storage';
 import { restorePurchases }    from '../lib/purchases';
+import { deleteAccount }       from '../lib/api';
+import AsyncStorage            from '@react-native-async-storage/async-storage';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -138,16 +140,35 @@ export default function AccountScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       'Delete account',
-      'This will permanently delete your account and all data. This cannot be undone.',
+      'This will permanently delete your account and all your data. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Delete permanently',
           style: 'destructive',
-          onPress: () => Alert.alert('Request sent', 'Our team will process your deletion within 48 hours.'),
+          onPress: () => confirmDeleteAccount(),
         },
       ]
     );
+  }
+
+  async function confirmDeleteAccount() {
+    setLoading(true);
+    try {
+      const result = await deleteAccount();
+      if (!result.ok) {
+        Alert.alert('Error', result.error ?? 'Could not delete account. Please try again.');
+        return;
+      }
+      // Clear all local data before signing out
+      await AsyncStorage.clear().catch(() => {});
+      await logout();
+      router.replace('/onboarding');
+    } catch {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

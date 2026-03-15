@@ -61,11 +61,6 @@ let _configured = false;
 export function configurePurchases(): void {
   if (_configured) return;
   try {
-    // Guard against hot-reload double-configure (native SDK keeps state across JS reloads)
-    if (Purchases.isConfigured) {
-      _configured = true;
-      return;
-    }
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }

@@ -41,6 +41,7 @@ import {
   recommendationActionHandler,
 } from "./handlers/profile-handlers.js";
 import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
+import { deleteAccountHandler } from "./handlers/account-handlers.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ const routes: AnyRoute[] = [
   { method: "POST", path: "/actions/recommendation", handler: recommendationActionHandler },
   { method: "POST", path: "/chat",         handler: chatHandler },
   { method: "GET",  path: "/chat/history", handler: chatHistoryHandler },
+  { method: "DELETE", path: "/account",   handler: deleteAccountHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
