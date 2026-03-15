@@ -204,9 +204,6 @@ function ImmersiveHeader({ name, score, topInset }: { name: string | null; score
         style={StyleSheet.absoluteFill}
       />
       <View style={[ih.content, { paddingTop: topInset + 12 }]}>
-        <Animated.View style={{ transform: [{ scale }], width: 64, height: 64, marginBottom: 10 }}>
-          <MascotImage emotion="encourageant" style={{ width: 64, height: 64 }} />
-        </Animated.View>
         <Text style={ih.line1}>{line1}</Text>
         <Text style={ih.line2}>{line2}</Text>
       </View>
