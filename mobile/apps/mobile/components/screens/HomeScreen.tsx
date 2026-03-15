@@ -3,11 +3,13 @@
  *
  * Structure:
  *   1. Coach header   — R-Lo avatar + personalised greeting
- *   2. Recovery card  — score, cycles/week, wake time
- *   3. Tonight card   — bedtime + wake window
- *   4. Chat area      — R-Lo messages + user replies
- *   5. Quick actions  — 5 chips (hidden once chat is active)
+ *   2. Tonight widget — bedtime → wake (only essential)
+ *   3. R-Lo message   — "How can I help you today?"
+ *   4. Quick actions  — 5 conversation starters
+ *   5. Chat           — user + R-Lo messages
  *   6. Input          — sticky at bottom
+ *
+ * Metrics (cycles, recovery score, debt) → Insights screen only.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -17,7 +19,6 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -38,14 +39,13 @@ import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }               from '../ui/MascotImage';
 import { computeInsights }           from '../../lib/insights';
 import { getMockInsightsData }       from '../../lib/mock-insights-data';
-import type { UserProfile, NightRecord } from '@r90/types';
+import type { UserProfile }          from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const BG      = '#0B1220';
 const CARD    = '#1A2436';
 const SURFACE2= '#243046';
 const ACCENT  = '#4DA3FF';
-const SUCCESS = '#3DDC97';
 const WARNING = '#F5A623';
 const TEXT    = '#E6EDF7';
 const SUB     = '#9FB0C5';
@@ -57,19 +57,17 @@ function formatMin(m: number): string {
   const mins = ((m % 1440) + 1440) % 1440;
   return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
 }
-function scoreColor(n: number) { return n >= 75 ? SUCCESS : n >= 50 ? WARNING : '#F87171'; }
-function scoreLabel(n: number) { return n >= 75 ? 'Great recovery' : n >= 50 ? 'Building' : 'Recovery needed'; }
 
 function coachGreeting(name: string | null, score: number): { line1: string; line2: string } {
   const h = new Date().getHours();
   const salutation = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  const greeting   = name ? `${salutation}, ${name}.` : `${salutation}.`;
-  let context: string;
-  if (score >= 80) context = 'Your recovery looks strong today.';
-  else if (score >= 65) context = 'Your rhythm is building nicely.';
-  else if (score >= 50) context = 'Stay consistent — tonight matters.';
-  else context = 'Your body needs rest. Let\'s plan tonight well.';
-  return { line1: greeting, line2: context };
+  const line1 = name ? `${salutation}, ${name}.` : `${salutation}.`;
+  let line2: string;
+  if (score >= 80)      line2 = 'Your recovery looks strong today.';
+  else if (score >= 65) line2 = 'Your rhythm is building nicely.';
+  else if (score >= 50) line2 = 'Stay consistent — tonight matters.';
+  else                  line2 = "Your body needs rest. Let's plan tonight well.";
+  return { line1, line2 };
 }
 
 // ─── Quick actions ────────────────────────────────────────────────────────────
@@ -81,7 +79,7 @@ const QUICK_ACTIONS = [
   { icon: 'sunny-outline',       label: 'Woke early',                   prompt: 'I woke up earlier than my anchor time' },
 ];
 
-// ─── Guided mode data ─────────────────────────────────────────────────────────
+// ─── Guided mode ─────────────────────────────────────────────────────────────
 const WAKE_OPTS = [
   { label: '05:00', value: 300 }, { label: '05:30', value: 330 },
   { label: '06:00', value: 360 }, { label: '06:30', value: 390 },
@@ -130,7 +128,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 const bbl = StyleSheet.create({
-  row:        { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 4 },
+  row:        { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 6 },
   rowUser:    { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   bubble:     { backgroundColor: CARD, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 12, paddingHorizontal: 16, flexShrink: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: 3 },
   bubbleUser: { backgroundColor: ACCENT, borderBottomLeftRadius: 18, borderBottomRightRadius: 4 },
@@ -156,10 +154,12 @@ function ThinkingDots() {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4, paddingVertical: 6 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 }}>
       <MascotImage emotion="Reflexion" style={{ width: 22, height: 22 }} />
       <View style={{ flexDirection: 'row', gap: 4 }}>
-        {dots.map((v, i) => <Animated.View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: ACCENT, opacity: v }} />)}
+        {dots.map((v, i) => (
+          <Animated.View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: ACCENT, opacity: v }} />
+        ))}
       </View>
     </View>
   );
@@ -179,8 +179,8 @@ function CoachHeader({ name, score }: { name: string | null; score: number }) {
 
   return (
     <View style={hd.wrap}>
-      <Animated.View style={[hd.mascotWrap, { transform: [{ scale }] }]}>
-        <MascotImage emotion="encourageant" style={hd.mascot} />
+      <Animated.View style={{ transform: [{ scale }], width: 60, height: 60 }}>
+        <MascotImage emotion="encourageant" style={{ width: 60, height: 60 }} />
       </Animated.View>
       <View style={hd.text}>
         <Text style={hd.line1}>{line1}</Text>
@@ -190,120 +190,72 @@ function CoachHeader({ name, score }: { name: string | null; score: number }) {
   );
 }
 const hd = StyleSheet.create({
-  wrap:       { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
-  mascotWrap: { width: 60, height: 60, flexShrink: 0 },
-  mascot:     { width: 60, height: 60 },
-  text:       { flex: 1 },
-  line1:      { fontSize: 18, fontWeight: '700', color: TEXT, lineHeight: 24 },
-  line2:      { fontSize: 14, color: SUB, marginTop: 3, lineHeight: 20 },
+  wrap:  { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 },
+  text:  { flex: 1 },
+  line1: { fontSize: 18, fontWeight: '700', color: TEXT, lineHeight: 24 },
+  line2: { fontSize: 14, color: SUB, marginTop: 4, lineHeight: 20 },
 });
 
-// ─── 2. Recovery card ─────────────────────────────────────────────────────────
-function RecoveryCard({ score, cycles, target, wake }: {
-  score: number; cycles: number; target: number; wake: number | null;
-}) {
-  const color = scoreColor(score);
-  const label = scoreLabel(score);
-  return (
-    <View style={rc.card}>
-      <Text style={rc.section}>Recovery today</Text>
-      <View style={rc.row}>
-        <View style={rc.left}>
-          <Text style={[rc.score, { color }]}>{score}<Text style={rc.scorePct}>%</Text></Text>
-          <Text style={[rc.label, { color }]}>{label}</Text>
-        </View>
-        <View style={rc.right}>
-          <View style={rc.barBg}>
-            <View style={[rc.barFill, { width: `${score}%`, backgroundColor: color }]} />
-          </View>
-          <View style={rc.stats}>
-            <View style={rc.stat}>
-              <Ionicons name="sync-outline" size={13} color={MUTED} />
-              <Text style={rc.statText}>{cycles}/{target} cycles this week</Text>
-            </View>
-            {wake !== null && (
-              <View style={rc.stat}>
-                <Ionicons name="sunny-outline" size={13} color={MUTED} />
-                <Text style={rc.statText}>Wake time {formatMin(wake)}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-const rc = StyleSheet.create({
-  card:     { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 10 },
-  section:  { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 },
-  row:      { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  left:     { alignItems: 'flex-start' },
-  score:    { fontSize: 48, fontWeight: '900', lineHeight: 52 },
-  scorePct: { fontSize: 20, fontWeight: '700' },
-  label:    { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  right:    { flex: 1, gap: 10 },
-  barBg:    { height: 5, borderRadius: 3, backgroundColor: SURFACE2, overflow: 'hidden' },
-  barFill:  { height: '100%', borderRadius: 3 },
-  stats:    { gap: 6 },
-  stat:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statText: { fontSize: 13, color: SUB },
-});
-
-// ─── 3. Tonight card ─────────────────────────────────────────────────────────
-function TonightCard({ bedtime, wake }: { bedtime: number | null; wake: number | null }) {
+// ─── 2. Tonight widget ────────────────────────────────────────────────────────
+function TonightWidget({ bedtime, wake }: { bedtime: number | null; wake: number | null }) {
   if (bedtime === null && wake === null) return null;
   return (
-    <View style={tn.card}>
-      <Text style={tn.section}>Tonight</Text>
-      <View style={tn.row}>
-        <View style={tn.item}>
-          <Ionicons name="moon-outline" size={16} color={ACCENT} />
+    <View style={tw.card}>
+      <Text style={tw.label}>Tonight</Text>
+      <View style={tw.row}>
+        <View style={tw.item}>
+          <Ionicons name="moon-outline" size={18} color={ACCENT} />
           <View>
-            <Text style={tn.time}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
-            <Text style={tn.sub}>Bedtime</Text>
+            <Text style={tw.time}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
+            <Text style={tw.sub}>Bedtime</Text>
           </View>
         </View>
-        <Ionicons name="arrow-forward-outline" size={14} color={MUTED} />
-        <View style={tn.item}>
-          <Ionicons name="sunny-outline" size={16} color={WARNING} />
+        <View style={tw.arrow}>
+          <Ionicons name="arrow-forward-outline" size={16} color={MUTED} />
+        </View>
+        <View style={tw.item}>
+          <Ionicons name="sunny-outline" size={18} color={WARNING} />
           <View>
-            <Text style={tn.time}>{wake !== null ? formatMin(wake) : '—'}</Text>
-            <Text style={tn.sub}>Wake time</Text>
+            <Text style={tw.time}>{wake !== null ? formatMin(wake) : '—'}</Text>
+            <Text style={tw.sub}>Wake time</Text>
           </View>
         </View>
       </View>
     </View>
   );
 }
-const tn = StyleSheet.create({
-  card:    { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 10 },
-  section: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 },
-  row:     { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  item:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  time:    { fontSize: 20, fontWeight: '800', color: TEXT },
-  sub:     { fontSize: 12, color: MUTED, marginTop: 1 },
+const tw = StyleSheet.create({
+  card:  { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 16 },
+  label: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
+  row:   { flexDirection: 'row', alignItems: 'center' },
+  item:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  arrow: { paddingHorizontal: 8 },
+  time:  { fontSize: 22, fontWeight: '800', color: TEXT },
+  sub:   { fontSize: 12, color: MUTED, marginTop: 2 },
 });
 
-// ─── 4. Quick action chips ────────────────────────────────────────────────────
-function QuickActions({ onPress }: { onPress: (prompt: string) => void }) {
+// ─── 4. Quick actions ─────────────────────────────────────────────────────────
+function QuickActions({ onPress, disabled }: { onPress: (p: string) => void; disabled?: boolean }) {
   return (
     <View style={qa.wrap}>
       {QUICK_ACTIONS.map(({ icon, label, prompt }) => (
         <Pressable
           key={label}
-          style={({ pressed }) => [qa.chip, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [qa.chip, (pressed || disabled) && { opacity: 0.6 }]}
           onPress={() => onPress(prompt)}
+          disabled={disabled}
         >
           <Ionicons name={icon as any} size={14} color={ACCENT} />
           <Text style={qa.text}>{label}</Text>
+          <Ionicons name="chevron-forward" size={12} color={MUTED} />
         </Pressable>
       ))}
     </View>
   );
 }
 const qa = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, gap: 7 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
+  wrap: { paddingHorizontal: 16, gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13 },
   text: { fontSize: 14, color: SUB, flex: 1 },
 });
 
@@ -314,21 +266,20 @@ export default function HomeScreen() {
   const router                = useRouter();
   const { messages, isStreaming, sendMessage, injectMessage } = useChat();
 
-  // State
   const [input,        setInput]        = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [profile,      setProfile]      = useState<UserProfile | null>(null);
-  const [insights,     setInsights]     = useState<ReturnType<typeof computeInsights> | null>(null);
+  const [energyScore,  setEnergyScore]  = useState(0);
   const [userName,     setUserName]     = useState<string | null>(null);
 
-  // Guided mode
+  // Guided mode refs
   const guidedStep   = useRef<'name' | 'wake' | 'goal' | 'done'>('name');
   const guidedName   = useRef('');
   const guidedWake   = useRef(390);
   const [guidedChips, setGuidedChips] = useState<'wake' | 'goal' | null>(null);
   const guidedTyping = useRef(false);
 
-  const listRef         = useRef<FlatList<ChatMessage>>(null);
+  const scrollRef       = useRef<ScrollView>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
   const hasGreeted      = useRef(false);
@@ -338,14 +289,13 @@ export default function HomeScreen() {
     (async () => {
       const [p, h, onboarding] = await Promise.all([loadProfile(), loadWeekHistory(), loadOnboardingData()]);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
-
       if (p && h && h.length > 0) {
         setProfile(p);
-        setInsights(computeInsights(h, p));
+        setEnergyScore(computeInsights(h, p).energyScore);
       } else {
-        const mock = getMockInsightsData();
-        setProfile(mock.profile);
-        setInsights(computeInsights(mock.history, mock.profile));
+        const { history, profile: mp } = getMockInsightsData();
+        setProfile(mp);
+        setEnergyScore(computeInsights(history, mp).energyScore);
       }
     })();
   }, []);
@@ -354,6 +304,7 @@ export default function HomeScreen() {
   function rloSay(text: string, ms = 900): Promise<void> {
     return new Promise(r => setTimeout(() => { injectMessage(text); r(); }, ms));
   }
+
   async function handleGuidedAnswer(txt: string) {
     if (guidedTyping.current) return;
     guidedTyping.current = true;
@@ -373,12 +324,14 @@ export default function HomeScreen() {
     }
     guidedTyping.current = false;
   }
+
   async function handleGuidedWakePick(minutes: number, label: string) {
     guidedWake.current = minutes; guidedStep.current = 'goal';
     setGuidedChips(null); injectMessage(label);
     await rloSay("Perfect.\n\nWhat's your main goal right now?", 700);
     setGuidedChips('goal'); guidedTyping.current = false;
   }
+
   async function handleGuidedGoalPick(value: string, label: string) {
     guidedStep.current = 'done'; setGuidedChips(null); injectMessage(label);
     await rloSay("Great. Let me build your R90 recovery rhythm.", 700);
@@ -390,7 +343,7 @@ export default function HomeScreen() {
   // ── Greeting ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (hasGreeted.current) return;
-    const t = setTimeout(async () => {
+    const t = setTimeout(() => {
       hasGreeted.current = true;
       if (phase === 'guided_chat') {
         injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.\n\nWhat should I call you?");
@@ -416,7 +369,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!messages.length) return;
-    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(t);
   }, [messages]);
 
@@ -431,39 +384,32 @@ export default function HomeScreen() {
   }
 
   // ── Derived ──────────────────────────────────────────────────────────────
-  const isGuidedMode  = phase === 'guided_chat';
-  const canSend       = input.trim().length > 0 && (!isStreaming || isGuidedMode);
-  const hasUserChat   = messages.some(m => m.role === 'user');
-  const energyScore   = insights?.energyScore  ?? 0;
-  const weeklyCycles  = insights?.weeklyCycles  ?? 0;
-  const weeklyTarget  = insights?.weeklyTarget  ?? 35;
-  const nightlyTarget = profile?.idealCyclesPerNight ?? 5;
-  const bedtime       = dayPlan?.cycleWindow?.bedtime  ?? null;
-  const wakeTime      = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
+  const isGuidedMode = phase === 'guided_chat';
+  const canSend      = input.trim().length > 0 && (!isStreaming || isGuidedMode);
+  const hasUserChat  = messages.some(m => m.role === 'user');
+  const bedtime      = dayPlan?.cycleWindow?.bedtime  ?? null;
+  const wakeTime     = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={sc.root} edges={['top']}>
       <KeyboardAvoidingView style={sc.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-        {/* ── GUIDED SETUP MODE ─────────────────────────────────────────── */}
+        {/* ── GUIDED SETUP ──────────────────────────────────────────────── */}
         {isGuidedMode ? (
           <>
             <View style={sc.guidedHeader}>
               <MascotImage emotion="encourageant" style={{ width: 34, height: 34 }} />
               <View>
-                <Text style={sc.guidedHeaderName}>R-Lo</Text>
-                <Text style={sc.guidedHeaderSub}>Your personal sleep coach</Text>
+                <Text style={sc.guidedName}>R-Lo</Text>
+                <Text style={sc.guidedSub}>Your personal sleep coach</Text>
               </View>
             </View>
-            <FlatList
-              ref={listRef}
-              data={messages}
-              keyExtractor={m => m.id}
-              contentContainerStyle={sc.listContent}
-              renderItem={({ item }) => <ChatBubble msg={item} />}
-              showsVerticalScrollIndicator={false}
-            />
+
+            <ScrollView ref={scrollRef} style={sc.flex} contentContainerStyle={sc.guidedList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
+            </ScrollView>
+
             {guidedChips === 'wake' && (
               <View style={sc.chipsWrap}>
                 {WAKE_OPTS.map(({ label, value }) => (
@@ -474,6 +420,7 @@ export default function HomeScreen() {
                 ))}
               </View>
             )}
+
             {guidedChips === 'goal' && (
               <View style={sc.chipsWrap}>
                 {GOAL_OPTS.map(({ label, value }) => (
@@ -484,8 +431,9 @@ export default function HomeScreen() {
                 ))}
               </View>
             )}
+
             {guidedStep.current === 'name' && !guidedChips && (
-              <View style={[sc.composer, { borderTopColor: BORDER }]}>
+              <View style={sc.composer}>
                 <View style={sc.inputRow}>
                   <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
                     <TextInput style={sc.input} placeholder="Your name…" placeholderTextColor={MUTED}
@@ -501,9 +449,10 @@ export default function HomeScreen() {
             )}
           </>
         ) : (
-          /* ── NORMAL COACH MODE ──────────────────────────────────────────── */
+          /* ── COACH MODE ─────────────────────────────────────────────────── */
           <>
             <ScrollView
+              ref={scrollRef}
               style={sc.flex}
               contentContainerStyle={sc.scroll}
               showsVerticalScrollIndicator={false}
@@ -512,44 +461,27 @@ export default function HomeScreen() {
               {/* 1. Coach header */}
               <CoachHeader name={userName} score={energyScore} />
 
-              {/* 2. Recovery card */}
-              <RecoveryCard
-                score={energyScore}
-                cycles={weeklyCycles}
-                target={weeklyTarget}
-                wake={wakeTime}
-              />
+              {/* 2. Tonight widget */}
+              <TonightWidget bedtime={bedtime} wake={wakeTime} />
 
-              {/* 3. Tonight's plan */}
-              <TonightCard bedtime={bedtime} wake={wakeTime} />
+              {/* 3. Chat messages (R-Lo greeting + conversation) */}
+              <View style={sc.chatArea}>
+                {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
+                {isStreaming && <ThinkingDots />}
+              </View>
 
-              {/* 4. Chat messages */}
-              {messages.length > 0 && (
-                <View style={sc.chatArea}>
-                  {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
-                  {isStreaming && <ThinkingDots />}
-                </View>
-              )}
-
-              {/* 5. Quick actions — visible until user starts chatting */}
-              {!hasUserChat && (
-                <View style={sc.quickWrap}>
-                  <QuickActions onPress={send} />
-                </View>
-              )}
-
-              {/* Re-show chips after chat active */}
-              {hasUserChat && !isStreaming && (
-                <View style={[sc.quickWrap, { marginTop: 4 }]}>
-                  <QuickActions onPress={send} />
+              {/* 4. Quick actions — always visible when not streaming */}
+              {!isStreaming && (
+                <View style={sc.qaWrap}>
+                  <QuickActions onPress={send} disabled={isStreaming} />
                 </View>
               )}
 
               <View style={{ height: 16 }} />
             </ScrollView>
 
-            {/* 6. Chat input */}
-            <View style={[sc.composer, { borderTopColor: BORDER }]}>
+            {/* 5. Chat input */}
+            <View style={sc.composer}>
               <View style={sc.inputRow}>
                 <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
                   <TextInput
@@ -586,23 +518,22 @@ const sc = StyleSheet.create({
   flex:   { flex: 1 },
   scroll: { paddingBottom: 8 },
 
-  chatArea:  { paddingHorizontal: 16, paddingTop: 4, gap: 4 },
-  quickWrap: { paddingTop: 12 },
+  chatArea: { paddingHorizontal: 16, gap: 6 },
+  qaWrap:   { paddingTop: 16, paddingBottom: 4 },
 
-  listContent: { padding: 16, paddingBottom: 8, gap: 10 },
-
-  composer: { borderTopWidth: StyleSheet.hairlineWidth, backgroundColor: BG, paddingBottom: 6 },
+  composer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG, paddingBottom: 6 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
   inputWrap:{ flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
   input:    { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
   sendBtn:  { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   // Guided mode
-  guidedHeader:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
-  guidedHeaderName:{ fontSize: 16, fontWeight: '700', color: TEXT },
-  guidedHeaderSub: { fontSize: 12, color: MUTED },
-  chipsWrap:       { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
-  chip:            { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: `${ACCENT}40` },
-  chipWide:        { flexGrow: 1 },
-  chipText:        { fontSize: 14, color: TEXT, fontWeight: '500', textAlign: 'center' },
+  guidedHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
+  guidedName:   { fontSize: 16, fontWeight: '700', color: TEXT },
+  guidedSub:    { fontSize: 12, color: MUTED },
+  guidedList:   { padding: 16, gap: 10 },
+  chipsWrap:    { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  chip:         { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: `${ACCENT}40` },
+  chipWide:     { flexGrow: 1 },
+  chipText:     { fontSize: 14, color: TEXT, fontWeight: '500', textAlign: 'center' },
 });
