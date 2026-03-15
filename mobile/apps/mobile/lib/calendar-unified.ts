@@ -13,6 +13,7 @@
 import type { CalendarEvent } from '@r90/types';
 import { fetchEventsWithPermission, fetchTodayEvents } from './calendar';
 import { fetchGoogleEvents } from './google-calendar';
+import { getMockCalendarEvents } from './mock-calendar-data';
 
 export interface FetchAllEventsOptions {
   /** Use silent fetch (no permission prompt). Defaults to false. */
@@ -58,6 +59,11 @@ export async function fetchAllCalendarEvents(
 
   // Sort by start time for predictable ordering
   merged.sort((a, b) => a.start - b.start);
+
+  // No real calendar data → fall back to mock for UX testing
+  if (merged.length === 0) {
+    return getMockCalendarEvents();
+  }
 
   return merged;
 }
