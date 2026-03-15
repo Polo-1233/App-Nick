@@ -10,18 +10,16 @@
     "build:engine": "tsc -p engine/tsconfig.json",
     "build:backend": "tsc -p backend/tsconfig.json",
     "build": "npm run build:engine && npm run build:backend",
-
     "typecheck:engine": "tsc -p engine/tsconfig.json --noEmit",
     "typecheck:backend": "tsc -p backend/tsconfig.json --noEmit",
     "typecheck": "npm run typecheck:engine && npm run typecheck:backend",
-
     "start": "node backend-dist/backend/server.js",
-
     "serve": "npm run build && node backend-dist/backend/server.js",
     "dev": "tsx watch backend/server.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.99.1"
+    "@supabase/supabase-js": "^2.99.1",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -29,4 +27,3 @@
     "typescript": "^5.4.0"
   }
 }
-
