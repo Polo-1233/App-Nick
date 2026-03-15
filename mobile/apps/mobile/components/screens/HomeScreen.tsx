@@ -1,13 +1,18 @@
 /**
  * HomeScreen — Immersive coach experience
  *
- * Structure:
- *   1. Header image  — montagne.png (~33% height) + dark gradient + R-Lo + greeting
- *   2. Tonight card  — bedtime → wake
- *   3. R-Lo message  — "How can I help you today?"
- *   4. Quick actions — 5 chips
- *   5. Chat          — conversation
- *   6. Input         — sticky at bottom
+ * GUIDED MODE (phase = 'guided_chat'):
+ *   R-Lo setup conversation embedded in Home screen.
+ *   3 steps: wake time → main goal → bedtime habit
+ *   Options appear as styled cards below R-Lo's message.
+ *   No separate screen — feels like the real product from step 1.
+ *
+ * COACH MODE (phase = 'done'):
+ *   1. Immersive header — montagne.png + gradient + R-Lo + greeting
+ *   2. Tonight widget   — bedtime → wake
+ *   3. Chat             — R-Lo message + conversation
+ *   4. Quick actions    — 5 conversation starters
+ *   5. Input            — sticky at bottom
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -35,7 +40,6 @@ import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
   loadOnboardingData, saveOnboardingData,
 } from '../../lib/storage';
-import { usePremium }                from '../../lib/use-premium';
 import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }               from '../ui/MascotImage';
 import { computeInsights }           from '../../lib/insights';
@@ -48,6 +52,7 @@ const CARD    = '#1A2436';
 const SURFACE2= '#243046';
 const ACCENT  = '#4DA3FF';
 const WARNING = '#F5A623';
+const SUCCESS = '#3DDC97';
 const TEXT    = '#E6EDF7';
 const SUB     = '#9FB0C5';
 const MUTED   = '#6B7F99';
@@ -58,45 +63,54 @@ const HEADER_H = Math.round(SCREEN_H * 0.34);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMin(m: number): string {
-  const mins = ((m % 1440) + 1440) % 1440;
-  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  const safe = ((m % 1440) + 1440) % 1440;
+  return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
 }
 
 function coachGreeting(name: string | null, score: number): { line1: string; line2: string } {
   const h = new Date().getHours();
   const time = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
   const line1 = name ? `Good ${time}, ${name}` : `Good ${time}`;
-  let line2: string;
-  if (score >= 80)      line2 = 'Your recovery looks strong today.';
-  else if (score >= 65) line2 = 'Your rhythm is building nicely.';
-  else if (score >= 50) line2 = 'Stay consistent — tonight matters.';
-  else                  line2 = "Your body needs rest. Let's plan tonight well.";
+  const line2 = score >= 80 ? 'Your recovery looks strong today.'
+              : score >= 65 ? 'Your rhythm is building nicely.'
+              : score >= 50 ? 'Stay consistent — tonight matters.'
+              : "Your body needs rest. Let's plan tonight well.";
   return { line1, line2 };
 }
 
 // ─── Quick actions ────────────────────────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { icon: 'stats-chart-outline', label: 'How am I doing this week?',    prompt: 'How am I doing this week?' },
-  { icon: 'moon-outline',        label: 'What should I do before bed?', prompt: 'What should I do before bed?' },
-  { icon: 'bed-outline',         label: 'Slept late',                   prompt: 'I slept later than usual last night' },
-  { icon: 'calendar-outline',    label: 'Plan tonight',                 prompt: 'Help me plan my sleep for tonight' },
-  { icon: 'sunny-outline',       label: 'Woke early',                   prompt: 'I woke up earlier than my anchor time' },
+  { label: 'How am I doing this week?',    prompt: 'How am I doing this week?' },
+  { label: 'What should I do before bed?', prompt: 'What should I do before bed?' },
+  { label: 'Slept late',                   prompt: 'I slept later than usual last night' },
+  { label: 'Plan tonight',                 prompt: 'Help me plan my sleep for tonight' },
+  { label: 'Woke early',                   prompt: 'I woke up earlier than my anchor time' },
 ];
 
-// ─── Guided mode ─────────────────────────────────────────────────────────────
+// ─── Guided setup options ─────────────────────────────────────────────────────
 const WAKE_OPTS = [
-  { label: '05:00', value: 300 }, { label: '05:30', value: 330 },
-  { label: '06:00', value: 360 }, { label: '06:30', value: 390 },
-  { label: '07:00', value: 420 }, { label: '07:30', value: 450 },
-  { label: '08:00', value: 480 }, { label: '08:30', value: 510 },
-  { label: '09:00', value: 540 },
+  { label: '06:00', value: 360 },
+  { label: '06:30', value: 390 },
+  { label: '07:00', value: 420 },
+  { label: '07:30', value: 450 },
+  { label: '08:00', value: 480 },
+  { label: 'Custom', value: -1 },
 ];
+
 const GOAL_OPTS = [
-  { label: 'Better recovery',     value: 'recovery'    },
-  { label: 'More energy',         value: 'energy'      },
-  { label: 'Fall asleep faster',  value: 'sleep_speed' },
-  { label: 'Consistent schedule', value: 'consistency' },
+  { label: 'Better recovery',       value: 'recovery'    },
+  { label: 'More energy',           value: 'energy'      },
+  { label: 'Fix my sleep schedule', value: 'sleep_speed' },
+  { label: 'Reduce fatigue',        value: 'consistency' },
 ];
+
+const BEDTIME_OPTS = [
+  { label: 'Usually',   value: 'before_midnight' },
+  { label: 'Sometimes', value: 'sometimes'       },
+  { label: 'Rarely',    value: 'rarely'          },
+];
+
+type GuidedStep = 'wake' | 'goal' | 'bedtime' | 'done';
 
 // ─── Blinking cursor ──────────────────────────────────────────────────────────
 function BlinkingCursor() {
@@ -169,10 +183,39 @@ function ThinkingDots() {
   );
 }
 
+// ─── Setup option card ────────────────────────────────────────────────────────
+function OptionCard({
+  label, selected, onPress, icon,
+}: { label: string; selected?: boolean; onPress: () => void; icon?: string }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        oc.card,
+        selected && oc.cardSelected,
+        (pressed && !selected) && { opacity: 0.75 },
+      ]}
+      onPress={onPress}
+    >
+      {icon ? (
+        <View style={oc.iconWrap}>
+          <Ionicons name={icon as any} size={18} color={selected ? '#000' : ACCENT} />
+        </View>
+      ) : null}
+      <Text style={[oc.label, selected && oc.labelSelected]}>{label}</Text>
+      {selected && <Ionicons name="checkmark-circle" size={18} color="#000" />}
+    </Pressable>
+  );
+}
+const oc = StyleSheet.create({
+  card:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: CARD, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 18, borderWidth: 1.5, borderColor: 'transparent' },
+  cardSelected: { backgroundColor: ACCENT, borderColor: ACCENT },
+  iconWrap:     { width: 28, height: 28, borderRadius: 8, backgroundColor: `${ACCENT}20`, alignItems: 'center', justifyContent: 'center' },
+  label:        { flex: 1, fontSize: 15, fontWeight: '600', color: TEXT },
+  labelSelected:{ color: '#000' },
+});
+
 // ─── 1. Immersive header ──────────────────────────────────────────────────────
-function ImmersiveHeader({
-  name, score, topInset,
-}: { name: string | null; score: number; topInset: number }) {
+function ImmersiveHeader({ name, score, topInset }: { name: string | null; score: number; topInset: number }) {
   const { line1, line2 } = coachGreeting(name, score);
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -185,28 +228,16 @@ function ImmersiveHeader({
 
   return (
     <View style={[ih.container, { height: HEADER_H + topInset }]}>
-      {/* Background image */}
-      <Image
-        source={require('../../assets/montagne.png')}
-        style={ih.image}
-        resizeMode="cover"
-      />
-
-      {/* Dark gradient overlay — bottom heavy so text pops */}
+      <Image source={require('../../assets/montagne.png')} style={ih.image} resizeMode="cover" />
       <LinearGradient
         colors={['rgba(11,18,32,0.20)', 'rgba(11,18,32,0.55)', 'rgba(11,18,32,0.92)']}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
-
-      {/* Content: mascot + greeting */}
       <View style={[ih.content, { paddingTop: topInset + 16 }]}>
-        {/* R-Lo mascot */}
-        <Animated.View style={[ih.mascotWrap, { transform: [{ scale }] }]}>
-          <MascotImage emotion="encourageant" style={ih.mascot} />
+        <Animated.View style={[{ transform: [{ scale }] }, { width: 72, height: 72, marginBottom: 10 }]}>
+          <MascotImage emotion="encourageant" style={{ width: 72, height: 72 }} />
         </Animated.View>
-
-        {/* Greeting */}
         <Text style={ih.line1}>{line1}</Text>
         <Text style={ih.line2}>{line2}</Text>
       </View>
@@ -214,16 +245,14 @@ function ImmersiveHeader({
   );
 }
 const ih = StyleSheet.create({
-  container:  { width: '100%', overflow: 'hidden' },
-  image:      { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  content:    { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, alignItems: 'flex-start' },
-  mascotWrap: { width: 72, height: 72, marginBottom: 10 },
-  mascot:     { width: 72, height: 72 },
-  line1:      { fontSize: 26, fontWeight: '800', color: '#FFFFFF', lineHeight: 32, marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  line2:      { fontSize: 15, color: 'rgba(255,255,255,0.80)', lineHeight: 22, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  container: { width: '100%', overflow: 'hidden' },
+  image:     { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  content:   { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 20 },
+  line1:     { fontSize: 26, fontWeight: '800', color: '#FFF', lineHeight: 32, marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  line2:     { fontSize: 15, color: 'rgba(255,255,255,0.80)', lineHeight: 22, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 });
 
-// ─── 2. Tonight widget — compact single line ──────────────────────────────────
+// ─── 2. Tonight widget ────────────────────────────────────────────────────────
 function TonightWidget({ bedtime, wake }: { bedtime: number | null; wake: number | null }) {
   if (bedtime === null && wake === null) return null;
   return (
@@ -247,7 +276,7 @@ const tw = StyleSheet.create({
   arrow: { fontSize: 14, color: MUTED, marginHorizontal: 2 },
 });
 
-// ─── 4. Conversation suggestions ─────────────────────────────────────────────
+// ─── Quick actions ────────────────────────────────────────────────────────────
 function QuickActions({ onPress, disabled }: { onPress: (p: string) => void; disabled?: boolean }) {
   return (
     <View style={qa.wrap}>
@@ -275,6 +304,51 @@ const qa = StyleSheet.create({
   text:  { fontSize: 13, color: SUB, fontWeight: '500' },
 });
 
+// ─── Guided setup UI ─────────────────────────────────────────────────────────
+function SetupQuestion({
+  question, options, onSelect, selectedValue, customChild,
+}: {
+  question:     string;
+  options:      { label: string; value: string | number }[];
+  onSelect:     (label: string, value: string | number) => void;
+  selectedValue?: string | number;
+  customChild?: React.ReactNode;
+}) {
+  return (
+    <View style={sq.wrap}>
+      {/* R-Lo bubble */}
+      <View style={sq.bubbleRow}>
+        <View style={{ width: 32, height: 32, flexShrink: 0 }}>
+          <MascotImage emotion="encourageant" style={{ width: 32, height: 32 }} />
+        </View>
+        <View style={sq.bubble}>
+          <Text style={sq.bubbleText}>{question}</Text>
+        </View>
+      </View>
+
+      {/* Options */}
+      <View style={sq.options}>
+        {options.map(opt => (
+          <OptionCard
+            key={opt.label}
+            label={opt.label}
+            selected={selectedValue === opt.value || (opt.value === -1 && selectedValue === 'custom')}
+            onPress={() => onSelect(opt.label, opt.value)}
+          />
+        ))}
+        {customChild}
+      </View>
+    </View>
+  );
+}
+const sq = StyleSheet.create({
+  wrap:       { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, gap: 16 },
+  bubbleRow:  { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  bubble:     { flex: 1, backgroundColor: CARD, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 14, paddingHorizontal: 16 },
+  bubbleText: { fontSize: 16, color: TEXT, lineHeight: 24, fontWeight: '500' },
+  options:    { gap: 10 },
+});
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
@@ -289,17 +363,19 @@ export default function HomeScreen() {
   const [energyScore,  setEnergyScore]  = useState(0);
   const [userName,     setUserName]     = useState<string | null>(null);
 
-  // Guided mode refs
-  const guidedStep   = useRef<'name' | 'wake' | 'goal' | 'done'>('name');
-  const guidedName   = useRef('');
-  const guidedWake   = useRef(390);
-  const [guidedChips, setGuidedChips] = useState<'wake' | 'goal' | null>(null);
-  const guidedTyping = useRef(false);
+  // ── Guided state ─────────────────────────────────────────────────────────
+  const [guidedStep,     setGuidedStep]     = useState<GuidedStep>('wake');
+  const [selectedWake,   setSelectedWake]   = useState<number | null>(null);
+  const [selectedGoal,   setSelectedGoal]   = useState<string | null>(null);
+  const [selectedBedtime,setSelectedBedtime]= useState<string | null>(null);
+  const [customWake,     setCustomWake]     = useState('');
+  const [showCustomWake, setShowCustomWake] = useState(false);
+  const [isFinishing,    setIsFinishing]    = useState(false);
 
-  const scrollRef       = useRef<ScrollView>(null);
-  const hasMountedFocus = useRef(false);
-  const hasRedirected   = useRef(false);
-  const hasGreeted      = useRef(false);
+  const scrollRef        = useRef<ScrollView>(null);
+  const hasMountedFocus  = useRef(false);
+  const hasRedirected    = useRef(false);
+  const hasGreeted       = useRef(false);
 
   // ── Load data ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -307,68 +383,15 @@ export default function HomeScreen() {
       const [p, h, onboarding] = await Promise.all([loadProfile(), loadWeekHistory(), loadOnboardingData()]);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
       if (p && h && h.length > 0) {
-        setProfile(p);
-        setEnergyScore(computeInsights(h, p).energyScore);
+        setProfile(p); setEnergyScore(computeInsights(h, p).energyScore);
       } else {
-        const { history, profile: mp } = getMockInsightsData();
-        setProfile(mp);
-        setEnergyScore(computeInsights(history, mp).energyScore);
+        const { history: mh, profile: mp } = getMockInsightsData();
+        setProfile(mp); setEnergyScore(computeInsights(mh, mp).energyScore);
       }
     })();
   }, []);
 
-  // ── Guided helpers ───────────────────────────────────────────────────────
-  function rloSay(text: string, ms = 900): Promise<void> {
-    return new Promise(r => setTimeout(() => { injectMessage(text); r(); }, ms));
-  }
-  async function handleGuidedAnswer(txt: string) {
-    if (guidedTyping.current) return;
-    guidedTyping.current = true;
-    setInput('');
-    if (guidedStep.current === 'name') {
-      const firstName = txt.trim().split(/\s+/)[0] ?? txt.trim();
-      guidedName.current = firstName;
-      guidedStep.current = 'wake';
-      await rloSay(`Nice to meet you, ${firstName}! 👋\n\nI'll build your schedule around your natural 90-minute cycles.\n\nWhen do you usually wake up?`, 800);
-      setGuidedChips('wake');
-    } else if (guidedStep.current === 'wake') {
-      const m = WAKE_OPTS.find(o => o.label === txt);
-      await handleGuidedWakePick(m?.value ?? 390, txt);
-    } else if (guidedStep.current === 'goal') {
-      const m = GOAL_OPTS.find(o => o.label === txt);
-      await handleGuidedGoalPick(m?.value ?? 'recovery', txt);
-    }
-    guidedTyping.current = false;
-  }
-  async function handleGuidedWakePick(minutes: number, label: string) {
-    guidedWake.current = minutes; guidedStep.current = 'goal';
-    setGuidedChips(null); injectMessage(label);
-    await rloSay("Perfect.\n\nWhat's your main goal right now?", 700);
-    setGuidedChips('goal'); guidedTyping.current = false;
-  }
-  async function handleGuidedGoalPick(value: string, label: string) {
-    guidedStep.current = 'done'; setGuidedChips(null); injectMessage(label);
-    await rloSay("Great. Let me build your R90 recovery rhythm.", 700);
-    await saveOnboardingData({ firstName: guidedName.current, wakeTimeMinutes: guidedWake.current, priority: value, constraint: '' });
-    setTimeout(() => advance('plan'), 1400);
-    guidedTyping.current = false;
-  }
-
-  // ── Greeting ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (hasGreeted.current) return;
-    const t = setTimeout(() => {
-      hasGreeted.current = true;
-      if (phase === 'guided_chat') {
-        injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.\n\nWhat should I call you?");
-        guidedStep.current = 'name';
-      } else {
-        injectMessage("How can I help you today?");
-      }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [phase, injectMessage]);
-
+  // ── Onboarding redirect ──────────────────────────────────────────────────
   useEffect(() => {
     if (!needsOnboarding || hasRedirected.current) return;
     hasCompletedIntro().then(done => {
@@ -387,19 +410,74 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [messages]);
 
-  // ── Send ─────────────────────────────────────────────────────────────────
+  // ── Greeting (coach mode only) ───────────────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'done' || hasGreeted.current) return;
+    const t = setTimeout(() => {
+      hasGreeted.current = true;
+      injectMessage('How can I help you today?');
+    }, 500);
+    return () => clearTimeout(t);
+  }, [phase, injectMessage]);
+
+  // ── Guided handlers ──────────────────────────────────────────────────────
+  function handleWakePick(label: string, value: number | string) {
+    if (value === -1) {
+      setShowCustomWake(true);
+      setSelectedWake(-1);
+      return;
+    }
+    setShowCustomWake(false);
+    setSelectedWake(value as number);
+    setTimeout(() => setGuidedStep('goal'), 420);
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }
+
+  function confirmCustomWake() {
+    const parts = customWake.split(':');
+    const h = parseInt(parts[0] ?? '7', 10);
+    const m = parseInt(parts[1] ?? '0', 10);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return;
+    const minutes = h * 60 + m;
+    setSelectedWake(minutes);
+    setShowCustomWake(false);
+    setTimeout(() => setGuidedStep('goal'), 420);
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }
+
+  function handleGoalPick(_label: string, value: number | string) {
+    setSelectedGoal(value as string);
+    setTimeout(() => setGuidedStep('bedtime'), 420);
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }
+
+  async function handleBedtimePick(_label: string, value: number | string) {
+    setSelectedBedtime(value as string);
+    setIsFinishing(true);
+    scrollRef.current?.scrollToEnd({ animated: true });
+
+    const wake = selectedWake ?? 450;
+    await saveOnboardingData({
+      firstName:       userName ?? '',
+      wakeTimeMinutes: wake,
+      priority:        selectedGoal ?? 'recovery',
+      constraint:      value as string,
+    });
+
+    setTimeout(() => advance('plan'), 1000);
+  }
+
+  // ── Coach mode send ──────────────────────────────────────────────────────
   function send(text?: string) {
     const txt = (text ?? input).trim();
-    if (!txt) return;
-    if (phase === 'guided_chat') { void handleGuidedAnswer(txt); return; }
-    if (isStreaming) return;
+    if (!txt || isStreaming) return;
     setInput('');
     void sendMessage(txt);
   }
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const isGuidedMode = phase === 'guided_chat';
-  const canSend      = input.trim().length > 0 && (!isStreaming || isGuidedMode);
+  const canSend      = input.trim().length > 0 && !isStreaming;
   const bedtime      = dayPlan?.cycleWindow?.bedtime  ?? null;
   const wakeTime     = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
 
@@ -408,57 +486,89 @@ export default function HomeScreen() {
     <View style={sc.root}>
       <KeyboardAvoidingView style={sc.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-        {/* ── GUIDED SETUP ──────────────────────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════════
+            GUIDED SETUP MODE
+        ══════════════════════════════════════════════════════════════════ */}
         {isGuidedMode ? (
           <SafeAreaView style={sc.flex} edges={['top', 'bottom']}>
-            <View style={sc.guidedHeader}>
-              <MascotImage emotion="encourageant" style={{ width: 34, height: 34 }} />
-              <View>
-                <Text style={sc.guidedName}>R-Lo</Text>
-                <Text style={sc.guidedSub}>Your personal sleep coach</Text>
+            <ScrollView
+              ref={scrollRef}
+              style={sc.flex}
+              contentContainerStyle={sc.guidedScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* R-Lo intro */}
+              <View style={sc.introSection}>
+                <MascotImage emotion="encourageant" style={{ width: 68, height: 68, marginBottom: 16 }} />
+                <Text style={sc.introTitle}>Hi! I'm R-Lo.</Text>
+                <Text style={sc.introSub}>
+                  {"I'm your personal recovery coach.\nBefore we start, I need a few things\nto build your sleep rhythm."}
+                </Text>
               </View>
-            </View>
-            <ScrollView ref={scrollRef} style={sc.flex} contentContainerStyle={sc.guidedList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
-            </ScrollView>
-            {guidedChips === 'wake' && (
-              <View style={sc.chipsWrap}>
-                {WAKE_OPTS.map(({ label, value }) => (
-                  <Pressable key={label} style={({ pressed }) => [sc.chip, pressed && { opacity: 0.7 }]}
-                    onPress={() => { void handleGuidedWakePick(value, label); }}>
-                    <Text style={sc.chipText}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            {guidedChips === 'goal' && (
-              <View style={sc.chipsWrap}>
-                {GOAL_OPTS.map(({ label, value }) => (
-                  <Pressable key={label} style={({ pressed }) => [sc.chip, sc.chipWide, pressed && { opacity: 0.7 }]}
-                    onPress={() => { void handleGuidedGoalPick(value, label); }}>
-                    <Text style={sc.chipText}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            {guidedStep.current === 'name' && !guidedChips && (
-              <View style={sc.composer}>
-                <View style={sc.inputRow}>
-                  <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
-                    <TextInput style={sc.input} placeholder="Your name…" placeholderTextColor={MUTED}
-                      value={input} onChangeText={setInput} onSubmitEditing={() => send()}
-                      onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)}
-                      returnKeyType="send" autoFocus autoCapitalize="words" />
+
+              {/* Step 1 — Wake time */}
+              <SetupQuestion
+                question="What time do you usually wake up?"
+                options={WAKE_OPTS}
+                onSelect={handleWakePick}
+                selectedValue={selectedWake ?? undefined}
+                customChild={showCustomWake ? (
+                  <View style={sc.customRow}>
+                    <TextInput
+                      style={sc.customInput}
+                      placeholder="HH:MM (e.g. 06:45)"
+                      placeholderTextColor={MUTED}
+                      value={customWake}
+                      onChangeText={setCustomWake}
+                      keyboardType="numbers-and-punctuation"
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={confirmCustomWake}
+                    />
+                    <Pressable style={sc.customConfirm} onPress={confirmCustomWake}>
+                      <Ionicons name="checkmark" size={18} color="#000" />
+                    </Pressable>
                   </View>
-                  <Pressable style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]} onPress={() => send()} disabled={!canSend}>
-                    <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
-                  </Pressable>
+                ) : undefined}
+              />
+
+              {/* Step 2 — Goal */}
+              {(guidedStep === 'goal' || guidedStep === 'bedtime' || guidedStep === 'done') && (
+                <SetupQuestion
+                  question="What is your main goal?"
+                  options={GOAL_OPTS}
+                  onSelect={handleGoalPick}
+                  selectedValue={selectedGoal ?? undefined}
+                />
+              )}
+
+              {/* Step 3 — Bedtime habit */}
+              {(guidedStep === 'bedtime' || guidedStep === 'done') && (
+                <SetupQuestion
+                  question="Do you usually go to sleep before midnight?"
+                  options={BEDTIME_OPTS}
+                  onSelect={handleBedtimePick}
+                  selectedValue={selectedBedtime ?? undefined}
+                />
+              )}
+
+              {/* Finishing message */}
+              {isFinishing && (
+                <View style={sc.finishingWrap}>
+                  <MascotImage emotion="celebration" style={{ width: 56, height: 56 }} />
+                  <Text style={sc.finishingText}>Building your sleep rhythm…</Text>
                 </View>
-              </View>
-            )}
+              )}
+
+              <View style={{ height: insets.bottom + 24 }} />
+            </ScrollView>
           </SafeAreaView>
+
         ) : (
-          /* ── COACH MODE ─────────────────────────────────────────────────── */
+        /* ════════════════════════════════════════════════════════════════
+           COACH MODE
+        ═════════════════════════════════════════════════════════════════= */
           <>
             <ScrollView
               ref={scrollRef}
@@ -467,14 +577,14 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* 1. Immersive header (full bleed, no SafeArea) */}
+              {/* 1. Immersive header */}
               <ImmersiveHeader name={userName} score={energyScore} topInset={insets.top} />
 
               {/* 2. Tonight widget */}
               <View style={{ height: 14 }} />
               <TonightWidget bedtime={bedtime} wake={wakeTime} />
 
-              {/* 3. Chat area */}
+              {/* 3. Chat */}
               <View style={sc.chatArea}>
                 {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
                 {isStreaming && <ThinkingDots />}
@@ -525,26 +635,30 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const sc = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: BG },
-  flex:   { flex: 1 },
-  scroll: { paddingBottom: 8 },
+  root:  { flex: 1, backgroundColor: BG },
+  flex:  { flex: 1 },
+  scroll:{ paddingBottom: 8 },
 
+  // Guided
+  guidedScroll:  { paddingBottom: 8 },
+  introSection:  { alignItems: 'center', paddingTop: 40, paddingBottom: 32, paddingHorizontal: 24 },
+  introTitle:    { fontSize: 28, fontWeight: '800', color: TEXT, marginBottom: 12, textAlign: 'center' },
+  introSub:      { fontSize: 16, color: SUB, lineHeight: 26, textAlign: 'center' },
+
+  customRow:     { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  customInput:   { flex: 1, backgroundColor: SURFACE2, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: TEXT, borderWidth: 1, borderColor: `${ACCENT}50` },
+  customConfirm: { width: 48, height: 48, borderRadius: 14, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
+
+  finishingWrap: { alignItems: 'center', paddingVertical: 28, gap: 14 },
+  finishingText: { fontSize: 16, fontWeight: '600', color: SUCCESS },
+
+  // Coach mode
   chatArea: { paddingHorizontal: 16, paddingTop: 4, gap: 6 },
   qaWrap:   { paddingTop: 14, paddingBottom: 4 },
 
-  composer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
-  inputWrap:{ flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
-  input:    { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
-  sendBtn:  { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-
-  // Guided mode
-  guidedHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: BORDER },
-  guidedName:   { fontSize: 16, fontWeight: '700', color: TEXT },
-  guidedSub:    { fontSize: 12, color: MUTED },
-  guidedList:   { padding: 16, gap: 10 },
-  chipsWrap:    { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
-  chip:         { backgroundColor: CARD, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: `${ACCENT}40` },
-  chipWide:     { flexGrow: 1 },
-  chipText:     { fontSize: 14, color: TEXT, fontWeight: '500', textAlign: 'center' },
+  composer:  { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG },
+  inputRow:  { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
+  inputWrap: { flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
+  input:     { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
+  sendBtn:   { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
