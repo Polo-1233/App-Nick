@@ -56,6 +56,10 @@ export default function SubscriptionScreen() {
   const router                         = useRouter();
   const { isPremium, refresh }         = usePremiumGate();
   const [yearly,   setYearly]          = useState(true);
+  // Pricing
+  const MONTHLY_PRICE  = '$9.99';
+  const YEARLY_TOTAL   = '$79.99';
+  const YEARLY_MONTHLY = '$6.66';
   const [loading,  setLoading]         = useState(false);
 
   // ── Purchase ─────────────────────────────────────────────────────────────
@@ -159,7 +163,7 @@ export default function SubscriptionScreen() {
               <Text style={s.planName}>Monthly</Text>
               {!yearly && <View style={s.selectedDot} />}
             </View>
-            <Text style={s.planPrice}>$4.99<Text style={s.planPer}> / mo</Text></Text>
+            <Text style={s.planPrice}>{MONTHLY_PRICE}<Text style={s.planPer}> / mo</Text></Text>
             <Text style={s.planNote}>Cancel anytime</Text>
           </Pressable>
 
@@ -174,8 +178,8 @@ export default function SubscriptionScreen() {
                 <Text style={s.bestBadgeText}>Best value</Text>
               </View>
             </View>
-            <Text style={s.planPrice}>$3.25<Text style={s.planPer}> / mo</Text></Text>
-            <Text style={s.planYearlyTotal}>$39 / year</Text>
+            <Text style={s.planPrice}>{YEARLY_MONTHLY}<Text style={s.planPer}> / mo</Text></Text>
+            <Text style={s.planYearlyTotal}>{YEARLY_TOTAL} / year</Text>
             <Text style={s.planNote}>Save 33% vs monthly</Text>
           </Pressable>
 
@@ -203,8 +207,8 @@ export default function SubscriptionScreen() {
         {/* ── 6. Footer ── */}
         <Text style={s.footer}>
           {yearly
-            ? 'Free for 7 days, then $39/year. Cancel anytime.'
-            : 'Free for 7 days, then $4.99/month. Cancel anytime.'}
+            ? `Free for 7 days, then ${YEARLY_TOTAL}/year. Cancel anytime.`
+            : `Free for 7 days, then ${MONTHLY_PRICE}/month. Cancel anytime.`}
         </Text>
 
         <Pressable style={s.restoreBtn} onPress={() => { void handleRestore(); }} disabled={loading}>
