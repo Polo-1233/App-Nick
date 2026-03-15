@@ -45,10 +45,10 @@ const C = {
 
 // ─── Benefits ─────────────────────────────────────────────────────────────────
 const BENEFITS = [
-  { icon: 'sync-outline',           text: 'Understand your sleep cycles'  },
-  { icon: 'moon-outline',           text: 'Know exactly when to sleep'    },
-  { icon: 'flash-outline',          text: 'Recover faster from fatigue'   },
-  { icon: 'airplane-outline',       text: 'Fix jet lag automatically'     },
+  { icon: 'sunny-outline',          text: 'Wake up with more energy every morning'      },
+  { icon: 'moon-outline',           text: 'Let AI choose the perfect time for you to sleep' },
+  { icon: 'trending-up-outline',    text: 'Build a stable sleep rhythm automatically'   },
+  { icon: 'flash-outline',          text: 'Recover faster from fatigue and jet lag'     },
 ];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
