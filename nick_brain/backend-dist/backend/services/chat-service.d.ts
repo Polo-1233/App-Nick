@@ -31,9 +31,10 @@ export interface ChatInput {
  *   1. Validate input
  *   2. Load persisted history from DB (supplement client-side history)
  *   3. Build structured context from engine
- *   4. Call OpenAI with retry (non-streaming for reliability; fake-stream the result)
- *   5. Persist the exchange to DB
- *   6. Send SSE chunks + [DONE]
+ *   4. Call OpenAI with tools (dynamic data via tool calls)
+ *   5. Fallback: static context if tool calling fails
+ *   6. Persist the exchange to DB
+ *   7. Fake-stream the response
  */
 export declare function streamChatResponse(client: AppClient, userId: string, input: ChatInput, res: ServerResponse): Promise<void>;
 /**

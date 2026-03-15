@@ -27,6 +27,7 @@ export interface ChatMessage {
 export interface UseChatResult {
   messages:        ChatMessage[];
   isStreaming:     boolean;
+  isThinking:      boolean;
   sendMessage:     (text: string) => Promise<void>;
   clearHistory:    () => void;
   injectMessage:   (content: string) => void; // local R-Lo message, no API call
@@ -36,12 +37,13 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[]; done: boolean; error?: string; consumed: number } {
+function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[]; done: boolean; error?: string; thinking?: string; consumed: number } {
   const slice   = raw.slice(alreadyParsed);
   const lines   = slice.split("\n");
   const deltas: string[] = [];
   let done      = false;
   let error: string | undefined;
+  let thinking: string | undefined;
   let consumed  = alreadyParsed;
 
   for (const line of lines) {
@@ -53,19 +55,21 @@ function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[];
     if (data === "[DONE]") { done = true; consumed += line.length + 1; break; }
 
     try {
-      const parsed = JSON.parse(data) as { delta?: string; error?: string };
+      const parsed = JSON.parse(data) as { delta?: string; error?: string; status?: string; tool?: string };
       if (parsed.error) { error = parsed.error; consumed += line.length + 1; break; }
+      if (parsed.status === "thinking") { thinking = parsed.tool ?? "data"; }
       if (parsed.delta) { deltas.push(parsed.delta); }
     } catch { /* skip */ }
     consumed += line.length + 1;
   }
 
-  return { deltas, done, error, consumed };
+  return { deltas, done, error, thinking, consumed };
 }
 
 export function useChat(): UseChatResult {
   const [messages,    setMessages]    = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isThinking, setIsThinking]  = useState(false);
   const xhrRef     = useRef<XMLHttpRequest | null>(null);
   const parsedRef  = useRef(0); // bytes already processed in XHR response
 
@@ -106,7 +110,13 @@ export function useChat(): UseChatResult {
           const result = parseSSEChunks(raw, parsedRef.current);
           parsedRef.current = result.consumed;
 
+          // Track thinking state
+          if (result.thinking) {
+            setIsThinking(true);
+          }
+
           if (result.deltas.length > 0) {
+            setIsThinking(false);
             accumulated += result.deltas.join("");
             const snapshot = accumulated;
             setMessages(prev => prev.map(m =>
@@ -171,6 +181,7 @@ export function useChat(): UseChatResult {
       }
     } finally {
       setIsStreaming(false);
+      setIsThinking(false);
     }
   }, [messages, isStreaming]);
 
@@ -185,5 +196,5 @@ export function useChat(): UseChatResult {
     setMessages(prev => (prev.length === 0 ? [msg] : prev));
   }, []);
 
-  return { messages, isStreaming, sendMessage, clearHistory, injectMessage };
+  return { messages, isStreaming, isThinking, sendMessage, clearHistory, injectMessage };
 }

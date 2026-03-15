@@ -32,6 +32,8 @@ import {
   fetchLatestWeeklyReport,
 } from "../db/queries.js";
 import { detectPatterns } from "./pattern-detector.js";
+import { SLEEP_COACH_TOOLS } from "./tool-definitions.js";
+import { executeTool } from "./tool-executor.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -422,6 +424,133 @@ async function callOpenAIWithRetry(
   return { content: FALLBACK_MESSAGE, failed: true };
 }
 
+// ─── Tool-calling loop ──────────────────────────────────────────────────────
+
+interface ToolCallMessage {
+  role: string;
+  content: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: string;
+    function: { name: string; arguments: string };
+  }>;
+}
+
+/**
+ * Call OpenAI with tool-calling support. Executes up to 3 iterations of the loop.
+ * Sends "thinking" status events via SSE for progress indication.
+ * Falls back to static context on failure.
+ */
+async function callOpenAIWithTools(
+  apiKey: string,
+  messages: Array<{ role: string; content: string | null; tool_call_id?: string; name?: string }>,
+  userId: string,
+  client: AppClient,
+  res: ServerResponse,
+): Promise<{ content: string; failed: boolean }> {
+  const MAX_ITERATIONS = 3;
+
+  try {
+    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+      const response = await fetch(OPENAI_CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type":  "application/json",
+        },
+        body: JSON.stringify({
+          model:       "gpt-4o",
+          messages,
+          tools:       SLEEP_COACH_TOOLS,
+          tool_choice: "auto",
+          stream:      false,
+          max_tokens:  512,
+          temperature: 0.65,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI HTTP ${response.status}`);
+      }
+
+      const json = await response.json() as {
+        choices?: Array<{
+          message?: ToolCallMessage;
+          finish_reason?: string;
+        }>;
+      };
+
+      const choice  = json.choices?.[0];
+      const message = choice?.message;
+
+      if (!message) {
+        throw new Error("Empty OpenAI response");
+      }
+
+      // If the model wants to call tools
+      if (message.tool_calls && message.tool_calls.length > 0) {
+        // Add the assistant message with tool_calls to the conversation
+        messages.push({
+          role: "assistant",
+          content: message.content,
+          ...({ tool_calls: message.tool_calls } as Record<string, unknown>),
+        } as typeof messages[number]);
+
+        // Send thinking status (not SSE headers yet — just queue them)
+        if (!res.headersSent) {
+          res.writeHead(200, {
+            "Content-Type":                "text/event-stream",
+            "Cache-Control":               "no-cache",
+            "Connection":                  "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+          });
+        }
+
+        // Execute each tool call
+        for (const tc of message.tool_calls) {
+          // Send thinking indicator
+          res.write(`data: ${JSON.stringify({ status: "thinking", tool: tc.function.name })}\n\n`);
+
+          let parsedArgs: Record<string, unknown> = {};
+          try {
+            parsedArgs = JSON.parse(tc.function.arguments);
+          } catch {
+            // Empty args
+          }
+
+          const result = await executeTool(tc.function.name, parsedArgs, userId, client);
+
+          // Add tool result to conversation
+          messages.push({
+            role: "tool",
+            content: result,
+            tool_call_id: tc.id,
+            name: tc.function.name,
+          } as typeof messages[number]);
+        }
+
+        // Continue loop — next iteration will send tool results back to OpenAI
+        continue;
+      }
+
+      // No tool calls — we have the final response
+      const content = message.content;
+      if (!content) {
+        throw new Error("Empty content in final response");
+      }
+
+      return { content, failed: false };
+    }
+
+    // Max iterations reached
+    throw new Error("Tool-calling loop exceeded max iterations");
+  } catch (err) {
+    console.warn("[chat-service] Tool-calling failed:", err instanceof Error ? err.message : err);
+    return { content: "", failed: true };
+  }
+}
+
 // ─── Main streaming entry point ───────────────────────────────────────────────
 
 /**
@@ -431,9 +560,10 @@ async function callOpenAIWithRetry(
  *   1. Validate input
  *   2. Load persisted history from DB (supplement client-side history)
  *   3. Build structured context from engine
- *   4. Call OpenAI with retry (non-streaming for reliability; fake-stream the result)
- *   5. Persist the exchange to DB
- *   6. Send SSE chunks + [DONE]
+ *   4. Call OpenAI with tools (dynamic data via tool calls)
+ *   5. Fallback: static context if tool calling fails
+ *   6. Persist the exchange to DB
+ *   7. Fake-stream the response
  */
 export async function streamChatResponse(
   client:  AppClient,
@@ -495,28 +625,72 @@ export async function streamChatResponse(
     }
   }
 
-  // ── 4. Build structured context from engine ────────────────────────────
-  let contextSections = "[CURRENT_STATE]\nContext unavailable — respond based on general R90 principles.";
+  // ── 4. Build minimal context for tool-calling mode ────────────────────
+  let minimalContext = "";
   try {
     const ctx = await buildStructuredContext(client, userId);
-    contextSections = formatContextSections(ctx);
+    // Only [USER_PROFILE] + [CURRENT_STATE] for the tool-calling system prompt
+    const lines: string[] = [];
+    lines.push("[USER_PROFILE]");
+    lines.push(`today: ${ctx.today}`);
+    lines.push(`anchor_wake_time: ${ctx.arp_time ?? "not set"}`);
+    lines.push(`chronotype: ${ctx.chronotype}`);
+    lines.push(`cycle_target_per_night: ${ctx.cycle_target}`);
+    lines.push("");
+    lines.push("[CURRENT_STATE]");
+    if (ctx.active_states.length > 0) {
+      lines.push(`active_states: ${ctx.active_states.join(", ")}`);
+    } else {
+      lines.push("active_states: none");
+    }
+    if (ctx.primary_rec) lines.push(`primary_recommendation: ${ctx.primary_rec}`);
+    lines.push("");
+    minimalContext = lines.join("\n");
   } catch (err) {
     console.warn("[chat-service] context build failed:", err instanceof Error ? err.message : err);
+    minimalContext = "[CURRENT_STATE]\nContext unavailable — respond based on general R90 principles.";
   }
 
-  const systemPrompt = buildSystemPrompt(contextSections);
+  const toolSystemPrompt = buildSystemPrompt(minimalContext);
 
-  // Build messages array: system + history + new user message
-  const messages = [
-    { role: "system",    content: systemPrompt },
+  // Build messages for tool-calling flow
+  const toolMessages: Array<{ role: string; content: string | null; tool_call_id?: string; name?: string }> = [
+    { role: "system", content: toolSystemPrompt },
     ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content })),
-    { role: "user",      content: cleanMessage },
+    { role: "user",   content: cleanMessage },
   ];
 
-  // ── 2. Call OpenAI with retry ──────────────────────────────────────────
-  const { content: assistantReply, failed } = await callOpenAIWithRetry(apiKey, messages);
+  // ── Try tool-calling flow first ──────────────────────────────────────
+  let assistantReply: string;
+  let failed: boolean;
 
-  // ── 3b. Persist exchange (best-effort, non-blocking) ──────────────────
+  const toolResult = await callOpenAIWithTools(apiKey, toolMessages, userId, client, res);
+
+  if (!toolResult.failed && toolResult.content) {
+    assistantReply = toolResult.content;
+    failed = false;
+  } else {
+    // ── Fallback: full static context (original behavior) ────────────
+    let contextSections = "[CURRENT_STATE]\nContext unavailable — respond based on general R90 principles.";
+    try {
+      const ctx = await buildStructuredContext(client, userId);
+      contextSections = formatContextSections(ctx);
+    } catch {
+      // Use default fallback
+    }
+
+    const fallbackMessages = [
+      { role: "system",  content: buildSystemPrompt(contextSections) },
+      ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content })),
+      { role: "user",    content: cleanMessage },
+    ];
+
+    const fallbackResult = await callOpenAIWithRetry(apiKey, fallbackMessages);
+    assistantReply = fallbackResult.content;
+    failed = fallbackResult.failed;
+  }
+
+  // ── Persist exchange (best-effort, non-blocking) ──────────────────
   const sessionId = input.session_id ?? dailySessionId();
   if (!failed) {
     saveExchange(client, userId, sessionId, cleanMessage, assistantReply).catch(err => {
@@ -525,7 +699,20 @@ export async function streamChatResponse(
   }
 
   // ── Stream the response as SSE ───────────────────────────────────────
-  await fakeStreamResponse(res, assistantReply);
+  if (res.headersSent) {
+    // Headers already sent by tool-calling flow — just stream the final response
+    const words = assistantReply.split(/(\s+)/);
+    for (const chunk of words) {
+      if (chunk) {
+        res.write(`data: ${JSON.stringify({ delta: chunk })}\n\n`);
+        await new Promise(r => setTimeout(r, 18));
+      }
+    }
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } else {
+    await fakeStreamResponse(res, assistantReply);
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

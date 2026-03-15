@@ -123,6 +123,24 @@ async function handleRequest(req, res) {
         sendJson(res, 200, { ok: true, service: "r90-backend", ts: new Date().toISOString() });
         return;
     }
+    // Admin: tool call logs (no auth — internal debug only)
+    if (method === "GET" && path === "/admin/tool-logs") {
+        try {
+            const { createServerClient } = await import("./db/client.js");
+            const adminClient = createServerClient();
+            const limit = Math.min(parseInt(query.get("limit") ?? "20", 10) || 20, 100);
+            const { data } = await adminClient
+                .from("tool_call_logs")
+                .select("id, user_id, tool_name, duration_ms, success, created_at")
+                .order("created_at", { ascending: false })
+                .limit(limit);
+            sendJson(res, 200, { logs: data ?? [] });
+        }
+        catch (err) {
+            sendError(res, 500, "Failed to fetch tool logs", "ADMIN_ERROR");
+        }
+        return;
+    }
     const route = routes.find(r => r.method === method && r.path === path);
     if (!route) {
         sendError(res, 404, `No route for ${method} ${path}`);

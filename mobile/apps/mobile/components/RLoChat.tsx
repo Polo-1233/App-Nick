@@ -74,7 +74,7 @@ function BlinkingCursor({ color }: { color: string }) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RLoChat({ visible, onClose }: Props) {
-  const { messages, isStreaming, sendMessage, clearHistory } = useChat();
+  const { messages, isStreaming, isThinking, sendMessage, clearHistory } = useChat();
   const { theme } = useTheme();
   const c = theme.colors;
   const [input, setInput] = useState("");

@@ -461,7 +461,7 @@ export default function HomeScreen() {
   const { phase, advance }    = useOnboardingPhase();
   const router                = useRouter();
   const insets                = useSafeAreaInsets();
-  const { messages, isStreaming, sendMessage, injectMessage } = useChat();
+  const { messages, isStreaming, isThinking, sendMessage, injectMessage } = useChat();
 
   const [input,          setInput]         = useState('');
   const [inputFocused,   setInputFocused]  = useState(false);
@@ -762,7 +762,18 @@ export default function HomeScreen() {
               keyboardShouldPersistTaps="handled"
             >
               {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
-              {isStreaming && messages[messages.length - 1]?.role === 'user' && <ThinkingDots />}
+              {isThinking && (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 4 }}>
+                  <View style={{ width: 26, height: 26, flexShrink: 0, alignSelf: 'flex-end' }}>
+                    <MascotImage emotion="Reflexion" style={{ width: 26, height: 26 }} />
+                  </View>
+                  <View style={{ backgroundColor: SURFACE2, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 11, paddingHorizontal: 15 }}>
+                    <Text style={{ fontSize: 13, color: MUTED }}>R-Lo is checking your data…</Text>
+                    <ThinkingDots />
+                  </View>
+                </View>
+              )}
+              {isStreaming && !isThinking && messages[messages.length - 1]?.role === 'user' && <ThinkingDots />}
             </ScrollView>
 
             {/* 5. Expandable panel — above toggle */}
