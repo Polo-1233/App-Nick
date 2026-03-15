@@ -24,6 +24,7 @@ import {
   type InsightsData,
   type DayTrend,
 } from '../../lib/insights';
+import { getMockInsightsData } from '../../lib/mock-insights-data';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette (same as app) ────────────────────────────────────────────────────
@@ -170,9 +171,23 @@ export default function InsightsScreen() {
   useEffect(() => {
     async function load() {
       const [p, h] = await Promise.all([loadProfile(), loadWeekHistory()]);
-      setProfile(p);
-      setHistory(h ?? []);
-      if (p && h && h.length > 0) setInsights(computeInsights(h, p));
+
+      // Use real data when available; fall back to mock for UI testing
+      const resolvedProfile = p;
+      const resolvedHistory = h && h.length > 0 ? h : null;
+
+      if (resolvedProfile && resolvedHistory) {
+        setProfile(resolvedProfile);
+        setHistory(resolvedHistory);
+        setInsights(computeInsights(resolvedHistory, resolvedProfile));
+      } else {
+        // ── Mock fallback — remove when backend data is available ──
+        const mock = getMockInsightsData();
+        setProfile(mock.profile);
+        setHistory(mock.history);
+        setInsights(computeInsights(mock.history, mock.profile));
+      }
+
       setLoading(false);
     }
     void load();
