@@ -178,6 +178,15 @@ const bbl = StyleSheet.create({
 });
 
 // ─── Immersive Header (38%) ────────────────────────────────────────────────────
+// ─── Header background images (rotate every 20s) ─────────────────────────────
+const HEADER_IMAGES = [
+  require('../../assets/rlo-sommet.png'),
+  require('../../assets/rlo-lac.png'),
+  require('../../assets/rlo-etoiles.png'),
+  require('../../assets/rlo-foret.png'),
+  require('../../assets/rlo-soleil.png'),
+];
+
 function ImmersiveHeader({
   name, score, topInset, bedtime, wake,
 }: {
@@ -186,6 +195,29 @@ function ImmersiveHeader({
 }) {
   const { line1, line2 } = coachGreeting(name, score);
 
+  // Image rotation every 20s
+  const [imgIndex, setImgIndex]   = useState(0);
+  const [nextIndex, setNextIndex] = useState(1);
+  const crossFade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const next = (imgIndex + 1) % HEADER_IMAGES.length;
+      setNextIndex(next);
+      crossFade.setValue(1);
+      Animated.timing(crossFade, {
+        toValue: 0,
+        duration: 1200,
+        useNativeDriver: true,
+      }).start(() => {
+        setImgIndex(next);
+        crossFade.setValue(1);
+      });
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [imgIndex, crossFade]);
+
+  // Breathing animation for mascot
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -199,9 +231,16 @@ function ImmersiveHeader({
 
   return (
     <View style={{ height: HEADER_H + topInset, overflow: 'hidden' }}>
+      {/* Next image (behind) */}
       <Image
-        source={require('../../assets/montagne.png')}
+        source={HEADER_IMAGES[nextIndex]}
         style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+      {/* Current image (fades out) */}
+      <Animated.Image
+        source={HEADER_IMAGES[imgIndex]}
+        style={[StyleSheet.absoluteFill, { opacity: crossFade }]}
         resizeMode="cover"
       />
       {/* Gradient — lighter at top, heavier at bottom */}
