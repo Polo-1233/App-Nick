@@ -230,13 +230,6 @@ function ImmersiveHeader({
         </View>
       )}
 
-      {/* R-Lo mascot — centered, breathing */}
-      <View style={ih.mascotWrap}>
-        <Animated.View style={{ transform: [{ scale: mascotScale }] }}>
-          <MascotImage emotion="encourageant" style={{ width: 72, height: 72 }} />
-        </Animated.View>
-      </View>
-
       {/* Greeting — bottom of image */}
       <View style={[ih.greeting, { paddingTop: topInset }]}>
         <Text style={ih.line1}>{line1}</Text>
