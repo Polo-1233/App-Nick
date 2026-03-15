@@ -1,30 +1,22 @@
 /**
- * HomeScreen — Coach-centric layout
+ * HomeScreen — Coach-first layout
  *
  * GUIDED MODE (phase = 'guided_chat'):
- *   Setup conversation embedded in Home: wake → goal → bedtime habit
+ *   Setup conversation: wake → goal → bedtime habit
  *
  * COACH MODE (phase = 'done'):
- *   1. Header image    — montagne.png (30%) + R-Lo + greeting
- *   2. Body            — Segmented (Suggestions | Modes) when no chat
- *                        Chat messages when conversation is active
- *   3. Tonight widget  — compact, pinned just above input
- *   4. Chat input      — sticky at bottom
+ *   1. Header (38%)    — mountain image + sleep plan label (top-left) + R-Lo + greeting
+ *   2. Chat area       — R-Lo bubble + conversation messages
+ *   3. Input bar       — sticky, always visible
+ *   4. Toggle          — [Suggestions] [Modes] compact pill buttons
+ *   5. Expandable panel— slides up when tapped, horizontal carousel inside
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Animated,
-  Dimensions,
-  Image,
+  View, Text, StyleSheet, Pressable, TextInput,
+  KeyboardAvoidingView, Platform, ScrollView,
+  Animated, Dimensions, Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }        from 'expo-router';
@@ -56,7 +48,8 @@ const MUTED   = '#6B7F99';
 const BORDER  = 'rgba(255,255,255,0.06)';
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const HEADER_H = Math.round(SCREEN_H * 0.30);
+const HEADER_H   = Math.round(SCREEN_H * 0.38);
+const PANEL_H    = 220; // expandable panel height
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMin(m: number): string {
@@ -66,55 +59,54 @@ function formatMin(m: number): string {
 
 function coachGreeting(name: string | null, score: number) {
   const h = new Date().getHours();
-  const time = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  const period = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
   return {
-    line1: name ? `Good ${time}, ${name}` : `Good ${time}`,
+    line1: name ? `Good ${period}, ${name}` : `Good ${period}`,
     line2: score >= 80 ? 'Your recovery looks strong today.'
          : score >= 65 ? 'Your rhythm is building nicely.'
          : score >= 50 ? 'Stay consistent — tonight matters.'
-         : "Your body needs rest. Let's plan tonight well.",
+         : "Let's plan tonight carefully.",
   };
 }
 
-// ─── Suggestions ─────────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
 const SUGGESTIONS = [
-  { icon: 'stats-chart-outline', color: '#4DA3FF', label: 'Analyze my week',        sub: 'See your recovery trend',        prompt: 'How am I doing this week?' },
-  { icon: 'moon-outline',        color: '#9B59B6', label: 'Prepare tonight',        sub: "Plan tonight's sleep window",    prompt: 'Help me plan my sleep for tonight' },
-  { icon: 'bed-outline',         color: '#F5A623', label: 'I slept late',           sub: 'Adjust for a late night',        prompt: 'I slept later than usual last night' },
-  { icon: 'refresh-outline',     color: '#3DDC97', label: 'Adjust my rhythm',       sub: 'Recalibrate your schedule',      prompt: 'Help me adjust my sleep rhythm' },
-  { icon: 'flash-outline',       color: '#F87171', label: 'Improve recovery',       sub: 'Faster bounce-back tips',        prompt: 'How can I improve my recovery?' },
+  { icon: 'stats-chart-outline', color: '#4DA3FF', label: 'Analyze my week',   sub: 'See your recovery trend',      prompt: 'How am I doing this week?' },
+  { icon: 'moon-outline',        color: '#9B59B6', label: 'Prepare tonight',   sub: "Plan tonight's sleep window",  prompt: 'Help me plan my sleep for tonight' },
+  { icon: 'bed-outline',         color: '#F5A623', label: 'I slept late',      sub: 'Adjust for a late night',      prompt: 'I slept later than usual last night' },
+  { icon: 'refresh-outline',     color: '#3DDC97', label: 'Adjust my rhythm',  sub: 'Recalibrate your schedule',    prompt: 'Help me adjust my sleep rhythm' },
+  { icon: 'flash-outline',       color: '#F87171', label: 'Improve recovery',  sub: 'Faster bounce-back tips',      prompt: 'How can I improve my recovery?' },
 ];
-
-// ─── Modes ────────────────────────────────────────────────────────────────────
 const MODES = [
-  { icon: 'airplane-outline', color: '#4DA3FF', label: 'Jet lag recovery',           sub: 'Reset after time zones',         prompt: 'Help me recover from jet lag' },
-  { icon: 'book-outline',     color: '#9B59B6', label: 'Learning mode',              sub: 'Sleep for memory & focus',       prompt: 'Optimize my sleep for learning and memory' },
-  { icon: 'globe-outline',    color: '#3DDC97', label: 'Travel recovery',            sub: 'Maintain rhythm while travelling',prompt: 'I am travelling soon, help me plan my sleep' },
-  { icon: 'home-outline',     color: '#F5A623', label: 'Sleep environment',          sub: 'Optimize your room setup',       prompt: 'How can I improve my sleep environment?' },
-  { icon: 'flash-outline',    color: '#F87171', label: 'Fatigue reset',              sub: 'Recover when exhausted',         prompt: 'I am exhausted, help me recover fast' },
-  { icon: 'moon-outline',     color: '#6B7F99', label: 'Night shift',                sub: 'Adjust for irregular hours',     prompt: 'I work night shifts, help me adjust my sleep' },
+  { icon: 'airplane-outline', color: '#4DA3FF', label: 'Jet lag recovery',  sub: 'Reset after time zones',         prompt: 'Help me recover from jet lag' },
+  { icon: 'book-outline',     color: '#9B59B6', label: 'Learning mode',     sub: 'Sleep for memory & focus',       prompt: 'Optimize my sleep for learning and memory' },
+  { icon: 'globe-outline',    color: '#3DDC97', label: 'Travel recovery',   sub: 'Maintain rhythm while travelling',prompt: 'I am travelling soon, help me plan my sleep' },
+  { icon: 'home-outline',     color: '#F5A623', label: 'Sleep environment', sub: 'Optimize your room setup',       prompt: 'How can I improve my sleep environment?' },
+  { icon: 'flash-outline',    color: '#F87171', label: 'Fatigue reset',     sub: 'Recover when exhausted',         prompt: 'I am exhausted, help me recover fast' },
+  { icon: 'moon-outline',     color: '#6B7F99', label: 'Night shift',       sub: 'Adjust for irregular hours',     prompt: 'I work night shifts, help me adjust my sleep' },
 ];
 
-// ─── Guided mode options ──────────────────────────────────────────────────────
-const WAKE_OPTS  = [
+// Guided
+const WAKE_OPTS = [
   { label: '06:00', value: 360 }, { label: '06:30', value: 390 },
   { label: '07:00', value: 420 }, { label: '07:30', value: 450 },
   { label: '08:00', value: 480 }, { label: 'Custom', value: -1 },
 ];
-const GOAL_OPTS  = [
-  { label: 'Better recovery',       value: 'recovery'    },
-  { label: 'More energy',           value: 'energy'      },
+const GOAL_OPTS = [
+  { label: 'Better recovery',       value: 'recovery' },
+  { label: 'More energy',           value: 'energy' },
   { label: 'Fix my sleep schedule', value: 'sleep_speed' },
   { label: 'Reduce fatigue',        value: 'consistency' },
 ];
 const BEDTIME_OPTS = [
   { label: 'Usually',   value: 'before_midnight' },
-  { label: 'Sometimes', value: 'sometimes'       },
-  { label: 'Rarely',    value: 'rarely'          },
+  { label: 'Sometimes', value: 'sometimes' },
+  { label: 'Rarely',    value: 'rarely' },
 ];
 type GuidedStep = 'wake' | 'goal' | 'bedtime' | 'done';
 
-// ─── Small components ─────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
 function BlinkingCursor() {
   const op = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -160,8 +152,8 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   return (
     <View style={[bbl.row, isUser && bbl.rowUser]}>
       {!isUser && (
-        <View style={{ width: 28, height: 28, flexShrink: 0, alignSelf: 'flex-end' }}>
-          <MascotImage emotion="rassurante" style={{ width: 28, height: 28 }} />
+        <View style={{ width: 26, height: 26, flexShrink: 0, alignSelf: 'flex-end' }}>
+          <MascotImage emotion="rassurante" style={{ width: 26, height: 26 }} />
         </View>
       )}
       <View style={[bbl.bubble, isUser && bbl.bubbleUser, isError && bbl.bubbleError]}>
@@ -174,36 +166,70 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 const bbl = StyleSheet.create({
-  row:        { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 6 },
-  rowUser:    { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-  bubble:     { backgroundColor: CARD, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 12, paddingHorizontal: 16, flexShrink: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: 3 },
-  bubbleUser: { backgroundColor: ACCENT, borderBottomLeftRadius: 18, borderBottomRightRadius: 4 },
-  bubbleError:{ backgroundColor: 'rgba(248,113,113,0.10)', borderWidth: 1, borderColor: '#F87171' },
-  text:       { fontSize: 15, lineHeight: 24, color: TEXT },
-  textUser:   { color: '#000' },
+  row:         { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 4 },
+  rowUser:     { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
+  bubble:      { backgroundColor: CARD, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 11, paddingHorizontal: 15, flexShrink: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: 3 },
+  bubbleUser:  { backgroundColor: ACCENT, borderBottomLeftRadius: 18, borderBottomRightRadius: 4 },
+  bubbleError: { backgroundColor: 'rgba(248,113,113,0.10)', borderWidth: 1, borderColor: '#F87171' },
+  text:        { fontSize: 15, lineHeight: 23, color: TEXT },
+  textUser:    { color: '#000' },
 });
 
-// ─── 1. Immersive header ──────────────────────────────────────────────────────
-function ImmersiveHeader({ name, score, topInset }: { name: string | null; score: number; topInset: number }) {
+// ─── Immersive Header (38%) ────────────────────────────────────────────────────
+function ImmersiveHeader({
+  name, score, topInset, bedtime, wake,
+}: {
+  name: string | null; score: number; topInset: number;
+  bedtime: number | null; wake: number | null;
+}) {
   const { line1, line2 } = coachGreeting(name, score);
+
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: 3400, useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: 3400, useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 1, duration: 3600, useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: 3600, useNativeDriver: true }),
     ])).start();
   }, [breathe]);
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.04] });
+  const mascotScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.05] });
+
+  const showPlan = bedtime !== null || wake !== null;
 
   return (
-    <View style={[ih.container, { height: HEADER_H + topInset }]}>
-      <Image source={require('../../assets/montagne.png')} style={ih.image} resizeMode="cover" />
+    <View style={{ height: HEADER_H + topInset, overflow: 'hidden' }}>
+      <Image
+        source={require('../../assets/montagne.png')}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+      {/* Gradient — lighter at top, heavier at bottom */}
       <LinearGradient
-        colors={['rgba(11,18,32,0.15)', 'rgba(11,18,32,0.50)', 'rgba(11,18,32,0.90)']}
-        locations={[0, 0.5, 1]}
+        colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.45)', 'rgba(11,18,32,0.92)']}
+        locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
-      <View style={[ih.content, { paddingTop: topInset + 12 }]}>
+
+      {/* Sleep plan — top-left status label */}
+      {showPlan && (
+        <View style={[ih.planLabel, { top: topInset + 14 }]}>
+          <Text style={ih.planTitle}>Tonight</Text>
+          <Text style={ih.planTimes}>
+            {bedtime !== null ? formatMin(bedtime) : '—'}
+            {'  →  '}
+            {wake !== null ? formatMin(wake) : '—'}
+          </Text>
+        </View>
+      )}
+
+      {/* R-Lo mascot — centered, breathing */}
+      <View style={ih.mascotWrap}>
+        <Animated.View style={{ transform: [{ scale: mascotScale }] }}>
+          <MascotImage emotion="encourageant" style={{ width: 72, height: 72 }} />
+        </Animated.View>
+      </View>
+
+      {/* Greeting — bottom of image */}
+      <View style={[ih.greeting, { paddingTop: topInset }]}>
         <Text style={ih.line1}>{line1}</Text>
         <Text style={ih.line2}>{line2}</Text>
       </View>
@@ -211,112 +237,170 @@ function ImmersiveHeader({ name, score, topInset }: { name: string | null; score
   );
 }
 const ih = StyleSheet.create({
-  container: { width: '100%', overflow: 'hidden' },
-  image:     { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  content:   { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 18 },
-  line1:     { fontSize: 24, fontWeight: '800', color: '#FFF', lineHeight: 30, marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  line2:     { fontSize: 14, color: 'rgba(255,255,255,0.80)', lineHeight: 20, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  planLabel: {
+    position:          'absolute',
+    left:              16,
+    backgroundColor:   'rgba(11,18,32,0.55)',
+    borderRadius:      10,
+    paddingHorizontal: 12,
+    paddingVertical:   7,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.10)',
+  },
+  planTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
+  planTimes: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  mascotWrap:{
+    position:       'absolute',
+    left: 0, right: 0,
+    top:  0, bottom: 0,
+    alignItems:     'center',
+    justifyContent: 'center',
+    marginBottom:   28,
+  },
+  greeting: {
+    position:          'absolute',
+    bottom:            18,
+    left:              20,
+    right:             20,
+  },
+  line1: { fontSize: 22, fontWeight: '800', color: '#FFF', lineHeight: 28, marginBottom: 3, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  line2: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 19, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 });
 
-// ─── 2. Segmented control ─────────────────────────────────────────────────────
-function SegmentedControl({ active, onChange }: { active: 'suggestions' | 'modes'; onChange: (v: 'suggestions' | 'modes') => void }) {
-  return (
-    <View style={seg.wrap}>
-      {(['suggestions', 'modes'] as const).map(tab => (
-        <Pressable
-          key={tab}
-          style={[seg.tab, active === tab && seg.tabActive]}
-          onPress={() => onChange(tab)}
-        >
-          <Text style={[seg.label, active === tab && seg.labelActive]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-const seg = StyleSheet.create({
-  wrap:        { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, marginBottom: 4, backgroundColor: CARD, borderRadius: 14, padding: 4 },
-  tab:         { flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: 'center' },
-  tabActive:   { backgroundColor: SURFACE2 },
-  label:       { fontSize: 14, fontWeight: '600', color: MUTED },
-  labelActive: { color: TEXT },
-});
-
-// ─── 3 & 4. Shared horizontal carousel ───────────────────────────────────────
+// ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
 type CarouselItem = { icon: string; color: string; label: string; sub: string; prompt: string };
 
-function CoachCardCarousel({ items, onPress, disabled }: {
-  items:    CarouselItem[];
-  onPress:  (p: string) => void;
-  disabled?: boolean;
+function ExpandablePanel({
+  visible, activeTab, onChangeTab, onPress, disabled,
+}: {
+  visible:     boolean;
+  activeTab:   'suggestions' | 'modes';
+  onChangeTab: (t: 'suggestions' | 'modes') => void;
+  onPress:     (p: string) => void;
+  disabled?:   boolean;
 }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(anim, {
+      toValue:        visible ? 1 : 0,
+      useNativeDriver: false,
+      bounciness:     4,
+      speed:          16,
+    }).start();
+  }, [visible, anim]);
+
+  const panelHeight = anim.interpolate({ inputRange: [0, 1], outputRange: [0, PANEL_H] });
+  const opacity     = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] });
+  const items: CarouselItem[] = activeTab === 'suggestions' ? SUGGESTIONS : MODES;
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={cc.scroll}
-      style={cc.scroller}
-      decelerationRate="fast"
-      snapToInterval={154}   // card width + gap
-      snapToAlignment="start"
-    >
-      {items.map(({ icon, color, label, sub, prompt }) => (
-        <Pressable
-          key={label}
-          style={({ pressed }) => [cc.card, (pressed || disabled) && { opacity: 0.7 }]}
-          onPress={() => onPress(prompt)}
-          disabled={disabled}
-        >
-          <View style={[cc.iconCircle, { backgroundColor: `${color}15`, borderColor: `${color}28` }]}>
-            <Ionicons name={icon as any} size={22} color={color} />
-          </View>
-          <Text style={cc.title}>{label}</Text>
-          <Text style={cc.sub} numberOfLines={2}>{sub}</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+    <Animated.View style={[panel.wrap, { height: panelHeight, opacity }]}>
+      {/* Inner tab row */}
+      <View style={panel.tabRow}>
+        {(['suggestions', 'modes'] as const).map(tab => (
+          <Pressable
+            key={tab}
+            style={[panel.tab, activeTab === tab && panel.tabActive]}
+            onPress={() => onChangeTab(tab)}
+          >
+            <Text style={[panel.tabLabel, activeTab === tab && panel.tabLabelActive]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Cards carousel */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={panel.scroll}
+        decelerationRate="fast"
+        snapToInterval={150}
+        snapToAlignment="start"
+      >
+        {items.map(item => (
+          <Pressable
+            key={item.label}
+            style={({ pressed }) => [panel.card, (pressed || disabled) && { opacity: 0.7 }]}
+            onPress={() => onPress(item.prompt)}
+            disabled={disabled}
+          >
+            <View style={[panel.icon, { backgroundColor: `${item.color}15`, borderColor: `${item.color}28` }]}>
+              <Ionicons name={item.icon as any} size={20} color={item.color} />
+            </View>
+            <Text style={panel.cardTitle}>{item.label}</Text>
+            <Text style={panel.cardSub} numberOfLines={2}>{item.sub}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </Animated.View>
   );
 }
-const cc = StyleSheet.create({
-  scroller: { marginTop: 12 },
-  scroll:   { paddingHorizontal: 16, paddingBottom: 4, gap: 10 },
-  card:     { width: 144, backgroundColor: CARD, borderRadius: 18, padding: 18, gap: 10, alignItems: 'flex-start' },
-  iconCircle:{ width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  title:    { fontSize: 14, fontWeight: '700', color: TEXT, lineHeight: 20 },
-  sub:      { fontSize: 12, color: MUTED, lineHeight: 17 },
+const panel = StyleSheet.create({
+  wrap:         { backgroundColor: CARD, borderTopWidth: 1, borderTopColor: BORDER, overflow: 'hidden' },
+  tabRow:       { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 8 },
+  tab:          { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: SURFACE2 },
+  tabActive:    { backgroundColor: ACCENT },
+  tabLabel:     { fontSize: 13, fontWeight: '600', color: MUTED },
+  tabLabelActive:{ color: '#000' },
+  scroll:       { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
+  card:         { width: 140, backgroundColor: SURFACE2, borderRadius: 16, padding: 14, gap: 8, alignItems: 'flex-start' },
+  icon:         { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cardTitle:    { fontSize: 13, fontWeight: '700', color: TEXT, lineHeight: 18 },
+  cardSub:      { fontSize: 11, color: MUTED, lineHeight: 15 },
 });
 
-// ─── 5. Tonight widget (pinned above input) ───────────────────────────────────
-function TonightWidget({ bedtime, wake, cycles }: { bedtime: number | null; wake: number | null; cycles?: number }) {
-  if (bedtime === null && wake === null) return null;
+// ─── Toggle buttons (below input) ─────────────────────────────────────────────
+function ToggleBar({ panelOpen, activeTab, onToggle, onSwitchTab }: {
+  panelOpen:    boolean;
+  activeTab:    'suggestions' | 'modes';
+  onToggle:     () => void;
+  onSwitchTab:  (t: 'suggestions' | 'modes') => void;
+}) {
   return (
-    <View style={tw.bar}>
-      <Text style={tw.label}>Tonight</Text>
-      <View style={tw.times}>
-        <Ionicons name="moon-outline" size={13} color={ACCENT} />
-        <Text style={tw.time}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
-        <Text style={tw.arrow}>→</Text>
-        <Ionicons name="sunny-outline" size={13} color={WARNING} />
-        <Text style={tw.time}>{wake !== null ? formatMin(wake) : '—'}</Text>
-      </View>
-      {cycles !== undefined && cycles > 0 && (
-        <Text style={tw.cycles}>{cycles} cycles</Text>
-      )}
+    <View style={tog.row}>
+      {(['suggestions', 'modes'] as const).map(tab => {
+        const isActive = panelOpen && activeTab === tab;
+        return (
+          <Pressable
+            key={tab}
+            style={[tog.pill, isActive && tog.pillActive]}
+            onPress={() => {
+              if (!panelOpen) { onToggle(); onSwitchTab(tab); }
+              else if (activeTab !== tab) { onSwitchTab(tab); }
+              else { onToggle(); }
+            }}
+          >
+            <Ionicons
+              name={tab === 'suggestions' ? 'bulb-outline' : 'options-outline'}
+              size={13}
+              color={isActive ? '#000' : MUTED}
+            />
+            <Text style={[tog.label, isActive && tog.labelActive]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </Text>
+            <Ionicons
+              name={isActive ? 'chevron-down' : 'chevron-up'}
+              size={12}
+              color={isActive ? '#000' : MUTED}
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
-const tw = StyleSheet.create({
-  bar:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG },
-  label:  { fontSize: 12, fontWeight: '700', color: MUTED },
-  times:  { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 },
-  time:   { fontSize: 14, fontWeight: '700', color: TEXT },
-  arrow:  { fontSize: 13, color: MUTED, marginHorizontal: 1 },
-  cycles: { fontSize: 12, color: MUTED, fontWeight: '500' },
+const tog = StyleSheet.create({
+  row:         { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  pill:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: SURFACE2, borderWidth: 1, borderColor: BORDER },
+  pillActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
+  label:       { fontSize: 13, fontWeight: '600', color: MUTED },
+  labelActive: { color: '#000' },
 });
 
-// ─── Guided OptionCard ────────────────────────────────────────────────────────
+// ─── Guided sub-components ────────────────────────────────────────────────────
 function OptionCard({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -335,13 +419,12 @@ const oc = StyleSheet.create({
   labelSel: { color: '#000' },
 });
 
-// ─── Guided SetupQuestion ─────────────────────────────────────────────────────
 function SetupQuestion({ question, options, onSelect, selectedValue, customChild }: {
-  question: string;
-  options: { label: string; value: string | number }[];
-  onSelect: (l: string, v: string | number) => void;
+  question:      string;
+  options:       { label: string; value: string | number }[];
+  onSelect:      (l: string, v: string | number) => void;
   selectedValue?: string | number;
-  customChild?: React.ReactNode;
+  customChild?:  React.ReactNode;
 }) {
   return (
     <View style={sq.wrap}>
@@ -378,12 +461,13 @@ export default function HomeScreen() {
   const insets                = useSafeAreaInsets();
   const { messages, isStreaming, sendMessage, injectMessage } = useChat();
 
-  const [input,         setInput]        = useState('');
-  const [inputFocused,  setInputFocused] = useState(false);
-  const [activeTab,     setActiveTab]    = useState<'suggestions' | 'modes'>('suggestions');
-  const [profile,       setProfile]      = useState<UserProfile | null>(null);
-  const [energyScore,   setEnergyScore]  = useState(0);
-  const [userName,      setUserName]     = useState<string | null>(null);
+  const [input,          setInput]         = useState('');
+  const [inputFocused,   setInputFocused]  = useState(false);
+  const [activeTab,      setActiveTab]     = useState<'suggestions' | 'modes'>('suggestions');
+  const [panelOpen,      setPanelOpen]     = useState(false);
+  const [profile,        setProfile]       = useState<UserProfile | null>(null);
+  const [energyScore,    setEnergyScore]   = useState(72);
+  const [userName,       setUserName]      = useState<string | null>(null);
 
   // Guided
   const [guidedStep,      setGuidedStep]      = useState<GuidedStep>('wake');
@@ -399,7 +483,7 @@ export default function HomeScreen() {
   const hasRedirected   = useRef(false);
   const hasGreeted      = useRef(false);
 
-  // ── Load ─────────────────────────────────────────────────────────────────
+  // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       const [p, h, onboarding] = await Promise.all([loadProfile(), loadWeekHistory(), loadOnboardingData()]);
@@ -427,19 +511,23 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [messages]);
 
-  // Greeting (coach mode)
+  // Greeting
   useEffect(() => {
     if (phase !== 'done' || hasGreeted.current) return;
-    const t = setTimeout(() => { hasGreeted.current = true; injectMessage('How can I help you today?'); }, 500);
+    const t = setTimeout(() => { hasGreeted.current = true; injectMessage('How can I help you today?'); }, 400);
     return () => clearTimeout(t);
   }, [phase, injectMessage]);
 
-  // ── Guided handlers ──────────────────────────────────────────────────────
-  function handleWakePick(label: string, value: number | string) {
+  // Close panel when keyboard opens
+  useEffect(() => {
+    if (inputFocused && panelOpen) setPanelOpen(false);
+  }, [inputFocused, panelOpen]);
+
+  // ── Guided handlers ───────────────────────────────────────────────────────
+  function handleWakePick(_l: string, value: number | string) {
     if (value === -1) { setShowCustomWake(true); setSelectedWake(-1); return; }
     setShowCustomWake(false); setSelectedWake(value as number);
     setTimeout(() => setGuidedStep('goal'), 420);
-    scrollRef.current?.scrollToEnd({ animated: true });
   }
   function confirmCustomWake() {
     const [hStr, mStr] = customWake.split(':');
@@ -451,49 +539,52 @@ export default function HomeScreen() {
   function handleGoalPick(_l: string, value: number | string) {
     setSelectedGoal(value as string);
     setTimeout(() => setGuidedStep('bedtime'), 420);
-    scrollRef.current?.scrollToEnd({ animated: true });
   }
   async function handleBedtimePick(_l: string, value: number | string) {
     setSelectedBedtime(value as string); setIsFinishing(true);
-    scrollRef.current?.scrollToEnd({ animated: true });
     await saveOnboardingData({ firstName: userName ?? '', wakeTimeMinutes: selectedWake ?? 450, priority: selectedGoal ?? 'recovery', constraint: value as string });
     setTimeout(() => advance('plan'), 1000);
   }
 
-  // ── Coach send ────────────────────────────────────────────────────────────
+  // ── Send ──────────────────────────────────────────────────────────────────
   function send(text?: string) {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
+    setPanelOpen(false);
     void sendMessage(txt);
   }
 
-  // ── Derived ──────────────────────────────────────────────────────────────
-  const isGuidedMode  = phase === 'guided_chat';
-  const canSend       = input.trim().length > 0 && !isStreaming;
-  const bedtime       = dayPlan?.cycleWindow?.bedtime  ?? null;
-  const wakeTime      = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
-  const cycles        = profile?.idealCyclesPerNight;
-  // Show segmented when chat has no user message yet
-  const hasUserChat   = messages.some(m => m.role === 'user');
-  const showSegmented = !hasUserChat && !isStreaming;
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const isGuidedMode = phase === 'guided_chat';
+  const canSend      = input.trim().length > 0 && !isStreaming;
+  const bedtime      = dayPlan?.cycleWindow?.bedtime  ?? null;
+  const wakeTime     = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={sc.root}>
-      <KeyboardAvoidingView style={sc.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={sc.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
 
-        {/* ═══ GUIDED MODE ═══════════════════════════════════════════════════ */}
+        {/* ══ GUIDED MODE ══════════════════════════════════════════════════ */}
         {isGuidedMode ? (
           <SafeAreaView style={sc.flex} edges={['top', 'bottom']}>
-            <ScrollView ref={scrollRef} style={sc.flex} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {/* Intro */}
+            <ScrollView
+              ref={scrollRef}
+              style={sc.flex}
+              contentContainerStyle={{ paddingBottom: 24 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               <View style={sc.introSection}>
                 <MascotImage emotion="encourageant" style={{ width: 68, height: 68, marginBottom: 16 }} />
                 <Text style={sc.introTitle}>Hi! I'm R-Lo.</Text>
                 <Text style={sc.introSub}>{"I'm your personal recovery coach.\nBefore we start, I need a few things\nto build your sleep rhythm."}</Text>
               </View>
-              {/* Step 1 */}
               <SetupQuestion question="What time do you usually wake up?" options={WAKE_OPTS} onSelect={handleWakePick} selectedValue={selectedWake ?? undefined}
                 customChild={showCustomWake ? (
                   <View style={sc.customRow}>
@@ -501,11 +592,9 @@ export default function HomeScreen() {
                     <Pressable style={sc.customConfirm} onPress={confirmCustomWake}><Ionicons name="checkmark" size={18} color="#000" /></Pressable>
                   </View>
                 ) : undefined} />
-              {/* Step 2 */}
               {(guidedStep === 'goal' || guidedStep === 'bedtime' || guidedStep === 'done') && (
                 <SetupQuestion question="What is your main goal?" options={GOAL_OPTS} onSelect={handleGoalPick} selectedValue={selectedGoal ?? undefined} />
               )}
-              {/* Step 3 */}
               {(guidedStep === 'bedtime' || guidedStep === 'done') && (
                 <SetupQuestion question="Do you usually go to sleep before midnight?" options={BEDTIME_OPTS} onSelect={handleBedtimePick} selectedValue={selectedBedtime ?? undefined} />
               )}
@@ -519,61 +608,79 @@ export default function HomeScreen() {
           </SafeAreaView>
 
         ) : (
-        /* ═══ COACH MODE ════════════════════════════════════════════════════ */
-          <>
-            <ScrollView ref={scrollRef} style={sc.flex} contentContainerStyle={sc.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        /* ══ COACH MODE ══════════════════════════════════════════════════════ */
+          <View style={sc.flex}>
 
-              {/* 1. Immersive header */}
-              <ImmersiveHeader name={userName} score={energyScore} topInset={insets.top} />
+            {/* 1. Header image */}
+            <ImmersiveHeader
+              name={userName}
+              score={energyScore}
+              topInset={insets.top}
+              bedtime={bedtime}
+              wake={wakeTime}
+            />
 
-              {/* 2a. Segmented control + tabs (before chat) */}
-              {showSegmented && (
-                <>
-                  <SegmentedControl active={activeTab} onChange={setActiveTab} />
-                  <CoachCardCarousel
-                    items={activeTab === 'suggestions' ? SUGGESTIONS : MODES}
-                    onPress={send}
-                    disabled={isStreaming}
-                  />
-                </>
-              )}
-
-              {/* 2b. Chat messages (after first user message) */}
-              {!showSegmented && (
-                <View style={sc.chatArea}>
-                  {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
-                  {isStreaming && <ThinkingDots />}
-                </View>
-              )}
-
-              {/* Initial R-Lo bubble always visible */}
-              {showSegmented && messages.length > 0 && (
-                <View style={[sc.chatArea, { marginTop: 16 }]}>
-                  {messages.slice(0, 1).map(m => <ChatBubble key={m.id} msg={m} />)}
-                </View>
-              )}
-
-              <View style={{ height: 16 }} />
+            {/* 2. Chat area */}
+            <ScrollView
+              ref={scrollRef}
+              style={sc.flex}
+              contentContainerStyle={sc.chatContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
+              {isStreaming && messages[messages.length - 1]?.role === 'user' && <ThinkingDots />}
             </ScrollView>
 
-            {/* 3. Tonight widget — pinned above input */}
-            <TonightWidget bedtime={bedtime} wake={wakeTime} cycles={cycles} />
+            {/* 5. Expandable panel — above toggle */}
+            <ExpandablePanel
+              visible={panelOpen}
+              activeTab={activeTab}
+              onChangeTab={setActiveTab}
+              onPress={send}
+              disabled={isStreaming}
+            />
 
-            {/* 4. Chat input */}
-            <View style={sc.composer}>
+            {/* 4. Toggle bar */}
+            <ToggleBar
+              panelOpen={panelOpen}
+              activeTab={activeTab}
+              onToggle={() => setPanelOpen(v => !v)}
+              onSwitchTab={setActiveTab}
+            />
+
+            {/* 3. Input bar */}
+            <View style={[sc.composer, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
               <View style={sc.inputRow}>
                 <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
-                  <TextInput style={sc.input} placeholder="Message R-Lo…" placeholderTextColor={MUTED} value={input} onChangeText={setInput} onSubmitEditing={() => send()} onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)} returnKeyType="send" multiline maxLength={500} editable={!isStreaming} />
+                  <TextInput
+                    style={sc.input}
+                    placeholder="Message R-Lo…"
+                    placeholderTextColor={MUTED}
+                    value={input}
+                    onChangeText={setInput}
+                    onSubmitEditing={() => send()}
+                    onFocus={() => setInputFocused(true)}
+                    onBlur={() => setInputFocused(false)}
+                    returnKeyType="send"
+                    multiline
+                    maxLength={500}
+                    editable={!isStreaming}
+                  />
                 </View>
-                <Pressable style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]} onPress={() => send()} disabled={!canSend}>
+                <Pressable
+                  style={[sc.sendBtn, { backgroundColor: canSend ? ACCENT : SURFACE2 }]}
+                  onPress={() => send()}
+                  disabled={!canSend}
+                >
                   <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
                 </Pressable>
               </View>
-              <View style={{ height: insets.bottom }} />
+              <View style={{ height: insets.bottom || 8 }} />
             </View>
-          </>
-        )}
 
+          </View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -581,17 +688,15 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const sc = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: BG },
-  flex:  { flex: 1 },
-  scroll:{ paddingBottom: 8 },
+  root:        { flex: 1, backgroundColor: BG },
+  flex:        { flex: 1 },
+  chatContent: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
 
-  chatArea: { paddingHorizontal: 16, paddingTop: 8, gap: 6 },
-
-  composer:  { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG },
-  inputRow:  { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
-  inputWrap: { flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
-  input:     { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
-  sendBtn:   { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  composer:    { backgroundColor: BG },
+  inputRow:    { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
+  inputWrap:   { flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
+  input:       { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
+  sendBtn:     { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   // Guided
   introSection:  { alignItems: 'center', paddingTop: 40, paddingBottom: 32, paddingHorizontal: 24 },
