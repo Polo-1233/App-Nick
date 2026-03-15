@@ -298,21 +298,6 @@ function ExpandablePanel({
 
   return (
     <Animated.View style={[panel.wrap, { height: panelHeight, opacity }]}>
-      {/* Inner tab row */}
-      <View style={panel.tabRow}>
-        {(['suggestions', 'modes'] as const).map(tab => (
-          <Pressable
-            key={tab}
-            style={[panel.tab, activeTab === tab && panel.tabActive]}
-            onPress={() => onChangeTab(tab)}
-          >
-            <Text style={[panel.tabLabel, activeTab === tab && panel.tabLabelActive]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
       {/* Cards carousel */}
       <ScrollView
         horizontal
