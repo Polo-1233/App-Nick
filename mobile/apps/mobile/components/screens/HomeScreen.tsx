@@ -33,6 +33,7 @@ import {
 } from '../../lib/storage';
 import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }             from '../ui/MascotImage';
+import { Video, ResizeMode }        from 'expo-av';
 import { computeInsights }         from '../../lib/insights';
 import { getMockInsightsData }     from '../../lib/mock-insights-data';
 import type { UserProfile }        from '@r90/types';
@@ -178,15 +179,6 @@ const bbl = StyleSheet.create({
 });
 
 // ─── Immersive Header (38%) ────────────────────────────────────────────────────
-// ─── Header background images (rotate every 20s) ─────────────────────────────
-const HEADER_IMAGES = [
-  require('../../assets/rlo-sommet.png'),
-  require('../../assets/rlo-lac.png'),
-  require('../../assets/rlo-etoiles.png'),
-  require('../../assets/rlo-foret.png'),
-  require('../../assets/rlo-soleil.png'),
-];
-
 function ImmersiveHeader({
   name, score, topInset, bedtime, wake,
 }: {
@@ -194,28 +186,6 @@ function ImmersiveHeader({
   bedtime: number | null; wake: number | null;
 }) {
   const { line1, line2 } = coachGreeting(name, score);
-
-  // Image rotation every 20s
-  const [imgIndex, setImgIndex]   = useState(0);
-  const [nextIndex, setNextIndex] = useState(1);
-  const crossFade = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const next = (imgIndex + 1) % HEADER_IMAGES.length;
-      setNextIndex(next);
-      crossFade.setValue(1);
-      Animated.timing(crossFade, {
-        toValue: 0,
-        duration: 1200,
-        useNativeDriver: true,
-      }).start(() => {
-        setImgIndex(next);
-        crossFade.setValue(1);
-      });
-    }, 20000);
-    return () => clearInterval(interval);
-  }, [imgIndex, crossFade]);
 
   // Breathing animation for mascot
   const breathe = useRef(new Animated.Value(0)).current;
@@ -231,17 +201,15 @@ function ImmersiveHeader({
 
   return (
     <View style={{ height: HEADER_H + topInset, overflow: 'hidden' }}>
-      {/* Next image (behind) */}
-      <Image
-        source={HEADER_IMAGES[nextIndex]}
+      {/* Background video — looping, muted, autoplay */}
+      <Video
+        source={require('../../assets/header-animation.mp4')}
         style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      {/* Current image (fades out) */}
-      <Animated.Image
-        source={HEADER_IMAGES[imgIndex]}
-        style={[StyleSheet.absoluteFill, { opacity: crossFade }]}
-        resizeMode="cover"
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+        useNativeControls={false}
       />
       {/* Gradient — lighter at top, heavier at bottom */}
       <LinearGradient
