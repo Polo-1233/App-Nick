@@ -24,11 +24,22 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_user_session
 -- RLS: users can only read their own messages (if RLS is enabled)
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "chat_messages_own"
-  ON chat_messages
-  FOR ALL
-  USING (
-    user_id = (
-      SELECT id FROM users WHERE auth_user_id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'chat_messages' AND policyname = 'chat_messages_own'
+  ) THEN
+    EXECUTE $policy$
+      CREATE POLICY "chat_messages_own"
+        ON chat_messages
+        FOR ALL
+        USING (
+          user_id = (
+            SELECT id FROM users WHERE auth_user_id = auth.uid()
+          )
+        )
+    $policy$;
+  END IF;
+END;
+$$;
