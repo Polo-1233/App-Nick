@@ -18,10 +18,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { MascotImage } from '../components/ui/MascotImage';
 import { Button } from '../components/ui/Button';
+import { PERMISSION_KEYS } from '../lib/storage';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -57,7 +59,9 @@ export default function LoginScreen() {
       if (mode === 'signup') {
         router.replace('/onboarding');
       } else {
-        router.replace('/(tabs)');
+        // First login → show permission flow; subsequent logins → go straight to Home
+        const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
+        router.replace(shown ? '/(tabs)' : '/permissions');
       }
     } finally {
       setLoading(false);
