@@ -418,6 +418,7 @@ export default function HomeScreen() {
   const [inputFocused,   setInputFocused]  = useState(false);
   const [activeTab,      setActiveTab]     = useState<'suggestions' | 'modes'>('suggestions');
   const [panelOpen,      setPanelOpen]     = useState(false);
+  const [chatExpanded,   setChatExpanded]  = useState(false);
   const [profile,        setProfile]       = useState<UserProfile | null>(null);
   const [energyScore,    setEnergyScore]   = useState(72);
   const [userName,       setUserName]      = useState<string | null>(null);
@@ -509,6 +510,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!messages.length) return;
+    setChatExpanded(false); // collapse when new message arrives
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(t);
   }, [messages]);
@@ -728,8 +730,39 @@ export default function HomeScreen() {
               contentContainerStyle={sc.chatContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              scrollEnabled={chatExpanded}
+              onScrollEndDrag={e => {
+                // auto-collapse when scrolled back to bottom
+                const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 20) {
+                  setChatExpanded(false);
+                }
+              }}
             >
-              {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
+              {/* Fade overlay tap zone (collapsed mode) */}
+              {!chatExpanded && messages.length > 2 && (
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => setChatExpanded(true)}
+                />
+              )}
+
+              {messages.map((m, i) => {
+                const fromEnd = messages.length - 1 - i;
+                let opacity = 1;
+                if (!chatExpanded) {
+                  if (fromEnd <= 1)      opacity = 1.0;
+                  else if (fromEnd === 2) opacity = 0.45;
+                  else if (fromEnd === 3) opacity = 0.20;
+                  else                   opacity = 0.07;
+                }
+                return (
+                  <Animated.View key={m.id} style={{ opacity }}>
+                    <ChatBubble msg={m} />
+                  </Animated.View>
+                );
+              })}
+
               {isThinking && (
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '88%', marginBottom: 4 }}>
                   <View style={{ width: 26, height: 26, flexShrink: 0, alignSelf: 'flex-end' }}>
@@ -743,6 +776,20 @@ export default function HomeScreen() {
               )}
               {isStreaming && !isThinking && messages[messages.length - 1]?.role === 'user' && <ThinkingDots />}
             </ScrollView>
+
+            {/* Expand / collapse indicator */}
+            {messages.length > 2 && (
+              <Pressable
+                style={sc.chatToggle}
+                onPress={() => setChatExpanded(v => !v)}
+              >
+                <Ionicons
+                  name={chatExpanded ? 'chevron-down' : 'chevron-up'}
+                  size={14}
+                  color="rgba(255,255,255,0.4)"
+                />
+              </Pressable>
+            )}
 
             {/* 5. Expandable panel — above toggle */}
             <ExpandablePanel
@@ -804,6 +851,7 @@ const sc = StyleSheet.create({
   coachRoot:   { flex: 1 },
   flex:        { flex: 1 },
   chatContent: { flexGrow: 1, justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
+  chatToggle:  { alignSelf: 'center', paddingVertical: 4, paddingHorizontal: 16, marginBottom: 2 },
 
   composer:    { backgroundColor: 'transparent' },
   inputRow:    { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
