@@ -1,0 +1,97 @@
+{
+  "identifier" : "R90NavigatorStoreKit",
+  "nonConsumableProducts" : [],
+  "nonRenewingSubscriptions" : [],
+  "consumableProducts" : [],
+  "autoRenewableSubscriptions" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "r90_monthly_001",
+      "introductoryOffer" : {
+        "displayPrice" : "0.00",
+        "offerID" : null,
+        "paymentMode" : "FREE_TRIAL",
+        "periodCount" : 1,
+        "periodUnit" : "WEEK",
+        "type" : "INTRODUCTORY_OFFER"
+      },
+      "localizations" : [
+        {
+          "description" : "Unlock full access to R90 Navigator — personalized sleep coaching, AI recommendations, and advanced recovery tracking.",
+          "displayName" : "R90 Monthly Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.metalab.r90navigator.monthly",
+      "recurringSubscriptionPeriod" : "P1M",
+      "referenceName" : "Monthly Premium",
+      "subscriptionGroupID" : "r90_premium_group",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "displayPrice" : "79.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "r90_yearly_001",
+      "introductoryOffer" : {
+        "displayPrice" : "0.00",
+        "offerID" : null,
+        "paymentMode" : "FREE_TRIAL",
+        "periodCount" : 1,
+        "periodUnit" : "WEEK",
+        "type" : "INTRODUCTORY_OFFER"
+      },
+      "localizations" : [
+        {
+          "description" : "Full year of R90 Navigator Premium — personalized sleep coaching, AI recommendations, and advanced recovery tracking. Best value.",
+          "displayName" : "R90 Yearly Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.metalab.r90navigator.yearly",
+      "recurringSubscriptionPeriod" : "P1Y",
+      "referenceName" : "Yearly Premium",
+      "subscriptionGroupID" : "r90_premium_group",
+      "type" : "RecurringSubscription"
+    }
+  ],
+  "subscriptionGroups" : [
+    {
+      "id" : "r90_premium_group",
+      "localizations" : [
+        {
+          "customAppName" : "R90 Navigator",
+          "customAppSubtitle" : "Sleep performance coach",
+          "displayName" : "R90 Premium",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "R90 Premium"
+    }
+  ],
+  "settings" : {
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      }
+    ]
+  },
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}
