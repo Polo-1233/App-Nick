@@ -661,10 +661,10 @@ export default function HomeScreen() {
               isMuted
               useNativeControls={false}
             />
-            {/* Gradient overlay — keeps text readable */}
+            {/* Gradient overlay — subtle, keeps text readable without killing the video */}
             <LinearGradient
-              colors={['rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)', 'rgba(11,18,32,0.88)']}
-              locations={[0, 0.4, 1]}
+              colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
+              locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
             />
 
