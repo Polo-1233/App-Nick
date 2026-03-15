@@ -6,10 +6,12 @@
  *   - The LLM only reformulates engine outputs into natural coaching language.
  *   - The LLM cannot override R90 logic, change times, or invent methodology.
  *
- * Streaming:
- *   - Uses OpenAI GPT-4o with streaming enabled.
- *   - Yields SSE chunks to the HTTP response as they arrive.
- *   - The app accumulates chunks and renders progressively.
+ * Fixes applied (2026-03-15):
+ *   1. Persona renamed "Airloop" → "R-Lo" throughout
+ *   2. Retry logic: up to 2 retries with exponential backoff
+ *   3. Conversation persistence via chat_messages table
+ *   4. Structured context injection (sections instead of free text)
+ *   5. Light input moderation/validation
  */
 import type { ServerResponse } from "node:http";
 import type { AppClient } from "../db/client.js";
@@ -20,12 +22,22 @@ export interface ChatMessage {
 export interface ChatInput {
     message: string;
     history?: ChatMessage[];
+    session_id?: string;
 }
 /**
- * Stream a GPT-4o response via SSE to the HTTP response object.
+ * Stream a response to the HTTP response object via SSE.
  *
- * SSE format:
- *   data: {"delta":"chunk"}\n\n
- *   data: [DONE]\n\n
+ * Strategy:
+ *   1. Validate input
+ *   2. Load persisted history from DB (supplement client-side history)
+ *   3. Build structured context from engine
+ *   4. Call OpenAI with retry (non-streaming for reliability; fake-stream the result)
+ *   5. Persist the exchange to DB
+ *   6. Send SSE chunks + [DONE]
  */
 export declare function streamChatResponse(client: AppClient, userId: string, input: ChatInput, res: ServerResponse): Promise<void>;
+/**
+ * Load recent conversation history for the chat screen on app startup.
+ * Called by the chat init API to pre-populate conversation.
+ */
+export declare function loadChatHistory(client: AppClient, userId: string, limit?: number): Promise<ChatMessage[]>;

@@ -6,10 +6,12 @@
  *   - The LLM only reformulates engine outputs into natural coaching language.
  *   - The LLM cannot override R90 logic, change times, or invent methodology.
  *
- * Streaming:
- *   - Uses OpenAI GPT-4o with streaming enabled.
- *   - Yields SSE chunks to the HTTP response as they arrive.
- *   - The app accumulates chunks and renders progressively.
+ * Fixes applied (2026-03-15):
+ *   1. Persona renamed "Airloop" → "R-Lo" throughout
+ *   2. Retry logic: up to 2 retries with exponential backoff
+ *   3. Conversation persistence via chat_messages table
+ *   4. Structured context injection (sections instead of free text)
+ *   5. Light input moderation/validation
  */
 
 import type { ServerResponse } from "node:http";
@@ -17,6 +19,12 @@ import type { AppClient } from "../db/client.js";
 import { assembleEngineContext } from "../context/assembler.js";
 import { runEngineSafe } from "../../engine/engine-runner.js";
 import { buildHomeScreenPayload } from "../payloads/home-screen.js";
+import {
+  loadRecentMessages,
+  saveExchange,
+  dailySessionId,
+  type ChatMessageRow,
+} from "../db/chat-messages.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,14 +34,169 @@ export interface ChatMessage {
 }
 
 export interface ChatInput {
-  message:  string;
-  history?: ChatMessage[];  // last N turns for context
+  message:    string;
+  history?:   ChatMessage[];  // client-side history (overridden by persisted if available)
+  session_id?: string;        // optional explicit session ID from client
 }
 
-// ─── System prompt ────────────────────────────────────────────────────────────
+// ─── 5. Input moderation / validation ────────────────────────────────────────
 
-function buildSystemPrompt(contextSummary: string): string {
-  return `You are Airloop, the intelligent coaching layer of R90 Navigator — a sleep performance app built on Nick Littlehales' R90 methodology.
+const MAX_INPUT_LENGTH   = 1000;
+const MAX_HISTORY_TURNS  = 12;
+
+/**
+ * Validate and sanitize a user message before sending to the LLM.
+ * Returns { ok: true, message } or { ok: false, reason }.
+ */
+function validateInput(raw: string): { ok: true; message: string } | { ok: false; reason: string } {
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    return { ok: false, reason: "empty_message" };
+  }
+
+  if (trimmed.length > MAX_INPUT_LENGTH) {
+    return { ok: false, reason: "message_too_long" };
+  }
+
+  // Detect prompt injection attempts
+  const injectionPatterns = [
+    /ignore (previous|all) instructions/i,
+    /you are now/i,
+    /forget your (instructions|system prompt|persona)/i,
+    /act as (a )?(different|new) (ai|assistant|model)/i,
+    /system prompt:/i,
+  ];
+  for (const pattern of injectionPatterns) {
+    if (pattern.test(trimmed)) {
+      return { ok: false, reason: "injection_attempt" };
+    }
+  }
+
+  // Strip null bytes and control characters (keep newlines for multi-line messages)
+  const sanitized = trimmed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").trim();
+
+  if (!sanitized) {
+    return { ok: false, reason: "invalid_content" };
+  }
+
+  return { ok: true, message: sanitized };
+}
+
+// ─── 4. Structured context injection ─────────────────────────────────────────
+
+interface StructuredContext {
+  today:          string;
+  arp_time:       string | null;
+  chronotype:     string;
+  cycle_target:   number;
+  onboarding_ok:  boolean;
+  weekly_cycles:  string;
+  on_track:       boolean;
+  deficit:        number;
+  sleep_onset:    string | null;
+  current_phase:  number | string | null;
+  current_cycle:  number | string | null;
+  active_states:  string[];
+  primary_rec:    string | null;
+  recent_logs:    string[];
+  gate_blocked:   boolean;
+  gate_reason:    string | null;
+}
+
+async function buildStructuredContext(
+  client: AppClient,
+  userId: string,
+): Promise<StructuredContext> {
+  const ctx    = await assembleEngineContext(client, userId);
+  const output = runEngineSafe(ctx);
+  const home   = buildHomeScreenPayload(output, ctx);
+
+  const wb = home.weekly_balance;
+  const recentLogs = ctx.sleep_logs.slice(0, 3).map(l =>
+    `${l.date}: ${l.cycles_completed ?? "?"} cycles`
+  );
+
+  return {
+    today:         ctx.today,
+    arp_time:      ctx.profile.arp_time ?? null,
+    chronotype:    ctx.profile.chronotype,
+    cycle_target:  5,
+    onboarding_ok: ctx.profile.onboarding_completed,
+    weekly_cycles: wb ? `${wb.total}/${wb.target}` : "unknown",
+    on_track:      wb?.on_track ?? false,
+    deficit:       wb?.deficit ?? 0,
+    sleep_onset:   home.tonight_sleep_onset ?? null,
+    current_phase: home.current_phase ?? null,
+    current_cycle: home.current_cycle ?? null,
+    active_states: output.active_states.map(s =>
+      `${s.state_id} (${s.priority_label}, ${s.active_days}d)`
+    ),
+    primary_rec:   home.primary_recommendation?.message_key ?? null,
+    recent_logs:   recentLogs,
+    gate_blocked:  output.gate_blocked,
+    gate_reason:   output.gate_reason ?? null,
+  };
+}
+
+/**
+ * Format structured context into clearly delimited prompt sections.
+ * Sections make the context easier for GPT-4o to parse consistently.
+ */
+function formatContextSections(ctx: StructuredContext): string {
+  const lines: string[] = [];
+
+  lines.push("[USER_PROFILE]");
+  lines.push(`today: ${ctx.today}`);
+  lines.push(`anchor_wake_time: ${ctx.arp_time ?? "not set"}`);
+  lines.push(`chronotype: ${ctx.chronotype}`);
+  lines.push(`cycle_target_per_night: ${ctx.cycle_target}`);
+  lines.push(`onboarding_complete: ${ctx.onboarding_ok}`);
+  lines.push("");
+
+  if (ctx.gate_blocked) {
+    lines.push("[SLEEP_PLAN]");
+    lines.push(`status: blocked`);
+    lines.push(`reason: ${ctx.gate_reason ?? "unknown"}`);
+    lines.push("");
+  } else {
+    lines.push("[SLEEP_PLAN]");
+    lines.push(`tonight_sleep_onset: ${ctx.sleep_onset ?? "unknown"}`);
+    lines.push(`current_phase: ${ctx.current_phase ?? "unknown"}`);
+    lines.push(`current_cycle: ${ctx.current_cycle ?? "unknown"}`);
+    lines.push("");
+
+    lines.push("[WEEKLY_RECOVERY]");
+    lines.push(`cycles_this_week: ${ctx.weekly_cycles} (on_track: ${ctx.on_track})`);
+    lines.push(`deficit: ${ctx.deficit} cycles`);
+    lines.push("");
+  }
+
+  if (ctx.recent_logs.length > 0) {
+    lines.push("[RECENT_SLEEP_HISTORY]");
+    for (const log of ctx.recent_logs) {
+      lines.push(log);
+    }
+    lines.push("");
+  }
+
+  lines.push("[CURRENT_STATE]");
+  if (ctx.active_states.length > 0) {
+    lines.push(`active_states: ${ctx.active_states.join(", ")}`);
+  } else {
+    lines.push("active_states: none");
+  }
+  if (ctx.primary_rec) {
+    lines.push(`primary_recommendation: ${ctx.primary_rec}`);
+  }
+
+  return lines.join("\n");
+}
+
+// ─── 1. System prompt (R-Lo, not Airloop) ────────────────────────────────────
+
+function buildSystemPrompt(contextSections: string): string {
+  return `You are R-Lo, the intelligent sleep coach inside R90 Navigator — a sleep performance app built on Nick Littlehales' R90 methodology.
 
 ## Your role
 You help users understand and apply the R90 system to improve their sleep and performance. You speak like a knowledgeable, calm, and supportive performance coach — never clinical, never generic.
@@ -51,7 +214,7 @@ You help users understand and apply the R90 system to improve their sleep and pe
 - Discuss topics unrelated to sleep, recovery, and performance
 
 ## Current user context (from the R90 engine — treat as ground truth)
-${contextSummary}
+${contextSections}
 
 ## Response style
 - Concise: 2–4 sentences for simple questions, up to 8 for complex ones
@@ -61,75 +224,96 @@ ${contextSummary}
 - Never start with "Great question!" or similar filler`;
 }
 
-// ─── Context assembler ────────────────────────────────────────────────────────
+// ─── 2. OpenAI call with retry + graceful fallback ────────────────────────────
 
-async function buildContextSummary(
-  client: AppClient,
-  userId: string
-): Promise<string> {
-  try {
-    const ctx    = await assembleEngineContext(client, userId);
-    const output = runEngineSafe(ctx);
-    const home   = buildHomeScreenPayload(output, ctx);
-
-    const lines: string[] = [
-      `Today: ${ctx.today}`,
-      `ARP (anchor wake time): ${ctx.profile.arp_time ?? "not set"}`,
-      `Chronotype: ${ctx.profile.chronotype}`,
-      `Cycle target per night: 5`,
-      `Onboarding complete: ${ctx.profile.onboarding_completed}`,
-    ];
-
-    if (home.weekly_balance) {
-      const wb = home.weekly_balance;
-      lines.push(`Weekly cycles: ${wb.total}/${wb.target} (day ${wb.day_number}/7)`);
-      lines.push(`On track: ${wb.on_track ? "yes" : "no"}, deficit: ${wb.deficit}`);
-    }
-
-    if (home.gate_blocked) {
-      lines.push(`Engine gate: BLOCKED (reason: ${home.gate_reason ?? "unknown"})`);
-    } else {
-      lines.push(`Tonight sleep onset (5 cycles): ${home.tonight_sleep_onset ?? "unknown"}`);
-      lines.push(`Current phase: ${home.current_phase ?? "?"}, cycle: ${home.current_cycle ?? "?"}`);
-    }
-
-    if (output.active_states.length > 0) {
-      const stateList = output.active_states
-        .map(s => `${s.state_id} (${s.priority_label}, ${s.active_days}d active)`)
-        .join(", ");
-      lines.push(`Active user states: ${stateList}`);
-    } else {
-      lines.push("Active user states: none detected");
-    }
-
-    if (home.primary_recommendation) {
-      lines.push(`Primary recommendation: ${home.primary_recommendation.message_key}`);
-    }
-
-    const recent = ctx.sleep_logs.slice(0, 3);
-    if (recent.length > 0) {
-      const cyclesStr = recent
-        .map(l => `${l.date}: ${l.cycles_completed ?? "?"} cycles`)
-        .join(", ");
-      lines.push(`Recent sleep logs: ${cyclesStr}`);
-    }
-
-    return lines.join("\n");
-  } catch {
-    return "User context unavailable — respond based on general R90 principles.";
-  }
-}
-
-// ─── OpenAI streaming call ────────────────────────────────────────────────────
-
-const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_CHAT_URL  = "https://api.openai.com/v1/chat/completions";
+const MAX_RETRIES      = 2;
+const FALLBACK_MESSAGE = "R-Lo is having trouble responding right now. Please try again in a moment.";
 
 /**
- * Stream a GPT-4o response via SSE to the HTTP response object.
+ * Attempt a single non-streaming OpenAI request to get a complete response.
+ * Returns the content string or throws on failure.
+ */
+async function callOpenAI(
+  apiKey:   string,
+  messages: { role: string; content: string }[],
+  attempt:  number,
+): Promise<string> {
+  const response = await fetch(OPENAI_CHAT_URL, {
+    method:  "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type":  "application/json",
+    },
+    body: JSON.stringify({
+      model:       "gpt-4o",
+      messages,
+      stream:      false,
+      max_tokens:  512,
+      temperature: 0.65,
+    }),
+    signal: AbortSignal.timeout(20_000), // 20s timeout per attempt
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI HTTP ${response.status} (attempt ${attempt})`);
+  }
+
+  const json = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>;
+    error?:   { message?: string };
+  };
+
+  const content = json.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error(`Empty OpenAI response (attempt ${attempt})`);
+  }
+
+  return content;
+}
+
+/**
+ * Try to get a response with exponential backoff retries.
+ * On all failures, returns the safe fallback string.
+ */
+async function callOpenAIWithRetry(
+  apiKey:   string,
+  messages: { role: string; content: string }[],
+): Promise<{ content: string; failed: boolean }> {
+  let lastError: Error | unknown = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    try {
+      const content = await callOpenAI(apiKey, messages, attempt);
+      return { content, failed: false };
+    } catch (err) {
+      lastError = err;
+      console.warn(`[chat-service] OpenAI attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+
+      if (attempt <= MAX_RETRIES) {
+        // Exponential backoff: 800ms → 1600ms
+        const delay = 800 * Math.pow(2, attempt - 1);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+
+  console.error("[chat-service] All OpenAI attempts failed:", lastError instanceof Error ? lastError.message : lastError);
+  return { content: FALLBACK_MESSAGE, failed: true };
+}
+
+// ─── Main streaming entry point ───────────────────────────────────────────────
+
+/**
+ * Stream a response to the HTTP response object via SSE.
  *
- * SSE format:
- *   data: {"delta":"chunk"}\n\n
- *   data: [DONE]\n\n
+ * Strategy:
+ *   1. Validate input
+ *   2. Load persisted history from DB (supplement client-side history)
+ *   3. Build structured context from engine
+ *   4. Call OpenAI with retry (non-streaming for reliability; fake-stream the result)
+ *   5. Persist the exchange to DB
+ *   6. Send SSE chunks + [DONE]
  */
 export async function streamChatResponse(
   client:  AppClient,
@@ -137,23 +321,69 @@ export async function streamChatResponse(
   input:   ChatInput,
   res:     ServerResponse,
 ): Promise<void> {
+  // ── 5. Validate input ──────────────────────────────────────────────────
+  const validation = validateInput(input.message);
+  if (!validation.ok) {
+    if (validation.reason === "message_too_long") {
+      sendSseError(res, "Your message is too long. Please keep it under 1000 characters.");
+    } else if (validation.reason === "injection_attempt") {
+      sendSseError(res, "I can only help with sleep and recovery topics.");
+    } else {
+      sendSseError(res, "Please send a valid message.");
+    }
+    return;
+  }
+  const cleanMessage = validation.message;
+
   const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) {
-    sendSseError(res, "OpenAI API key not configured");
+    sendSseError(res, FALLBACK_MESSAGE);
     return;
   }
 
-  const contextSummary = await buildContextSummary(client, userId);
+  // ── 3. Load persisted history ──────────────────────────────────────────
+  let persistedHistory: ChatMessageRow[] = [];
+  try {
+    persistedHistory = await loadRecentMessages(client, userId, MAX_HISTORY_TURNS * 2);
+  } catch {
+    // Non-fatal: fall back to client history
+  }
 
-  // Build message array: system + history + new user message
-  const history = (input.history ?? []).slice(-10); // keep last 10 turns
+  // Prefer persisted history if available; fall back to client-sent history
+  const historyMessages: ChatMessage[] = persistedHistory.length > 0
+    ? persistedHistory.map(m => ({ role: m.role, content: m.content }))
+    : (input.history ?? []).slice(-MAX_HISTORY_TURNS);
+
+  // ── 4. Build structured context from engine ────────────────────────────
+  let contextSections = "[CURRENT_STATE]\nContext unavailable — respond based on general R90 principles.";
+  try {
+    const ctx = await buildStructuredContext(client, userId);
+    contextSections = formatContextSections(ctx);
+  } catch (err) {
+    console.warn("[chat-service] context build failed:", err instanceof Error ? err.message : err);
+  }
+
+  const systemPrompt = buildSystemPrompt(contextSections);
+
+  // Build messages array: system + history + new user message
   const messages = [
-    { role: "system",  content: buildSystemPrompt(contextSummary) },
-    ...history.map(m => ({ role: m.role, content: m.content })),
-    { role: "user",    content: input.message },
+    { role: "system",    content: systemPrompt },
+    ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content })),
+    { role: "user",      content: cleanMessage },
   ];
 
-  // Set SSE headers
+  // ── 2. Call OpenAI with retry ──────────────────────────────────────────
+  const { content: assistantReply, failed } = await callOpenAIWithRetry(apiKey, messages);
+
+  // ── 3b. Persist exchange (best-effort, non-blocking) ──────────────────
+  const sessionId = input.session_id ?? dailySessionId();
+  if (!failed) {
+    saveExchange(client, userId, sessionId, cleanMessage, assistantReply).catch(err => {
+      console.warn("[chat-service] persist failed:", err instanceof Error ? err.message : err);
+    });
+  }
+
+  // ── Stream the response as SSE (fake-stream character-by-character) ────
   res.writeHead(200, {
     "Content-Type":                "text/event-stream",
     "Cache-Control":               "no-cache",
@@ -161,70 +391,21 @@ export async function streamChatResponse(
     "Access-Control-Allow-Origin": "*",
   });
 
-  try {
-    const openaiRes = await fetch(OPENAI_CHAT_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type":  "application/json",
-      },
-      body: JSON.stringify({
-        model:       "gpt-4o",
-        messages,
-        stream:      true,
-        max_tokens:  512,
-        temperature: 0.65,
-      }),
-    });
-
-    if (!openaiRes.ok || !openaiRes.body) {
-      sendSseError(res, `OpenAI error ${openaiRes.status}`);
-      return;
+  // Send in word-sized chunks to simulate streaming feel
+  const words = assistantReply.split(/(\s+)/);
+  for (const chunk of words) {
+    if (chunk) {
+      res.write(`data: ${JSON.stringify({ delta: chunk })}\n\n`);
+      // Small delay between chunks for a natural feel
+      await new Promise(r => setTimeout(r, 18));
     }
-
-    // Stream chunks from OpenAI → client
-    const reader  = openaiRes.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer    = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith("data:")) continue;
-        const data = trimmed.slice(5).trim();
-        if (data === "[DONE]") {
-          res.write("data: [DONE]\n\n");
-          res.end();
-          return;
-        }
-        try {
-          const parsed = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>;
-          };
-          const delta = parsed.choices?.[0]?.delta?.content;
-          if (delta) {
-            res.write(`data: ${JSON.stringify({ delta })}\n\n`);
-          }
-        } catch {
-          // Malformed chunk — skip
-        }
-      }
-    }
-
-    res.write("data: [DONE]\n\n");
-    res.end();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Streaming failed";
-    sendSseError(res, msg);
   }
+
+  res.write("data: [DONE]\n\n");
+  res.end();
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function sendSseError(res: ServerResponse, message: string): void {
   if (!res.headersSent) {
@@ -235,4 +416,23 @@ function sendSseError(res: ServerResponse, message: string): void {
   }
   res.write(`data: ${JSON.stringify({ error: message })}\n\n`);
   res.end();
+}
+
+// ─── History loader for chat init ─────────────────────────────────────────────
+
+/**
+ * Load recent conversation history for the chat screen on app startup.
+ * Called by the chat init API to pre-populate conversation.
+ */
+export async function loadChatHistory(
+  client:    AppClient,
+  userId:    string,
+  limit      = 20,
+): Promise<ChatMessage[]> {
+  try {
+    const rows = await loadRecentMessages(client, userId, limit);
+    return rows.map(r => ({ role: r.role, content: r.content }));
+  } catch {
+    return [];
+  }
 }

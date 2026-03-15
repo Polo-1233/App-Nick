@@ -24,7 +24,7 @@ import { authenticate, authenticateSignup } from "./middleware/auth.js";
 import { submitSleepLogHandler, submitDailyLogHandler, submitCheckInHandler, } from "./handlers/log-handlers.js";
 import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./handlers/payload-handlers.js";
 import { createUserHandler, updateProfileHandler, updateEnvironmentHandler, recommendationActionHandler, } from "./handlers/profile-handlers.js";
-import { chatHandler } from "./handlers/chat-handler.js";
+import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
     // Signup - uses authenticateSignup (no existing users row required)
@@ -40,6 +40,7 @@ const routes = [
     { method: "POST", path: "/profile/environment", handler: updateEnvironmentHandler },
     { method: "POST", path: "/actions/recommendation", handler: recommendationActionHandler },
     { method: "POST", path: "/chat", handler: chatHandler },
+    { method: "GET", path: "/chat/history", handler: chatHistoryHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */

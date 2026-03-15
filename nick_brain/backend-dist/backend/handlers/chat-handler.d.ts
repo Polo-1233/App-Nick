@@ -1,17 +1,20 @@
 /**
- * chat-handler.ts — POST /chat
+ * chat-handler.ts — Chat routes
  *
- * Receives a user message + conversation history.
- * Assembles R90 engine context, then streams a GPT-4o response via SSE.
+ * POST /chat
+ *   Receives a user message, streams R-Lo response via SSE.
+ *   Body: { message: string, history?: [{role, content}], session_id?: string }
+ *   Response: text/event-stream
+ *     data: {"delta":"chunk"}\n\n
+ *     data: [DONE]\n\n
+ *     data: {"error":"message"}\n\n
  *
- * Request body:
- *   { message: string, history?: Array<{role, content}> }
- *
- * Response: text/event-stream (SSE)
- *   data: {"delta":"chunk"}\n\n
- *   data: [DONE]\n\n
- *   data: {"error":"message"}\n\n  (on error)
+ * GET /chat/history
+ *   Returns recent conversation history for chat screen initialisation.
+ *   Response: { messages: [{role, content}] }
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { URLSearchParams } from "node:url";
 import type { AuthContext } from "../middleware/auth.js";
-export declare function chatHandler(req: IncomingMessage, res: ServerResponse, auth: AuthContext): Promise<void>;
+export declare function chatHandler(req: IncomingMessage, res: ServerResponse, auth: AuthContext, _query: URLSearchParams): Promise<void>;
+export declare function chatHistoryHandler(_req: IncomingMessage, res: ServerResponse, auth: AuthContext, query: URLSearchParams): Promise<void>;
