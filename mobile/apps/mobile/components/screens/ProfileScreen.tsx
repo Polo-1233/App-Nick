@@ -442,7 +442,7 @@ export default function ProfileScreen() {
     },
     {
       icon:    'person-circle-outline',
-      label:   'Account',
+      label:   'Account management',
       sub:     'Manage your account and subscription',
       onPress: () => router.push('/account'),
     },
