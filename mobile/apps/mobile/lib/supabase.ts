@@ -15,6 +15,7 @@
 import { createClient, type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri } from 'expo-auth-session';
 
 // Required for Expo to properly close the auth browser on iOS
@@ -201,6 +202,53 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   }
 
   return { ok: false, error: 'No authentication data received from Google' };
+}
+
+/**
+ * Sign in with Apple (iOS only).
+ *
+ * Flow:
+ *   1. Native Apple authentication sheet (Face ID / Touch ID)
+ *   2. Get identity token (JWT) from Apple
+ *   3. Pass to Supabase signInWithIdToken → session
+ *
+ * Note: Apple Sign-In is only available on iOS 13+ physical devices.
+ * The button should not be shown on Android or simulator (no Face ID).
+ */
+export async function signInWithApple(): Promise<AuthResult> {
+  try {
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+
+    if (!credential.identityToken) {
+      return { ok: false, error: 'No identity token from Apple' };
+    }
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'apple',
+      token:    credential.identityToken,
+    });
+
+    if (error || !data.session) {
+      return { ok: false, error: error?.message ?? 'Apple Sign-In failed' };
+    }
+
+    return { ok: true, user: data.session.user, session: data.session };
+  } catch (err: unknown) {
+    // ERR_REQUEST_CANCELED = user dismissed the sheet
+    if (
+      typeof err === 'object' && err !== null &&
+      'code' in err &&
+      (err as { code: string }).code === 'ERR_REQUEST_CANCELED'
+    ) {
+      return { ok: false, error: 'cancelled' };
+    }
+    return { ok: false, error: err instanceof Error ? err.message : 'Apple Sign-In failed' };
+  }
 }
 
 /**

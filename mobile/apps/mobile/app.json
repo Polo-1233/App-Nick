@@ -19,7 +19,8 @@
       "infoPlist": {
         "NSCalendarsUsageDescription": "R90 Navigator reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.",
         "NSUserNotificationUsageDescription": "Get a gentle nudge when it's time to start your pre-sleep routine or take a recovery nap."
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.metalab.r90navigator",

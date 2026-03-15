@@ -25,8 +25,9 @@ import { useTheme } from '../lib/theme-context';
 import { MascotImage } from '../components/ui/MascotImage';
 import { Button } from '../components/ui/Button';
 import { PERMISSION_KEYS } from '../lib/storage';
-import { signInWithGoogle } from '../lib/supabase';
+import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { bootstrapUser } from '../lib/api';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function LoginScreen() {
   const [error,        setError]        = useState<string | null>(null);
   const [focusedField,  setFocusedField]  = useState<'email' | 'password' | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading,  setAppleLoading]  = useState(false);
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
@@ -61,6 +63,27 @@ export default function LoginScreen() {
       router.replace(shown ? '/(tabs)' : '/permissions');
     } finally {
       setGoogleLoading(false);
+    }
+  }
+
+  async function handleAppleSignIn() {
+    setAppleLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithApple();
+      if (!result.ok) {
+        if (result.error !== 'cancelled') {
+          setError(result.error ?? 'Apple Sign-In failed.');
+        }
+        return;
+      }
+      if (result.session?.access_token) {
+        await bootstrapUser(result.session.access_token).catch(() => {});
+      }
+      const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
+      router.replace(shown ? '/(tabs)' : '/permissions');
+    } finally {
+      setAppleLoading(false);
     }
   }
 
@@ -198,6 +221,17 @@ export default function LoginScreen() {
             }
           </Pressable>
 
+          {/* Apple Sign-In — iOS only */}
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
+              style={s.appleBtn}
+              onPress={() => { void handleAppleSignIn(); }}
+            />
+          )}
+
           {/* Error message */}
           {error ? (
             <Text style={[s.errorText, { color: c.error }]}>{error}</Text>
@@ -299,5 +333,9 @@ const s = StyleSheet.create({
   googleLabel: {
     fontSize:   16,
     fontWeight: '600',
+  },
+  appleBtn: {
+    width:  '100%',
+    height: 50,
   },
 });
