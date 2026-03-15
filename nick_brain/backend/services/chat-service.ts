@@ -25,7 +25,7 @@ import {
   dailySessionId,
   type ChatMessageRow,
 } from "../db/chat-messages.js";
-import { fetchRecentLifeEvents } from "../db/queries.js";
+import { fetchRecentLifeEvents, fetchUpcomingCalendarEvents } from "../db/queries.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,15 +111,18 @@ interface StructuredContext {
   work_start_time:     string | null;
   // Phase 1 — life events
   life_events:         Array<{ type: string; title: string; date: string; notes: string | null }>;
+  // Phase 2 — calendar events
+  calendar_events:     Array<{ type: string; title: string; start_time: string; is_today: boolean; is_tomorrow: boolean }>;
 }
 
 async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
-  const [ctx, lifeEvents] = await Promise.all([
+  const [ctx, lifeEvents, calendarEvents] = await Promise.all([
     assembleEngineContext(client, userId),
     fetchRecentLifeEvents(client, userId),
+    fetchUpcomingCalendarEvents(client, userId, 48),
   ]);
   const output = runEngineSafe(ctx);
   const home   = buildHomeScreenPayload(output, ctx);
@@ -169,6 +172,19 @@ async function buildStructuredContext(
       date:  e.event_date,
       notes: e.notes,
     })),
+    // Phase 2 — calendar events
+    calendar_events: calendarEvents.map(e => {
+      const eventDate = new Date(e.start_time).toISOString().slice(0, 10);
+      const todayStr  = new Date().toISOString().slice(0, 10);
+      const tomorrow  = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+      return {
+        type:       e.event_type_hint,
+        title:      e.title,
+        start_time: e.start_time,
+        is_today:   eventDate === todayStr,
+        is_tomorrow: eventDate === tomorrow,
+      };
+    }),
   };
 }
 
@@ -242,6 +258,21 @@ function formatContextSections(ctx: StructuredContext): string {
     for (const ev of ctx.life_events) {
       const rel = ev.date >= today ? `upcoming (${ev.date})` : `recent (${ev.date})`;
       lines.push(`${ev.type}: "${ev.title}" — ${rel}${ev.notes ? ` — ${ev.notes}` : ""}`);
+    }
+    lines.push("");
+  }
+
+  // Phase 2 — Calendar events
+  if (ctx.calendar_events.length > 0) {
+    lines.push("[CALENDAR_EVENTS]");
+    for (const ev of ctx.calendar_events) {
+      const time = new Date(ev.start_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+      const when = ev.is_today ? `today ${time}` : ev.is_tomorrow ? `tomorrow ${time}` : new Date(ev.start_time).toISOString().slice(0, 10) + ` ${time}`;
+      let flag = "";
+      const hour = new Date(ev.start_time).getHours();
+      if (ev.is_tomorrow && hour < 8) flag = " ⚠️ EARLY WAKE";
+      if (ev.is_today && (ev.type === "important" || ev.type === "travel")) flag = " ⚠️ HIGH STAKES TODAY";
+      lines.push(`${ev.type}: "${ev.title}" — ${when}${flag}`);
     }
     lines.push("");
   }

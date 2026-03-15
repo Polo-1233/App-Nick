@@ -90,4 +90,14 @@ export interface LifeEventInput {
 export declare function createLifeEvent(client: AppClient, userId: string, input: LifeEventInput): Promise<{
     id: string;
 } | null>;
+export interface CalendarEventInput {
+    external_id: string;
+    title: string;
+    start_time: string;
+    end_time: string;
+    all_day?: boolean;
+    source: string;
+    event_type_hint?: string;
+}
+export declare function upsertCalendarEvents(client: AppClient, userId: string, events: CalendarEventInput[]): Promise<boolean>;
 export declare function deleteLifeEvent(client: AppClient, userId: string, eventId: string): Promise<boolean>;

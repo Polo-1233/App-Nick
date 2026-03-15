@@ -396,3 +396,18 @@ export async function createLifeEvent(input: LifeEventInput): Promise<ApiRespons
 export async function deleteLifeEvent(id: string): Promise<ApiResponse<{ ok: boolean }>> {
   return request('DELETE', `/events/life?id=${id}`);
 }
+
+// ─── /calendar ───────────────────────────────────────────────────────────────
+
+export interface CalendarEventResponse {
+  id:              string;
+  title:           string;
+  start_time:      string;
+  end_time:        string;
+  event_type_hint: string;
+  source:          string;
+}
+
+export async function getUpcomingEvents(hours = 24): Promise<ApiResponse<{ events: CalendarEventResponse[] }>> {
+  return request('GET', `/calendar/upcoming?hours=${hours}`);
+}

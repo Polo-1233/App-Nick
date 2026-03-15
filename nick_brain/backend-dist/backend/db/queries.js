@@ -198,4 +198,21 @@ export async function fetchRecentLifeEvents(client, userId, lookbackDays = 14, l
         return [];
     return data;
 }
+/**
+ * Fetch upcoming calendar events within the next N hours.
+ */
+export async function fetchUpcomingCalendarEvents(client, userId, hoursAhead = 48) {
+    const now = new Date().toISOString();
+    const future = new Date(Date.now() + hoursAhead * 3_600_000).toISOString();
+    const { data, error } = await client
+        .from("calendar_events")
+        .select("id, user_id, external_id, title, start_time, end_time, all_day, source, event_type_hint, synced_at")
+        .eq("user_id", userId)
+        .gte("start_time", now)
+        .lte("start_time", future)
+        .order("start_time", { ascending: true });
+    if (error || !data)
+        return [];
+    return data;
+}
 //# sourceMappingURL=queries.js.map

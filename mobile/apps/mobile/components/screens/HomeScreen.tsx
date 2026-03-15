@@ -23,7 +23,9 @@ import { useRouter, useFocusEffect }        from 'expo-router';
 import { Ionicons }                         from '@expo/vector-icons';
 import { LinearGradient }                   from 'expo-linear-gradient';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDayPlanContext }       from '../../lib/day-plan-context';
+import { getUpcomingEvents, type CalendarEventResponse } from '../../lib/api';
 import { useOnboardingPhase }      from '../../lib/onboarding-phase-context';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
@@ -469,6 +471,10 @@ export default function HomeScreen() {
   const [energyScore,    setEnergyScore]   = useState(72);
   const [userName,       setUserName]      = useState<string | null>(null);
 
+  // Calendar banner
+  const [bannerEvent,    setBannerEvent]   = useState<CalendarEventResponse | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   // Guided
   const [guidedStep,      setGuidedStep]      = useState<GuidedStep>('wake');
   const [selectedWake,    setSelectedWake]    = useState<number | null>(null);
@@ -492,6 +498,27 @@ export default function HomeScreen() {
       else { const { history: mh, profile: mp } = getMockInsightsData(); setProfile(mp); setEnergyScore(computeInsights(mh, mp).energyScore); }
     })();
   }, []);
+
+  // Fetch upcoming calendar events for contextual banner
+  useEffect(() => {
+    if (phase !== 'done') return;
+    (async () => {
+      try {
+        const res = await getUpcomingEvents(24);
+        if (!res.ok || !res.data?.events) return;
+        const dismissed = await AsyncStorage.getItem('@r90:dismissedBanners');
+        const dismissedIds: string[] = dismissed ? JSON.parse(dismissed) : [];
+        // Priority: travel > important
+        const priority = res.data.events
+          .filter(e => (e.event_type_hint === 'travel' || e.event_type_hint === 'important') && !dismissedIds.includes(e.id));
+        const travel = priority.find(e => e.event_type_hint === 'travel');
+        const important = priority.find(e => e.event_type_hint === 'important');
+        setBannerEvent(travel ?? important ?? null);
+      } catch {
+        // Non-critical
+      }
+    })();
+  }, [phase]);
 
   useEffect(() => {
     if (!needsOnboarding || hasRedirected.current) return;
@@ -544,6 +571,28 @@ export default function HomeScreen() {
     setSelectedBedtime(value as string); setIsFinishing(true);
     await saveOnboardingData({ firstName: userName ?? '', wakeTimeMinutes: selectedWake ?? 450, priority: selectedGoal ?? 'recovery', constraint: value as string });
     setTimeout(() => advance('plan'), 1000);
+  }
+
+  // ── Banner dismiss ──────────────────────────────────────────────────────
+  async function dismissBanner() {
+    if (!bannerEvent) return;
+    setBannerDismissed(true);
+    try {
+      const raw = await AsyncStorage.getItem('@r90:dismissedBanners');
+      const ids: string[] = raw ? JSON.parse(raw) : [];
+      ids.push(bannerEvent.id);
+      await AsyncStorage.setItem('@r90:dismissedBanners', JSON.stringify(ids));
+    } catch {
+      // Non-critical
+    }
+  }
+
+  function handleBannerTap() {
+    if (!bannerEvent) return;
+    const prompt = bannerEvent.event_type_hint === 'travel'
+      ? `J'ai ${bannerEvent.title} demain, comment optimiser ma nuit ?`
+      : `J'ai ${bannerEvent.title} bientôt, comment me préparer ?`;
+    setInput(prompt);
   }
 
   // ── Send ──────────────────────────────────────────────────────────────────
@@ -619,6 +668,23 @@ export default function HomeScreen() {
               bedtime={bedtime}
               wake={wakeTime}
             />
+
+            {/* Calendar event banner */}
+            {bannerEvent && !bannerDismissed && (
+              <Pressable style={bn.wrap} onPress={handleBannerTap}>
+                <View style={bn.content}>
+                  <Text style={bn.text}>
+                    {bannerEvent.event_type_hint === 'travel'
+                      ? `✈️ ${bannerEvent.title} — ${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}. Your bedtime tonight is critical.`
+                      : `⭐ ${bannerEvent.title} — ${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}. R-Lo has advice for you.`
+                    }
+                  </Text>
+                  <Pressable onPress={dismissBanner} hitSlop={8}>
+                    <Ionicons name="close" size={16} color={MUTED} />
+                  </Pressable>
+                </View>
+              </Pressable>
+            )}
 
             {/* 2. Chat area */}
             <ScrollView
@@ -707,4 +773,27 @@ const sc = StyleSheet.create({
   customConfirm: { width: 48, height: 48, borderRadius: 14, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
   finishingWrap: { alignItems: 'center', paddingVertical: 28, gap: 14 },
   finishingText: { fontSize: 16, fontWeight: '600', color: SUCCESS },
+});
+
+const bn = StyleSheet.create({
+  wrap: {
+    marginHorizontal: 16,
+    marginTop:        8,
+    backgroundColor:  CARD,
+    borderRadius:     12,
+    borderLeftWidth:  3,
+    borderLeftColor:  ACCENT,
+    padding:          12,
+  },
+  content: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            10,
+  },
+  text: {
+    flex:       1,
+    fontSize:   13,
+    color:      TEXT,
+    lineHeight: 19,
+  },
 });

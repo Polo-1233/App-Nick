@@ -13,6 +13,7 @@ import { ThemeProvider, useTheme } from '../lib/theme-context';
 import { configurePurchases } from '../lib/purchases';
 import { AppSplash } from '../components/AppSplash';
 import { AuthProvider, useAuth } from '../lib/auth-context';
+import { syncCalendarToBackend } from '../lib/calendar-sync';
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -147,6 +148,12 @@ function RootLayoutInner() {
       router.replace('/login');
     }
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
+
+  // Sync calendar events to backend after auth is confirmed
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return;
+    void syncCalendarToBackend();
+  }, [isAuthenticated, authLoading]);
 
   // Deep-link into the app when the user taps a local notification.
   // Currently used by wind-down reminders (data.route = '/wind-down').

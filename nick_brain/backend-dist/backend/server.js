@@ -20,6 +20,7 @@
  */
 import http from "node:http";
 import fs from "node:fs";
+import { runMigrations } from "./db/migrate.js";
 import { authenticate, authenticateSignup } from "./middleware/auth.js";
 import { submitSleepLogHandler, submitDailyLogHandler, submitCheckInHandler, } from "./handlers/log-handlers.js";
 import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./handlers/payload-handlers.js";
@@ -27,6 +28,7 @@ import { createUserHandler, updateProfileHandler, updateEnvironmentHandler, reco
 import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
 import { deleteAccountHandler } from "./handlers/account-handlers.js";
 import { updateLifestyleHandler, getLifeEventsHandler, createLifeEventHandler, deleteLifeEventHandler, } from "./handlers/lifestyle-handlers.js";
+import { calendarSyncHandler, calendarUpcomingHandler, } from "./handlers/calendar-context-handler.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
     // Signup - uses authenticateSignup (no existing users row required)
@@ -48,6 +50,8 @@ const routes = [
     { method: "GET", path: "/events/life", handler: getLifeEventsHandler },
     { method: "POST", path: "/events/life", handler: createLifeEventHandler },
     { method: "DELETE", path: "/events/life", handler: deleteLifeEventHandler },
+    { method: "POST", path: "/calendar/sync", handler: calendarSyncHandler },
+    { method: "GET", path: "/calendar/upcoming", handler: calendarUpcomingHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */
@@ -98,7 +102,7 @@ async function handleRequest(req, res) {
     if (method === "OPTIONS") {
         res.writeHead(204, {
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Authorization, Content-Type",
         });
         res.end();
@@ -175,12 +179,21 @@ const server = http.createServer((req, res) => {
             sendError(res, 500, "Internal server error", "FATAL");
     });
 });
-server.listen(PORT, HOST, () => {
-    console.log(`\nR90 backend listening on http://${HOST}:${PORT}`);
-    console.log("Routes:");
-    for (const r of routes) {
-        console.log(`  ${r.method.padEnd(4)} ${r.path}`);
-    }
-    console.log();
+// Run migrations before accepting traffic
+runMigrations().then(() => {
+    server.listen(PORT, HOST, () => {
+        console.log(`\nR90 backend listening on http://${HOST}:${PORT}`);
+        console.log("Routes:");
+        for (const r of routes) {
+            console.log(`  ${r.method.padEnd(4)} ${r.path}`);
+        }
+        console.log();
+    });
+}).catch(err => {
+    console.error("[server] Migration runner failed:", err);
+    // Start anyway — migrations are non-blocking
+    server.listen(PORT, HOST, () => {
+        console.log(`\nR90 backend listening on http://${HOST}:${PORT} (migrations skipped)`);
+    });
 });
 //# sourceMappingURL=server.js.map

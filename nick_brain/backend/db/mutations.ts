@@ -618,6 +618,48 @@ export async function createLifeEvent(
   return data as { id: string };
 }
 
+// ─── Calendar events ─────────────────────────────────────────────────────────
+
+export interface CalendarEventInput {
+  external_id: string;
+  title:       string;
+  start_time:  string;
+  end_time:    string;
+  all_day?:    boolean;
+  source:      string;
+  event_type_hint?: string;
+}
+
+export async function upsertCalendarEvents(
+  client: AppClient,
+  userId: string,
+  events: CalendarEventInput[],
+): Promise<boolean> {
+  if (events.length === 0) return true;
+
+  const rows = events.map(e => ({
+    user_id:         userId,
+    external_id:     e.external_id,
+    title:           e.title,
+    start_time:      e.start_time,
+    end_time:        e.end_time,
+    all_day:         e.all_day ?? false,
+    source:          e.source,
+    event_type_hint: e.event_type_hint ?? "other",
+    synced_at:       new Date().toISOString(),
+  }));
+
+  const { error } = await client
+    .from("calendar_events")
+    .upsert(rows, { onConflict: "user_id,external_id,source" });
+
+  if (error) {
+    console.error("[mutations] upsertCalendarEvents failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function deleteLifeEvent(
   client: AppClient,
   userId: string,

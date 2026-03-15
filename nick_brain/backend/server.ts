@@ -49,6 +49,10 @@ import {
   createLifeEventHandler,
   deleteLifeEventHandler,
 } from "./handlers/lifestyle-handlers.js";
+import {
+  calendarSyncHandler,
+  calendarUpcomingHandler,
+} from "./handlers/calendar-context-handler.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +108,8 @@ const routes: AnyRoute[] = [
   { method: "GET",    path: "/events/life",        handler: getLifeEventsHandler },
   { method: "POST",   path: "/events/life",        handler: createLifeEventHandler },
   { method: "DELETE", path: "/events/life",        handler: deleteLifeEventHandler },
+  { method: "POST",   path: "/calendar/sync",      handler: calendarSyncHandler },
+  { method: "GET",    path: "/calendar/upcoming",   handler: calendarUpcomingHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
@@ -165,7 +171,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   if (method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Authorization, Content-Type",
     });
     res.end();

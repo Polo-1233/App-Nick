@@ -147,6 +147,18 @@ export interface RecommendationCooldownRow {
     last_triggered_at: string | null;
     dismissed_count: number;
 }
+export interface CalendarEventRow {
+    id: string;
+    user_id: string;
+    external_id: string;
+    title: string;
+    start_time: string;
+    end_time: string;
+    all_day: boolean;
+    source: string;
+    event_type_hint: string;
+    synced_at: string;
+}
 export declare function fetchUser(client: AppClient, userId: string): Promise<UserRow | null>;
 export declare function fetchUserProfile(client: AppClient, userId: string): Promise<UserProfileRow | null>;
 export declare function fetchARPConfig(client: AppClient, userId: string): Promise<ARPConfigRow | null>;
@@ -181,3 +193,7 @@ export declare function fetchCooldowns(client: AppClient, userId: string): Promi
  * Used to inject upcoming/recent events into the LLM context.
  */
 export declare function fetchRecentLifeEvents(client: AppClient, userId: string, lookbackDays?: number, lookaheadDays?: number): Promise<LifeEventRow[]>;
+/**
+ * Fetch upcoming calendar events within the next N hours.
+ */
+export declare function fetchUpcomingCalendarEvents(client: AppClient, userId: string, hoursAhead?: number): Promise<CalendarEventRow[]>;

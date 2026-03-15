@@ -450,6 +450,29 @@ export async function createLifeEvent(client, userId, input) {
     }
     return data;
 }
+export async function upsertCalendarEvents(client, userId, events) {
+    if (events.length === 0)
+        return true;
+    const rows = events.map(e => ({
+        user_id: userId,
+        external_id: e.external_id,
+        title: e.title,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        all_day: e.all_day ?? false,
+        source: e.source,
+        event_type_hint: e.event_type_hint ?? "other",
+        synced_at: new Date().toISOString(),
+    }));
+    const { error } = await client
+        .from("calendar_events")
+        .upsert(rows, { onConflict: "user_id,external_id,source" });
+    if (error) {
+        console.error("[mutations] upsertCalendarEvents failed:", error.message);
+        return false;
+    }
+    return true;
+}
 export async function deleteLifeEvent(client, userId, eventId) {
     const { error } = await client
         .from("life_events")

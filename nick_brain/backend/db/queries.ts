@@ -177,6 +177,21 @@ export interface RecommendationCooldownRow {
   dismissed_count: number;
 }
 
+// ─── calendar_events ─────────────────────────────────────────────────────────
+
+export interface CalendarEventRow {
+  id:              string;
+  user_id:         string;
+  external_id:     string;
+  title:           string;
+  start_time:      string;
+  end_time:        string;
+  all_day:         boolean;
+  source:          string;
+  event_type_hint: string;
+  synced_at:       string;
+}
+
 // ─── Query functions ──────────────────────────────────────────────────────────
 
 export async function fetchUser(
@@ -414,4 +429,27 @@ export async function fetchRecentLifeEvents(
 
   if (error || !data) return [];
   return data as LifeEventRow[];
+}
+
+/**
+ * Fetch upcoming calendar events within the next N hours.
+ */
+export async function fetchUpcomingCalendarEvents(
+  client: AppClient,
+  userId: string,
+  hoursAhead = 48,
+): Promise<CalendarEventRow[]> {
+  const now = new Date().toISOString();
+  const future = new Date(Date.now() + hoursAhead * 3_600_000).toISOString();
+
+  const { data, error } = await client
+    .from("calendar_events")
+    .select("id, user_id, external_id, title, start_time, end_time, all_day, source, event_type_hint, synced_at")
+    .eq("user_id", userId)
+    .gte("start_time", now)
+    .lte("start_time", future)
+    .order("start_time", { ascending: true });
+
+  if (error || !data) return [];
+  return data as CalendarEventRow[];
 }
