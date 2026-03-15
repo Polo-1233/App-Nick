@@ -218,55 +218,52 @@ function ImmersiveHeader({
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Sleep plan — top-left status label */}
-      {showPlan && (
-        <View style={[ih.planLabel, { top: topInset + 14 }]}>
-          <Text style={ih.planTitle}>Tonight</Text>
-          <Text style={ih.planTimes}>
-            {bedtime !== null ? formatMin(bedtime) : '—'}
-            {'  →  '}
-            {wake !== null ? formatMin(wake) : '—'}
-          </Text>
+      {/* Top row — Tonight (left) + Greeting (right) */}
+      <View style={[ih.topRow, { top: topInset + 14 }]}>
+        {showPlan && (
+          <View style={ih.planLabel}>
+            <Text style={ih.planTitle}>Tonight</Text>
+            <Text style={ih.planTimes}>
+              {bedtime !== null ? formatMin(bedtime) : '—'}
+              {'  →  '}
+              {wake !== null ? formatMin(wake) : '—'}
+            </Text>
+          </View>
+        )}
+        <View style={ih.greeting}>
+          <Text style={ih.line1} numberOfLines={1}>{line1}</Text>
+          <Text style={ih.line2} numberOfLines={2}>{line2}</Text>
         </View>
-      )}
-
-      {/* Greeting — bottom of image */}
-      <View style={[ih.greeting, { paddingTop: topInset }]}>
-        <Text style={ih.line1}>{line1}</Text>
-        <Text style={ih.line2}>{line2}</Text>
       </View>
     </View>
   );
 }
 const ih = StyleSheet.create({
+  topRow: {
+    position:        'absolute',
+    left:            16,
+    right:           16,
+    flexDirection:   'row',
+    alignItems:      'flex-start',
+    gap:             12,
+  },
   planLabel: {
-    position:          'absolute',
-    left:              16,
     backgroundColor:   'rgba(11,18,32,0.55)',
     borderRadius:      10,
     paddingHorizontal: 12,
     paddingVertical:   7,
     borderWidth:       1,
     borderColor:       'rgba(255,255,255,0.10)',
+    flexShrink:        0,
   },
   planTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
   planTimes: { fontSize: 13, fontWeight: '700', color: '#FFF' },
-  mascotWrap:{
-    position:       'absolute',
-    left: 0, right: 0,
-    top:  0, bottom: 0,
-    alignItems:     'center',
-    justifyContent: 'center',
-    marginBottom:   28,
-  },
   greeting: {
-    position:          'absolute',
-    bottom:            18,
-    left:              20,
-    right:             20,
+    flex:       1,
+    alignItems: 'flex-end',
   },
-  line1: { fontSize: 22, fontWeight: '800', color: '#FFF', lineHeight: 28, marginBottom: 3, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  line2: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 19, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  line1: { fontSize: 18, fontWeight: '800', color: '#FFF', lineHeight: 24, marginBottom: 3, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4, textAlign: 'right' },
+  line2: { fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 17, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3, textAlign: 'right' },
 });
 
 // ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
