@@ -204,6 +204,23 @@ interface PlanRevealProps {
   onContinue: () => void;
 }
 
+function CycleDots({ count }: { count: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center', marginTop: 6 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            width: 10, height: 10, borderRadius: 5,
+            backgroundColor: ACCENT,
+            opacity: 0.85 - i * 0.04,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
   const cardAnim = useRef(new Animated.Value(0)).current;
   const rloAnim  = useRef(new Animated.Value(0)).current;
@@ -217,32 +234,34 @@ function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
 
   const cardScale = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.0] });
 
+  const rloMessage = `This is your first recovery rhythm.\n\nIf you go to sleep at ${plan.onsetDisplay}, you'll complete ${plan.cycles} full sleep cycles and wake up at ${plan.wakeDisplay} with better recovery.\n\nLet's try this tonight.`;
+
   return (
     <View style={r.root}>
-      {/* Premium plan card */}
-      <Animated.View
-        style={[
-          r.card,
-          { opacity: cardAnim, transform: [{ scale: cardScale }] },
-        ]}
-      >
-        <Text style={r.cardTitle}>Tonight's plan</Text>
+      {/* Plan card */}
+      <Animated.View style={[r.card, { opacity: cardAnim, transform: [{ scale: cardScale }] }]}>
+        {/* Label */}
+        <Text style={r.cardTitle}>Your sleep rhythm is ready</Text>
 
-        <View style={r.statsRow}>
-          <View style={r.statCol}>
-            <Text style={r.statLabel}>Sleep onset</Text>
-            <Text style={r.statValue}>{plan.onsetDisplay}</Text>
+        {/* Time display */}
+        <View style={r.timeRow}>
+          <View style={r.timeBlock}>
+            <Text style={r.timeLabel}>Bedtime</Text>
+            <Text style={r.timeValue}>{plan.onsetDisplay}</Text>
           </View>
-          <View style={r.statDivider} />
-          <View style={r.statCol}>
-            <Text style={r.statLabel}>Wake time</Text>
-            <Text style={r.statValue}>{plan.wakeDisplay}</Text>
+          <View style={r.timeArrow}>
+            <Text style={r.arrowText}>→</Text>
           </View>
-          <View style={r.statDivider} />
-          <View style={r.statCol}>
-            <Text style={r.statLabel}>Cycles</Text>
-            <Text style={r.statValue}>{plan.cycles}</Text>
+          <View style={r.timeBlock}>
+            <Text style={r.timeLabel}>Wake up</Text>
+            <Text style={r.timeValue}>{plan.wakeDisplay}</Text>
           </View>
+        </View>
+
+        {/* Cycle dots */}
+        <View style={r.cyclesWrap}>
+          <Text style={r.cyclesLabel}>{plan.cycles} sleep cycles</Text>
+          <CycleDots count={plan.cycles} />
         </View>
       </Animated.View>
 
@@ -250,16 +269,14 @@ function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
       <Animated.View style={[r.rloRow, { opacity: rloAnim }]}>
         <MascotImage emotion="Fiere" size="sm" />
         <View style={r.rloBubble}>
-          <Text style={r.rloText}>
-            {"This is your first\nrecovery plan.\n\nFollow this tonight."}
-          </Text>
+          <Text style={r.rloText}>{rloMessage}</Text>
         </View>
       </Animated.View>
 
       {/* CTA */}
       <Animated.View style={[r.ctaWrap, { opacity: rloAnim }]}>
         <Button
-          label="Continue"
+          label="Start my rhythm"
           variant="primary"
           size="lg"
           fullWidth
@@ -275,7 +292,7 @@ const r = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    gap: 28,
+    gap: 24,
   },
   card: {
     backgroundColor:  SURFACE,
@@ -283,8 +300,7 @@ const r = StyleSheet.create({
     borderWidth:      1,
     borderColor:      BORDER,
     padding:          28,
-    gap:              24,
-    // Shadow
+    gap:              20,
     shadowColor:  '#000',
     shadowOpacity: 0.35,
     shadowRadius:  24,
@@ -292,34 +308,44 @@ const r = StyleSheet.create({
     elevation:     10,
   },
   cardTitle: {
+    fontSize:      18,
+    fontFamily:    'Inter-Bold',
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    lineHeight:    26,
+  },
+  timeRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            8,
+  },
+  timeBlock: { alignItems: 'center', gap: 4 },
+  timeArrow: { paddingHorizontal: 8, paddingTop: 10 },
+  arrowText: { fontSize: 22, color: TEXT_MUTED, fontWeight: '300' },
+  timeLabel: {
+    fontSize:      11,
+    fontFamily:    'Inter-Regular',
+    color:         TEXT_MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  timeValue: {
+    fontSize:      38,
+    fontFamily:    'Inter-Bold',
+    fontWeight:    '700',
+    color:         ACCENT,
+    letterSpacing: -1,
+  },
+  cyclesWrap: { alignItems: 'center', gap: 8 },
+  cyclesLabel: {
     fontSize:   13,
     fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     color:      TEXT_MUTED,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    textAlign: 'center',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    justifyContent: 'space-around',
-  },
-  statCol:     { alignItems: 'center', flex: 1, gap: 6 },
-  statDivider: { width: 1, height: 44, backgroundColor: BORDER },
-  statLabel: {
-    fontSize:   11,
-    fontFamily: 'Inter-Regular',
-    color:      TEXT_MUTED,
-    textTransform: 'uppercase',
     letterSpacing: 0.8,
-  },
-  statValue: {
-    fontSize:      32,
-    fontFamily:    'Inter-Bold',
-    fontWeight:    '700',
-    color:         ACCENT,
-    letterSpacing: -0.5,
   },
   rloRow: {
     flexDirection: 'row',
@@ -337,10 +363,10 @@ const r = StyleSheet.create({
     paddingVertical:     14,
   },
   rloText: {
-    fontSize:   16,
+    fontSize:   15,
     fontFamily: 'Inter-Regular',
     color:      TEXT,
-    lineHeight: 25,
+    lineHeight: 24,
   },
   ctaWrap: {},
 });
