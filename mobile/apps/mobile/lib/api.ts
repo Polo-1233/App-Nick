@@ -441,3 +441,22 @@ export interface WeeklyReportResponse {
 export async function getLatestWeeklyReport(): Promise<ApiResponse<{ report: WeeklyReportResponse | null }>> {
   return request('GET', '/reports/weekly/latest');
 }
+
+// ─── /notifications ──────────────────────────────────────────────────────────
+
+export interface ProactiveTriggerResponse {
+  type:         string;
+  priority:     number;
+  title:        string;
+  body:         string;
+  chat_context: string;
+  expires_at:   string;
+}
+
+export async function getProactiveTrigger(): Promise<ApiResponse<{ trigger: ProactiveTriggerResponse | null }>> {
+  return request('GET', '/notifications/proactive');
+}
+
+export async function dismissTrigger(trigger_type: string): Promise<ApiResponse<{ ok: boolean }>> {
+  return request('POST', '/notifications/dismiss', { trigger_type });
+}

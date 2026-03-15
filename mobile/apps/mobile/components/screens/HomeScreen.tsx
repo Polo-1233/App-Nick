@@ -562,6 +562,22 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [messages]);
 
+  // Check for pending chat context from proactive notification tap
+  useEffect(() => {
+    if (phase !== 'done') return;
+    (async () => {
+      try {
+        const pending = await AsyncStorage.getItem('@r90:pendingChatContext');
+        if (pending) {
+          await AsyncStorage.removeItem('@r90:pendingChatContext');
+          setInput(pending);
+        }
+      } catch {
+        // Non-critical
+      }
+    })();
+  }, [phase]);
+
   // Greeting
   useEffect(() => {
     if (phase !== 'done' || hasGreeted.current) return;

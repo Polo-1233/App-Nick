@@ -14,6 +14,7 @@ import { configurePurchases } from '../lib/purchases';
 import { AppSplash } from '../components/AppSplash';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { syncCalendarToBackend } from '../lib/calendar-sync';
+import { initProactiveNotifications } from '../lib/proactive-notifications';
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -149,10 +150,11 @@ function RootLayoutInner() {
     }
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
 
-  // Sync calendar events to backend after auth is confirmed
+  // Sync calendar events and init proactive notifications after auth
   useEffect(() => {
     if (!isAuthenticated || authLoading) return;
     void syncCalendarToBackend();
+    initProactiveNotifications();
   }, [isAuthenticated, authLoading]);
 
   // Deep-link into the app when the user taps a local notification.

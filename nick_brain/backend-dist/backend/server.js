@@ -32,6 +32,7 @@ import { updateLifestyleHandler, getLifeEventsHandler, createLifeEventHandler, d
 import { calendarSyncHandler, calendarUpcomingHandler, } from "./handlers/calendar-context-handler.js";
 import { calculateSummaryHandler, recentSummariesHandler, } from "./handlers/summary-handler.js";
 import { generateReportHandler, latestReportHandler, } from "./handlers/report-handler.js";
+import { proactiveNotificationHandler, dismissNotificationHandler, } from "./handlers/notification-handler.js";
 // ─── Route table ──────────────────────────────────────────────────────────────
 const routes = [
     // Signup - uses authenticateSignup (no existing users row required)
@@ -59,6 +60,8 @@ const routes = [
     { method: "GET", path: "/summaries/recent", handler: recentSummariesHandler },
     { method: "POST", path: "/reports/generate", handler: generateReportHandler },
     { method: "GET", path: "/reports/weekly/latest", handler: latestReportHandler },
+    { method: "GET", path: "/notifications/proactive", handler: proactiveNotificationHandler },
+    { method: "POST", path: "/notifications/dismiss", handler: dismissNotificationHandler },
 ];
 // ─── Request helpers ──────────────────────────────────────────────────────────
 /** Read and JSON-parse the request body. Returns null on empty or invalid JSON. */
