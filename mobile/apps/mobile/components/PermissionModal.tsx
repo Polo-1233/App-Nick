@@ -47,7 +47,7 @@ const CONTENT: Record<PermStep, { title: string; description: string }> = {
   },
 };
 
-const MASCOT = require('../assets/images/airloop-hello.png');
+const MASCOT = require('../assets/images/rlo-hello.png');
 
 const GREEN = '#22C55E';
 

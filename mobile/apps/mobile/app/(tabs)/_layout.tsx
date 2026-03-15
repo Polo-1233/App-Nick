@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { DayPlanProvider }         from "../../lib/day-plan-context";
 import { ChatProvider }            from "../../lib/chat-context";
-import { AirloopChat }             from "../../components/AirloopChat";
+import { RLoChat }             from "../../components/RLoChat";
 import { OfflineBanner }           from "../../components/OfflineBanner";
 import { RLoToastProvider }        from "../../components/RLoToast";
 import { OnboardingPlanOverlay }   from "../../components/OnboardingPlanOverlay";
@@ -93,7 +93,7 @@ export default function TabsLayout() {
               />
             )}
 
-            <AirloopChat
+            <RLoChat
               visible={chatVisible}
               onClose={() => setChatVisible(false)}
             />

@@ -2,7 +2,7 @@
  * ChatContext
  *
  * Exposes openChat() to any component inside the tab layout without
- * prop-drilling. The actual chat state and AirloopChat modal live in
+ * prop-drilling. The actual chat state and RLoChat modal live in
  * _layout.tsx — this context is a thin wire.
  */
 

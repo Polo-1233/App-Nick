@@ -122,12 +122,12 @@ export interface NextAction {
   ruleId: string; // traces back to R90_LOGIC_MAP
 }
 
-// --- Airloop Messages ---
+// --- R-Lo Messages ---
 
-export type AirloopMoment = "morning" | "midday" | "evening" | "post_event" | "general";
+export type RLoMoment = "morning" | "midday" | "evening" | "post_event" | "general";
 
-export interface AirloopMessage {
-  moment: AirloopMoment;
+export interface RLoMessage {
+  moment: RLoMoment;
   text: string;
   ruleId: string;
   tone: "calm" | "encouraging" | "pragmatic";
@@ -139,7 +139,7 @@ export interface DayPlan {
   date: DateString;
   blocks: TimeBlock[];
   nextAction: NextAction;
-  airloopMessage: AirloopMessage;
+  rloMessage: RLoMessage;
   readiness: ReadinessState;
   cycleWindow: CycleWindow;
   conflicts: Conflict[];
@@ -177,7 +177,7 @@ export interface ScenarioExpectation {
   nextActionType?: ActionType;
   /** Asserts dayPlan.nextAction.title contains the given substring. */
   nextActionTitleContains?: string;
-  airloopMessageContains?: string;
+  rloMessageContains?: string;
   conflictCount?: number;
   weeklyTotal?: number;
   hasCRPBlock?: boolean; // Assert whether DayPlan contains a CRP block

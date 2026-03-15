@@ -17,7 +17,7 @@ import type {
 import { calculateCycleWindow } from "./cycles";
 import { detectConflicts } from "./conflicts";
 import { selectNextAction } from "./actions";
-import { generateAirloopMessage } from "./airloop-messages";
+import { generateRLoMessage } from "./rlo-messages";
 import { computeReadiness } from "./readiness";
 import { addMinutes, isTimeBetween } from "./time-utils";
 import { CYCLE_DURATION } from "./cycles";
@@ -79,13 +79,13 @@ function assembleDayPlan(
   };
 
   const nextAction = selectNextAction(ruleContext);
-  const airloopMessage = generateAirloopMessage(ruleContext);
+  const rloMessage = generateRLoMessage(ruleContext);
 
   return {
     date,
     blocks,
     nextAction,
-    airloopMessage,
+    rloMessage,
     readiness,
     cycleWindow,
     conflicts,

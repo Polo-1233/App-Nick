@@ -90,12 +90,12 @@ function runScenario(scenario: Scenario): boolean {
       allPassed = false;
   }
 
-  // ── Day-plan assertions (hasCRPBlock, nextActionType, title, airloopMessage) ──
+  // ── Day-plan assertions (hasCRPBlock, nextActionType, title, rloMessage) ──
   const needsDayPlan =
     expected.hasCRPBlock != null ||
     expected.nextActionType != null ||
     expected.nextActionTitleContains != null ||
-    expected.airloopMessageContains != null;
+    expected.rloMessageContains != null;
 
   if (needsDayPlan) {
     const dayPlan = buildDayPlan(profile, input.id, currentTime, weekHistory, calendarEvents);
@@ -117,9 +117,9 @@ function runScenario(scenario: Scenario): boolean {
         allPassed = false;
     }
 
-    if (expected.airloopMessageContains != null) {
-      const includesText = dayPlan.airloopMessage.text.includes(expected.airloopMessageContains);
-      if (!assert(input.id, "airloopMessageContains", includesText, true))
+    if (expected.rloMessageContains != null) {
+      const includesText = dayPlan.rloMessage.text.includes(expected.rloMessageContains);
+      if (!assert(input.id, "rloMessageContains", includesText, true))
         allPassed = false;
     }
   }

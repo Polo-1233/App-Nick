@@ -2,7 +2,7 @@
  * OnboardingStep
  *
  * Reusable wrapper for onboarding screens.
- * Shows step indicator, an Airloop message bubble, and children.
+ * Shows step indicator, an R-Lo message bubble, and children.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -10,7 +10,7 @@ import { View, Text, StyleSheet } from 'react-native';
 interface Props {
   step: number;       // 1-indexed
   totalSteps: number;
-  message: string;    // Airloop says...
+  message: string;    // R-Lo says...
   children: React.ReactNode;
 }
 

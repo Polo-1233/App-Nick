@@ -2,7 +2,7 @@
  * ConflictCard
  *
  * Shows a single conflict inline in the Calendar tab.
- * Displays the Airloop explanation and, when options exist, a resolution picker.
+ * Displays the R-Lo explanation and, when options exist, a resolution picker.
  *
  * Rule R033: Options are always presented — never demanded.
  * The user can dismiss without choosing.
@@ -53,7 +53,7 @@ export function ConflictCard({
         </View>
       </View>
 
-      {/* Airloop explanation */}
+      {/* R-Lo explanation */}
       <Text style={styles.description}>{conflict.description}</Text>
 
       {/* Resolution options (only for pre_sleep conflicts) */}

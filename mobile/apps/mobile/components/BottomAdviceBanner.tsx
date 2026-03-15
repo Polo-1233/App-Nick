@@ -5,7 +5,7 @@
  * NOT used on Home.
  *
  * Layout (left → right):
- *   [mascot 48×48]   [advice text flex:1]   [Airloop chat button 40×40]
+ *   [mascot 48×48]   [advice text flex:1]   [R-Lo chat button 40×40]
  *
  * The chat button calls openChat() from ChatContext — no prop needed.
  * Wrapped in React.memo; useChatContext returns a stable reference so
@@ -46,16 +46,16 @@ export const BottomAdviceBanner = memo(function BottomAdviceBanner({
           {message}
         </Text>
 
-        {/* Airloop chat button — replaces the floating FAB */}
+        {/* R-Lo chat button — replaces the floating FAB */}
         <Pressable
           style={styles.chatBtn}
           onPress={openChat}
           accessibilityRole="button"
-          accessibilityLabel="Open Airloop chat"
+          accessibilityLabel="Open R-Lo chat"
           hitSlop={8}
         >
           <Image
-            source={require("../assets/images/airloop-hello.png")}
+            source={require("../assets/images/rlo-hello.png")}
             style={styles.chatBtnImage}
             resizeMode="contain"
           />

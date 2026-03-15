@@ -8,7 +8,7 @@ export { calculateCycleWindow, recalculateFromMissedBedtime, calculatePostEventW
 export { buildDayPlan, buildDayPlanFromWindow } from "./planner";
 export { detectConflicts, generateConflictOptions } from "./conflicts";
 export { selectNextAction } from "./actions";
-export { generateAirloopMessage, generatePostEventMessage } from "./airloop-messages";
+export { generateRLoMessage, generatePostEventMessage } from "./rlo-messages";
 export { computeReadiness } from "./readiness";
 export { RULES_REGISTRY, getTodoNickRules, getRule, getRulesByCategory } from "./rules";
 export { parseTime, formatTime, subtractMinutes, addMinutes, isTimeBetween, duration } from "./time-utils";

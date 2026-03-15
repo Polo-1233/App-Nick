@@ -1,5 +1,5 @@
 /**
- * AirloopChat — Streaming coaching chat for R90 Navigator
+ * RLoChat — Streaming coaching chat for R90 Navigator
  *
  * Full rewrite: free-text input + GPT-4o streaming via SSE.
  *
@@ -73,7 +73,7 @@ function BlinkingCursor({ color }: { color: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AirloopChat({ visible, onClose }: Props) {
+export function RLoChat({ visible, onClose }: Props) {
   const { messages, isStreaming, sendMessage, clearHistory } = useChat();
   const { theme } = useTheme();
   const c = theme.colors;

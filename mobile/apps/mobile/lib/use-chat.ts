@@ -1,5 +1,5 @@
 /**
- * use-chat.ts — Streaming chat hook for Airloop (React Native compatible)
+ * use-chat.ts — Streaming chat hook for R-Lo (React Native compatible)
  *
  * Uses XMLHttpRequest + onprogress for SSE streaming.
  * React Native's fetch doesn't support ReadableStream, but XHR does.

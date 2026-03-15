@@ -2,7 +2,7 @@
  * BottomSheetStats — slide-up bottom sheet with detailed weekly stats.
  *
  * Opens when WeeklyCycleRing is tapped.
- * Shows: bar chart (last 7 nights), summary row, Airloop coaching message.
+ * Shows: bar chart (last 7 nights), summary row, R-Lo coaching message.
  *
  * Animation: same backdrop-fade + spring-slide pattern used throughout the app.
  * No new dependencies — pure React Native Animated API.
@@ -190,7 +190,7 @@ export function BottomSheetStats({
 
           {/* ── Coaching message ── */}
           <View style={s.messageCard}>
-            <Text style={s.messageMeta}>AIRLOOP</Text>
+            <Text style={s.messageMeta}>R-LO</Text>
             <Text style={s.messageText}>{message}</Text>
           </View>
         </ScrollView>

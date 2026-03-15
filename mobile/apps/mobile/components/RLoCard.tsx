@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet } from "react-native";
-import type { AirloopMessage } from "@r90/types";
+import type { RLoMessage } from "@r90/types";
 
 interface Props {
-  message: AirloopMessage;
+  message: RLoMessage;
 }
 
-export function AirloopCard({ message }: Props) {
+export function RLoCard({ message }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.avatar}>

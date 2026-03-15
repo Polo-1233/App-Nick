@@ -1,5 +1,5 @@
 /**
- * AirloopSplash
+ * RLoSplash
  *
  * Opening screen for the onboarding flow.
  * Fades in, holds briefly, then calls onDone to advance.
@@ -15,7 +15,7 @@ interface Props {
   onDone: () => void;
 }
 
-export function AirloopSplash({ onDone }: Props) {
+export function RLoSplash({ onDone }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {

@@ -1,10 +1,10 @@
 /**
- * Airloop message generator.
+ * R-Lo message generator.
  *
  * Deterministic message selection based on context.
  * Rule references: R060-R065
  *
- * Tone guide (see docs/AIRLOOP_STYLE_GUIDE.md):
+ * Tone guide (see docs/RLO_STYLE_GUIDE.md):
  * - Calm expert: no mascot language, no exclamation marks, no emojis in text.
  * - Cycle-first: speak in cycles, not hours.
  * - Week-aware: reference X/35 progress, not nightly perfection.
@@ -16,13 +16,13 @@
  * - No exclamation marks. No emojis in message text.
  */
 
-import type { AirloopMessage, RuleContext, AirloopMoment } from "@r90/types";
+import type { RLoMessage, RuleContext, RLoMoment } from "@r90/types";
 import { formatTime } from "./time-utils";
 
 /**
- * Generate the primary Airloop message for the current moment.
+ * Generate the primary R-Lo message for the current moment.
  */
-export function generateAirloopMessage(ctx: RuleContext): AirloopMessage {
+export function generateRLoMessage(ctx: RuleContext): RLoMessage {
   const moment = determineMoment(ctx.now, ctx.profile.anchorTime);
 
   switch (moment) {
@@ -41,7 +41,7 @@ export function generateAirloopMessage(ctx: RuleContext): AirloopMessage {
  * Determine the time-of-day moment relative to anchor time.
  * Morning = anchor to anchor+6h, Midday = anchor+6h to anchor+11h, Evening = anchor+11h onward.
  */
-function determineMoment(now: number, anchorTime: number): AirloopMoment {
+function determineMoment(now: number, anchorTime: number): RLoMoment {
   // Calculate time since anchor (handles wraparound)
   const minutesSinceAnchor = (now - anchorTime + 1440) % 1440;
 
@@ -51,7 +51,7 @@ function determineMoment(now: number, anchorTime: number): AirloopMoment {
   return "general"; // 16h+ after anchor (close to next anchor)
 }
 
-function morningMessage(ctx: RuleContext): AirloopMessage {
+function morningMessage(ctx: RuleContext): RLoMessage {
   const lastNight = ctx.weekHistory[ctx.weekHistory.length - 1];
   const cycles = lastNight?.cyclesCompleted ?? ctx.todayPlan.cycleCount;
   const { zone } = ctx.readiness;
@@ -90,7 +90,7 @@ function morningMessage(ctx: RuleContext): AirloopMessage {
   };
 }
 
-function middayMessage(ctx: RuleContext): AirloopMessage {
+function middayMessage(ctx: RuleContext): RLoMessage {
   const { zone } = ctx.readiness;
 
   if (zone === "green") {
@@ -111,7 +111,7 @@ function middayMessage(ctx: RuleContext): AirloopMessage {
   };
 }
 
-function eveningMessage(ctx: RuleContext): AirloopMessage {
+function eveningMessage(ctx: RuleContext): RLoMessage {
   const bedtime = ctx.todayPlan.bedtime;
   const preSleep = ctx.todayPlan.preSleepStart;
   const minutesUntilPreSleep = ((preSleep - ctx.now) + 1440) % 1440;
@@ -133,7 +133,7 @@ function eveningMessage(ctx: RuleContext): AirloopMessage {
   };
 }
 
-function generalMessage(ctx: RuleContext): AirloopMessage {
+function generalMessage(ctx: RuleContext): RLoMessage {
   return {
     moment: "general",
     text: `At ${ctx.readiness.weeklyTotal}/${ctx.readiness.weeklyTarget} cycles this week.`,
@@ -150,7 +150,7 @@ export function generatePostEventMessage(
   eventEndTime: number,
   firstCycleTime: number,
   cycleCount: number
-): AirloopMessage {
+): RLoMessage {
   return {
     moment: "post_event",
     text: `Event done. Adrenaline takes 90 minutes to clear. Next cycle at ${formatTime(firstCycleTime)}. ${cycleCount} cycles tonight — fine for one night. Wind down, no screens.`,

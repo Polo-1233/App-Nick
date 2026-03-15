@@ -1,8 +1,8 @@
 /**
- * AirloopPresence
+ * RLoPresence
  *
- * A discrete bottom-of-screen indicator that Airloop is present.
- * Design rules (from AIRLOOP_STYLE_GUIDE.md):
+ * A discrete bottom-of-screen indicator that R-Lo is present.
+ * Design rules (from R-LO_STYLE_GUIDE.md):
  * - Discrete by default: very low opacity idle state.
  * - Animates only when there is something worth signalling (new message).
  * - No mascot energy: no bouncing, no waving, no emojis.
@@ -11,13 +11,13 @@
 
 import { useEffect, useRef } from "react";
 import { View, Text, Animated, StyleSheet } from "react-native";
-import type { AirloopMessage } from "@r90/types";
+import type { RLoMessage } from "@r90/types";
 
 interface Props {
-  message: AirloopMessage | null;
+  message: RLoMessage | null;
 }
 
-export function AirloopPresence({ message }: Props) {
+export function RLoPresence({ message }: Props) {
   const opacity = useRef(new Animated.Value(0.15)).current;
   const scale = useRef(new Animated.Value(1)).current;
   // Track previous message text to detect genuine changes
@@ -87,7 +87,7 @@ export function AirloopPresence({ message }: Props) {
         ]}
       />
       <Animated.Text style={[styles.label, { opacity }]}>
-        airloop
+        rlo
       </Animated.Text>
     </View>
   );
