@@ -439,11 +439,11 @@ export default function ProfileScreen() {
         <Text style={s.version}>R90 Navigator v0.1.0</Text>
       </ScrollView>
 
-      {showSettings && profile && (
+      {showSettings && (
         <SettingsModal
           visible={showSettings}
           onClose={() => setShowSettings(false)}
-          profile={profile}
+          profile={profile ?? { anchorTime: 390, chronotype: 'Neither' as const, idealCyclesPerNight: 5, weeklyTarget: 35 }}
           themeMode={themeMode}
           onThemeChange={m => { HapticsLight(); setThemeMode(m); }}
           onSave={handleSaveProfile}
