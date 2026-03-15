@@ -450,7 +450,7 @@ export default function ProfileScreen() {
       icon:    'headset-outline',
       label:   'Support',
       sub:     'Help and resources',
-      onPress: () => { void Linking.openURL('mailto:support@r90navigator.com'); },
+      onPress: () => router.push('/support'),
     },
   ];
 
