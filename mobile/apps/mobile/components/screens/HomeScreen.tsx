@@ -213,7 +213,7 @@ const ih = StyleSheet.create({
     left:            16,
     right:           16,
     flexDirection:   'row',
-    alignItems:      'flex-start',
+    alignItems:      'stretch',
     gap:             12,
   },
   planLabel: {
