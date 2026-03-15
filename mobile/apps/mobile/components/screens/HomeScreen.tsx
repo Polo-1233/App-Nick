@@ -1,15 +1,13 @@
 /**
- * HomeScreen — AI sleep coach conversation
+ * HomeScreen — Immersive coach experience
  *
  * Structure:
- *   1. Coach header   — R-Lo avatar + personalised greeting
- *   2. Tonight widget — bedtime → wake (only essential)
- *   3. R-Lo message   — "How can I help you today?"
- *   4. Quick actions  — 5 conversation starters
- *   5. Chat           — user + R-Lo messages
- *   6. Input          — sticky at bottom
- *
- * Metrics (cycles, recovery score, debt) → Insights screen only.
+ *   1. Header image  — montagne.png (~33% height) + dark gradient + R-Lo + greeting
+ *   2. Tonight card  — bedtime → wake
+ *   3. R-Lo message  — "How can I help you today?"
+ *   4. Quick actions — 5 chips
+ *   5. Chat          — conversation
+ *   6. Input         — sticky at bottom
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -23,10 +21,13 @@ import {
   Platform,
   ScrollView,
   Animated,
+  Dimensions,
+  Image,
 } from 'react-native';
-import { SafeAreaView }              from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons }                  from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect }        from 'expo-router';
+import { Ionicons }                         from '@expo/vector-icons';
+import { LinearGradient }                   from 'expo-linear-gradient';
 
 import { useDayPlanContext }         from '../../lib/day-plan-context';
 import { useOnboardingPhase }        from '../../lib/onboarding-phase-context';
@@ -52,6 +53,9 @@ const SUB     = '#9FB0C5';
 const MUTED   = '#6B7F99';
 const BORDER  = 'rgba(255,255,255,0.06)';
 
+const { height: SCREEN_H } = Dimensions.get('window');
+const HEADER_H = Math.round(SCREEN_H * 0.34);
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMin(m: number): string {
   const mins = ((m % 1440) + 1440) % 1440;
@@ -60,8 +64,8 @@ function formatMin(m: number): string {
 
 function coachGreeting(name: string | null, score: number): { line1: string; line2: string } {
   const h = new Date().getHours();
-  const salutation = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  const line1 = name ? `${salutation}, ${name}.` : `${salutation}.`;
+  const time = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  const line1 = name ? `Good ${time}, ${name}` : `Good ${time}`;
   let line2: string;
   if (score >= 80)      line2 = 'Your recovery looks strong today.';
   else if (score >= 65) line2 = 'Your rhythm is building nicely.';
@@ -165,35 +169,58 @@ function ThinkingDots() {
   );
 }
 
-// ─── 1. Coach header ──────────────────────────────────────────────────────────
-function CoachHeader({ name, score }: { name: string | null; score: number }) {
+// ─── 1. Immersive header ──────────────────────────────────────────────────────
+function ImmersiveHeader({
+  name, score, topInset,
+}: { name: string | null; score: number; topInset: number }) {
   const { line1, line2 } = coachGreeting(name, score);
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: 3200, useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: 3200, useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 1, duration: 3400, useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: 3400, useNativeDriver: true }),
     ])).start();
   }, [breathe]);
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.03] });
+  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.04] });
 
   return (
-    <View style={hd.wrap}>
-      <Animated.View style={{ transform: [{ scale }], width: 60, height: 60 }}>
-        <MascotImage emotion="encourageant" style={{ width: 60, height: 60 }} />
-      </Animated.View>
-      <View style={hd.text}>
-        <Text style={hd.line1}>{line1}</Text>
-        <Text style={hd.line2}>{line2}</Text>
+    <View style={[ih.container, { height: HEADER_H + topInset }]}>
+      {/* Background image */}
+      <Image
+        source={require('../../assets/montagne.png')}
+        style={ih.image}
+        resizeMode="cover"
+      />
+
+      {/* Dark gradient overlay — bottom heavy so text pops */}
+      <LinearGradient
+        colors={['rgba(11,18,32,0.20)', 'rgba(11,18,32,0.55)', 'rgba(11,18,32,0.92)']}
+        locations={[0, 0.5, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Content: mascot + greeting */}
+      <View style={[ih.content, { paddingTop: topInset + 16 }]}>
+        {/* R-Lo mascot */}
+        <Animated.View style={[ih.mascotWrap, { transform: [{ scale }] }]}>
+          <MascotImage emotion="encourageant" style={ih.mascot} />
+        </Animated.View>
+
+        {/* Greeting */}
+        <Text style={ih.line1}>{line1}</Text>
+        <Text style={ih.line2}>{line2}</Text>
       </View>
     </View>
   );
 }
-const hd = StyleSheet.create({
-  wrap:  { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 },
-  text:  { flex: 1 },
-  line1: { fontSize: 18, fontWeight: '700', color: TEXT, lineHeight: 24 },
-  line2: { fontSize: 14, color: SUB, marginTop: 4, lineHeight: 20 },
+const ih = StyleSheet.create({
+  container:  { width: '100%', overflow: 'hidden' },
+  image:      { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  content:    { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 20, paddingBottom: 20, alignItems: 'flex-start' },
+  mascotWrap: { width: 72, height: 72, marginBottom: 10 },
+  mascot:     { width: 72, height: 72 },
+  line1:      { fontSize: 26, fontWeight: '800', color: '#FFFFFF', lineHeight: 32, marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.4)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  line2:      { fontSize: 15, color: 'rgba(255,255,255,0.80)', lineHeight: 22, textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 });
 
 // ─── 2. Tonight widget ────────────────────────────────────────────────────────
@@ -210,9 +237,7 @@ function TonightWidget({ bedtime, wake }: { bedtime: number | null; wake: number
             <Text style={tw.sub}>Bedtime</Text>
           </View>
         </View>
-        <View style={tw.arrow}>
-          <Ionicons name="arrow-forward-outline" size={16} color={MUTED} />
-        </View>
+        <Ionicons name="arrow-forward-outline" size={15} color={MUTED} style={{ paddingHorizontal: 6 }} />
         <View style={tw.item}>
           <Ionicons name="sunny-outline" size={18} color={WARNING} />
           <View>
@@ -225,11 +250,10 @@ function TonightWidget({ bedtime, wake }: { bedtime: number | null; wake: number
   );
 }
 const tw = StyleSheet.create({
-  card:  { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 16 },
+  card:  { backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 16, marginBottom: 14 },
   label: { fontSize: 11, fontWeight: '600', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 },
   row:   { flexDirection: 'row', alignItems: 'center' },
   item:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  arrow: { paddingHorizontal: 8 },
   time:  { fontSize: 22, fontWeight: '800', color: TEXT },
   sub:   { fontSize: 12, color: MUTED, marginTop: 2 },
 });
@@ -264,6 +288,7 @@ export default function HomeScreen() {
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { phase, advance }    = useOnboardingPhase();
   const router                = useRouter();
+  const insets                = useSafeAreaInsets();
   const { messages, isStreaming, sendMessage, injectMessage } = useChat();
 
   const [input,        setInput]        = useState('');
@@ -304,7 +329,6 @@ export default function HomeScreen() {
   function rloSay(text: string, ms = 900): Promise<void> {
     return new Promise(r => setTimeout(() => { injectMessage(text); r(); }, ms));
   }
-
   async function handleGuidedAnswer(txt: string) {
     if (guidedTyping.current) return;
     guidedTyping.current = true;
@@ -324,14 +348,12 @@ export default function HomeScreen() {
     }
     guidedTyping.current = false;
   }
-
   async function handleGuidedWakePick(minutes: number, label: string) {
     guidedWake.current = minutes; guidedStep.current = 'goal';
     setGuidedChips(null); injectMessage(label);
     await rloSay("Perfect.\n\nWhat's your main goal right now?", 700);
     setGuidedChips('goal'); guidedTyping.current = false;
   }
-
   async function handleGuidedGoalPick(value: string, label: string) {
     guidedStep.current = 'done'; setGuidedChips(null); injectMessage(label);
     await rloSay("Great. Let me build your R90 recovery rhythm.", 700);
@@ -386,18 +408,17 @@ export default function HomeScreen() {
   // ── Derived ──────────────────────────────────────────────────────────────
   const isGuidedMode = phase === 'guided_chat';
   const canSend      = input.trim().length > 0 && (!isStreaming || isGuidedMode);
-  const hasUserChat  = messages.some(m => m.role === 'user');
   const bedtime      = dayPlan?.cycleWindow?.bedtime  ?? null;
   const wakeTime     = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={sc.root} edges={['top']}>
+    <View style={sc.root}>
       <KeyboardAvoidingView style={sc.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
         {/* ── GUIDED SETUP ──────────────────────────────────────────────── */}
         {isGuidedMode ? (
-          <>
+          <SafeAreaView style={sc.flex} edges={['top', 'bottom']}>
             <View style={sc.guidedHeader}>
               <MascotImage emotion="encourageant" style={{ width: 34, height: 34 }} />
               <View>
@@ -405,11 +426,9 @@ export default function HomeScreen() {
                 <Text style={sc.guidedSub}>Your personal sleep coach</Text>
               </View>
             </View>
-
             <ScrollView ref={scrollRef} style={sc.flex} contentContainerStyle={sc.guidedList} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
             </ScrollView>
-
             {guidedChips === 'wake' && (
               <View style={sc.chipsWrap}>
                 {WAKE_OPTS.map(({ label, value }) => (
@@ -420,7 +439,6 @@ export default function HomeScreen() {
                 ))}
               </View>
             )}
-
             {guidedChips === 'goal' && (
               <View style={sc.chipsWrap}>
                 {GOAL_OPTS.map(({ label, value }) => (
@@ -431,7 +449,6 @@ export default function HomeScreen() {
                 ))}
               </View>
             )}
-
             {guidedStep.current === 'name' && !guidedChips && (
               <View style={sc.composer}>
                 <View style={sc.inputRow}>
@@ -447,7 +464,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
-          </>
+          </SafeAreaView>
         ) : (
           /* ── COACH MODE ─────────────────────────────────────────────────── */
           <>
@@ -458,26 +475,27 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* 1. Coach header */}
-              <CoachHeader name={userName} score={energyScore} />
+              {/* 1. Immersive header (full bleed, no SafeArea) */}
+              <ImmersiveHeader name={userName} score={energyScore} topInset={insets.top} />
 
               {/* 2. Tonight widget */}
+              <View style={{ height: 14 }} />
               <TonightWidget bedtime={bedtime} wake={wakeTime} />
 
-              {/* 3. Chat messages (R-Lo greeting + conversation) */}
+              {/* 3. Chat area */}
               <View style={sc.chatArea}>
                 {messages.map(m => <ChatBubble key={m.id} msg={m} />)}
                 {isStreaming && <ThinkingDots />}
               </View>
 
-              {/* 4. Quick actions — always visible when not streaming */}
+              {/* 4. Quick actions */}
               {!isStreaming && (
                 <View style={sc.qaWrap}>
                   <QuickActions onPress={send} disabled={isStreaming} />
                 </View>
               )}
 
-              <View style={{ height: 16 }} />
+              <View style={{ height: insets.bottom + 16 }} />
             </ScrollView>
 
             {/* 5. Chat input */}
@@ -503,12 +521,13 @@ export default function HomeScreen() {
                   <Ionicons name="arrow-up" size={18} color={canSend ? '#000' : MUTED} />
                 </Pressable>
               </View>
+              <View style={{ height: insets.bottom }} />
             </View>
           </>
         )}
 
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -518,10 +537,10 @@ const sc = StyleSheet.create({
   flex:   { flex: 1 },
   scroll: { paddingBottom: 8 },
 
-  chatArea: { paddingHorizontal: 16, gap: 6 },
-  qaWrap:   { paddingTop: 16, paddingBottom: 4 },
+  chatArea: { paddingHorizontal: 16, paddingTop: 4, gap: 6 },
+  qaWrap:   { paddingTop: 14, paddingBottom: 4 },
 
-  composer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG, paddingBottom: 6 },
+  composer: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER, backgroundColor: BG },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, gap: 8 },
   inputWrap:{ flex: 1, backgroundColor: CARD, borderRadius: 22, borderWidth: 1, borderColor: 'transparent' },
   input:    { paddingHorizontal: 18, paddingVertical: 11, fontSize: 15, maxHeight: 120, color: TEXT, lineHeight: 22 },
