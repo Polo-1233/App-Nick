@@ -33,8 +33,8 @@ export const PREMIUM_ENTITLEMENT_ID = 'premium';
 
 /** Product identifiers as configured in RevenueCat. */
 export const PRODUCT_IDS = {
-  monthly: 'monthly',
-  yearly:  'yearly',
+  monthly: 'com.metalab.r90navigator.monthly',
+  yearly:  'com.metalab.r90navigator.yearly',
 } as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -61,9 +61,13 @@ let _configured = false;
 export function configurePurchases(): void {
   if (_configured) return;
   try {
+    // Guard against hot-reload double-configure (native SDK keeps state across JS reloads)
+    if (Purchases.isConfigured) {
+      _configured = true;
+      return;
+    }
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-      console.log('[purchases] RevenueCat iOS API key:', REVENUECAT_API_KEY_IOS);
     }
     if (Platform.OS === 'ios') {
       Purchases.configure({ apiKey: REVENUECAT_API_KEY_IOS });
