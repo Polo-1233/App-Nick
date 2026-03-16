@@ -69,6 +69,47 @@ const BANNER_H  = 80;
 /** FAB diameter. */
 const FAB_SIZE  = 56;
 
+// ─── Mock DayPlan (simulator / no backend) ────────────────────────────────────
+
+import type { DayPlan } from '@r90/types';
+
+const MOCK_DAY_PLAN: DayPlan = {
+  date: new Date().toISOString().split('T')[0]!,
+  blocks: [
+    { start: 1350, end: 1410, type: 'pre_sleep',   label: 'Wind-down' },   // 22:30–23:30
+    { start: 1410, end: 450,  type: 'sleep_cycle', label: 'Bedtime' },     // 23:30–07:30
+    { start:  450, end: 510,  type: 'wake',         label: 'Wake up' },    // 07:30–08:30
+    { start:  870, end: 960,  type: 'crp',          label: 'Nap window' }, // 14:30–16:00
+    { start:  720, end: 810,  type: 'down_period',  label: 'Rest break 1' }, // 12:00–13:30
+  ],
+  readiness: {
+    zone:         'green',
+    recentCycles: [5, 4, 5],
+    weeklyTotal:  22,
+    weeklyTarget: 35,
+  },
+  cycleWindow: {
+    bedtime:       1410,  // 23:30
+    wakeTime:      450,   // 07:30
+    cycleCount:    5,
+    preSleepStart: 1350,  // 22:30
+  },
+  conflicts:  [],
+  zoneStatus: 'experimental',
+  nextAction: {
+    type:        'general_guidance',
+    title:       'Prepare for tonight',
+    description: 'Your wind-down starts at 22:30.',
+    ruleId:      'MOCK',
+  },
+  rloMessage: {
+    moment:  'evening',
+    text:    'Good sleep rhythm this week — keep it up.',
+    ruleId:  'MOCK',
+    tone:    'encouraging',
+  },
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SelectedBlock {
@@ -105,6 +146,9 @@ export default function CalendarScreen() {
   const { dayPlan, loading, applyConflictOption } = useDayPlanContext();
   const { checkGate, recordUsage } = usePremium();
 
+  // Fallback to mock data when no backend data (simulator / offline)
+  const activePlan = dayPlan ?? MOCK_DAY_PLAN;
+
   // ── Backend day plan (enriched timeline from nick_brain) ───────────────────
   const [backendPlan,      setBackendPlan]      = useState<DayPlanPayload | null>(null);
   const [backendPlanLoaded, setBackendPlanLoaded] = useState(false);
@@ -135,9 +179,9 @@ export default function CalendarScreen() {
 
   const todayStr   = toDateStr(new Date());
   const currentMin = getCurrentMinute();
-  const zone       = dayPlan?.readiness.zone ?? null;
+  const zone       = activePlan.readiness.zone;
 
-  const todayCycles  = dayPlan?.readiness.recentCycles[0];
+  const todayCycles  = activePlan.readiness.recentCycles[0];
 
 
   // ── Load static data once ───────────────────────────────────────────────────
@@ -193,15 +237,15 @@ export default function CalendarScreen() {
 
   const getBlocksForDate = useCallback(
     (date: Date): { blocks: TimeBlock[]; conflicts: Conflict[] } => {
-      if (toDateStr(date) === todayStr && dayPlan) {
+      if (toDateStr(date) === todayStr) {
         // Prefer backend blocks when available (richer 16-cycle timeline)
-        const blocks = backendBlocks.length > 0 ? backendBlocks : dayPlan.blocks;
-        return { blocks, conflicts: dayPlan.conflicts };
+        const blocks = backendBlocks.length > 0 ? backendBlocks : activePlan.blocks;
+        return { blocks, conflicts: activePlan.conflicts };
       }
       if (profile) return { blocks: phantomBlocks(profile), conflicts: [] };
       return { blocks: [], conflicts: [] };
     },
-    [dayPlan, backendBlocks, profile, todayStr],
+    [activePlan, backendBlocks, profile, todayStr],
   );
 
   // ── Event handlers ──────────────────────────────────────────────────────────
@@ -249,17 +293,6 @@ export default function CalendarScreen() {
 
   if (loading) return <CalendarSkeletonScreen />;
 
-  if (!dayPlan) {
-    return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 32 }}>
-        <Ionicons name="moon-outline" size={40} color={theme.colors.textMuted} />
-        <Text style={{ color: theme.colors.textSub, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
-          No plan for today. Log a night to get started.
-        </Text>
-      </View>
-    );
-  }
-
   // ── FAB position ─────────────────────────────────────────────────────────────
   const fabBottom = 20;
 
@@ -292,7 +325,7 @@ export default function CalendarScreen() {
             todayStr={todayStr}
             todayCycles={todayCycles}
             todayZone={zone ?? undefined}
-            todayHasConflict={dayPlan.conflicts.length > 0}
+            todayHasConflict={activePlan.conflicts.length > 0}
             onDayTap={date => {
               setFocusedDate(date);
               setViewMode('1d');
