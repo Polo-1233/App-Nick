@@ -35,6 +35,7 @@ import {
   saveProfile,
   loadOnboardingData,
   clearAllStorage,
+  setOnboardingPhase,
 } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
 import type { ThemeMode } from '../../lib/theme';
@@ -418,6 +419,8 @@ export default function ProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset', style: 'destructive', onPress: async () => {
           await clearAllStorage();
+          // Set phase to guided_chat BEFORE logout so new session starts fresh
+          await setOnboardingPhase('guided_chat');
           await logout();
           router.replace('/onboarding');
         }},

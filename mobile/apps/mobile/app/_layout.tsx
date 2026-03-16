@@ -120,7 +120,7 @@ function RootLayoutInner() {
   const [dataReady,  setDataReady]  = useState(false);
   const [splashDone, setSplashDone] = useState(false);
   const [hasIntro,  setHasIntro]  = useState(false);
-  const hasRedirected = useRef(false);
+
 
   // Hook must be called before any early returns (React rules)
   useAndroidNavBar(immersiveMode, theme.colors.background, theme.dark);
@@ -138,15 +138,10 @@ function RootLayoutInner() {
   }, []);
 
   useEffect(() => {
-    if (!dataReady || !splashDone || authLoading || hasRedirected.current) return;
-    hasRedirected.current = true;
+    if (!dataReady || !splashDone || authLoading) return;
     if (!hasIntro) {
-      // Not done onboarding yet — send to onboarding regardless of auth state.
-      // Login is collected INSIDE the onboarding flow (step 11.5 in OnboardingPlanOverlay),
-      // just before the calendar access request.
       router.replace('/onboarding');
     } else if (!isAuthenticated) {
-      // Completed onboarding but not logged in (e.g. after sign-out).
       router.replace('/login');
     }
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
