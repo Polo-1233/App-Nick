@@ -688,8 +688,7 @@ export default function HomeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-
-<View style={sc.flex}>
+        <View style={sc.flex}>
 
             {/* Full-page background video */}
             <Video
@@ -871,7 +870,8 @@ export default function HomeScreen() {
             </View>
             </View>{/* end bottom zone */}
 
-          </View>      </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
