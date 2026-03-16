@@ -185,11 +185,11 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
   const snapW  = cardW + CARD_GAP;
 
-  // onboarding step 'name' → no cards (text input only)
-  if (onboardingStep === 'name') return null;
+  // greeting + name steps → no cards
+  if (onboardingStep === 'greeting' || onboardingStep === 'name') return null;
 
   let cards: SmartCard[];
-  if      (onboardingStep === 'greeting')       cards = ONBOARDING_START_CARDS;
+  if (false as boolean)       cards = ONBOARDING_START_CARDS; // kept to avoid unused-var error
   else if (onboardingStep === 'wake')           cards = ONBOARDING_WAKE_CARDS;
   else if (onboardingStep === 'goal')           cards = ONBOARDING_GOAL_CARDS;
   else if (onboardingStep === 'sleep_duration') cards = ONBOARDING_DURATION_CARDS;
@@ -660,7 +660,14 @@ export default function HomeScreen() {
       setOnboardingStep('greeting');
       const t = setTimeout(() => {
         injectMessage("Hi, I'm R-Lo.\n\nI help people align their sleep with their natural cycles so they wake up with real energy.");
-        setTimeout(() => injectMessage("Before we start, I need to learn a little about you.\n\nIt takes about 30 seconds."), 2200);
+        setTimeout(() => {
+          injectMessage("Before we start, I need to learn a little about you.\n\nIt takes about 30 seconds.");
+          // Auto-advance après 2s — pas besoin d'appuyer sur quoi que ce soit
+          setTimeout(() => {
+            setOnboardingStep('name');
+            injectMessage("First, what should I call you?");
+          }, 2000);
+        }, 2200);
       }, 600);
       return () => clearTimeout(t);
     }
@@ -675,11 +682,7 @@ export default function HomeScreen() {
     const step = onboardingStep;
     const d    = onboardingDataRef.current;
 
-    if (step === 'greeting') {
-      setOnboardingStep('name');
-      setTimeout(() => injectMessage("First, what should I call you?"), 400);
-
-    } else if (step === 'name') {
+    if (step === 'name') {
       const name = txt.trim().split(' ')[0] || txt.trim();
       d.name = name;
       setUserName(name);
