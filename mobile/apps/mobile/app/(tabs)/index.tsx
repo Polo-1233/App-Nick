@@ -34,8 +34,7 @@ import ProfileScreen  from "../../components/screens/ProfileScreen";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ICON_SIZE        = 20;
-const ICON_AREA_HEIGHT = 58;
-const BUBBLE_SIZE      = 40;
+const BUBBLE_SIZE      = 36;
 const PAGE_COUNT       = 4;
 
 // ─── TabIcon ──────────────────────────────────────────────────────────────────
@@ -90,9 +89,9 @@ const ti = StyleSheet.create({
     borderRadius: BUBBLE_SIZE / 2,
   },
   label: {
-    fontSize:   10,
-    fontWeight: "600",
-    letterSpacing: 0.2,
+    fontSize:      10,
+    fontWeight:    "500",
+    letterSpacing: 0.1,
   },
 });
 
@@ -102,7 +101,9 @@ export default function PagerLayout() {
   const { theme }          = useTheme();
   const { width: screenW } = useWindowDimensions();
   const insets             = useSafeAreaInsets();
-  const tabBarHeight       = ICON_AREA_HEIGHT + insets.bottom;
+  // Height = bubble (36) + label (12) + gap (3) + paddingTop (6) + paddingBottom (4) + safe area
+  const CONTENT_H    = BUBBLE_SIZE + 12 + 3 + 6 + 4;
+  const tabBarHeight = CONTENT_H + insets.bottom;
 
   const scrollRef  = useRef<ScrollView>(null);
   const scrollX    = useRef(new Animated.Value(0)).current;
@@ -163,8 +164,7 @@ export default function PagerLayout() {
         style={[
           styles.tabBar,
           {
-            height:          tabBarHeight,
-            paddingBottom:   insets.bottom,
+            paddingBottom:   insets.bottom || 4,
             backgroundColor: tabBarBg,
             borderTopColor:  tabBarBorder,
           },
@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
   page:    { flex: 1, overflow: "hidden" },
   tabBar:  {
     flexDirection:  "row",
-    borderTopWidth: 1,
-    paddingTop:     8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop:     6,
   },
   tabItem: {
     flex:           1,
