@@ -169,7 +169,7 @@ export default function OnboardingScreen() {
 
   // ── Slide 1: fade-in each time the user lands here ────────────────────────
   useEffect(() => {
-    if (page === 1) {
+    if (page === 2) {
       fadeAnim1.setValue(0);
       Animated.timing(fadeAnim1, {
         toValue: 1, duration: 600, delay: 100, useNativeDriver: true,
@@ -179,7 +179,7 @@ export default function OnboardingScreen() {
 
   // ── Slide 2: fade-in each time the user lands here ────────────────────────
   useEffect(() => {
-    if (page === 2) {
+    if (page === 1) {
       fadeAnim2.setValue(0);
       Animated.timing(fadeAnim2, {
         toValue: 1, duration: 600, delay: 100, useNativeDriver: true,
@@ -384,7 +384,7 @@ export default function OnboardingScreen() {
             </View>}
 
             {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
-            {page === 1 && <View style={s.slideV}>
+            {page === 2 && <View style={s.slideV}>
 
               <View style={s.titleArea}>
                 <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
@@ -438,7 +438,7 @@ export default function OnboardingScreen() {
             </View>}
 
             {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
-            {page === 2 && <View style={s.slideV}>
+            {page === 1 && <View style={s.slideV}>
               {/* Title + circle centered together as a unit */}
               <Animated.View style={[s.slide2Content, { opacity: fadeAnim2 }]}>
 
