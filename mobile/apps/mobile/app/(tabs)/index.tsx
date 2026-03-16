@@ -15,6 +15,7 @@
 import { useRef, useState, useCallback } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   ScrollView,
   Animated,
@@ -31,9 +32,9 @@ import ProfileScreen  from "../../components/screens/ProfileScreen";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ICON_SIZE        = 22;
-const ICON_AREA_HEIGHT = 54;
-const BUBBLE_SIZE      = 44;
+const ICON_SIZE        = 20;
+const ICON_AREA_HEIGHT = 58;
+const BUBBLE_SIZE      = 40;
 const PAGE_COUNT       = 4;
 
 // ─── TabIcon ──────────────────────────────────────────────────────────────────
@@ -42,32 +43,42 @@ type AnimNode = Animated.AnimatedInterpolation<string | number>;
 
 function TabIcon({
   icon,
+  label,
   anim,
   bubbleColor,
+  iconColor,
 }: {
   icon:        React.ReactNode;
+  label:       string;
   anim:        AnimNode;
   bubbleColor: string;
+  iconColor:   string;
 }) {
-  const iconOpacity = anim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [0.5, 1],
-  });
+  const iconOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
+  const labelOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
 
   return (
     <View style={ti.wrap}>
-      <Animated.View
-        style={[ti.bubble, { opacity: anim, backgroundColor: bubbleColor }]}
-      />
-      <Animated.View style={{ opacity: iconOpacity }}>
-        {icon}
-      </Animated.View>
+      <View style={ti.iconRow}>
+        <Animated.View style={[ti.bubble, { opacity: anim, backgroundColor: bubbleColor }]} />
+        <Animated.View style={{ opacity: iconOpacity }}>
+          {icon}
+        </Animated.View>
+      </View>
+      <Animated.Text style={[ti.label, { color: iconColor, opacity: labelOpacity }]}>
+        {label}
+      </Animated.Text>
     </View>
   );
 }
 
 const ti = StyleSheet.create({
   wrap: {
+    alignItems:     "center",
+    justifyContent: "center",
+    gap:            3,
+  },
+  iconRow: {
     width:          BUBBLE_SIZE,
     height:         BUBBLE_SIZE,
     alignItems:     "center",
@@ -76,6 +87,11 @@ const ti = StyleSheet.create({
   bubble: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: BUBBLE_SIZE / 2,
+  },
+  label: {
+    fontSize:   10,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
 });
 
@@ -154,28 +170,28 @@ export default function PagerLayout() {
       >
         {/* Home */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(0)}>
-          <TabIcon anim={anim0} bubbleColor={tabBarBubble} icon={
+          <TabIcon anim={anim0} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Coach" icon={
             <Ionicons name={activeIndex === 0 ? "home" : "home-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
 
         {/* Calendar */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(1)}>
-          <TabIcon anim={anim1} bubbleColor={tabBarBubble} icon={
+          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Planning" icon={
             <Ionicons name={activeIndex === 1 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
 
         {/* Insights */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(2)}>
-          <TabIcon anim={anim2} bubbleColor={tabBarBubble} icon={
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Insights" icon={
             <Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
 
         {/* Profile */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(3)}>
-          <TabIcon anim={anim3} bubbleColor={tabBarBubble} icon={
+          <TabIcon anim={anim3} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Profile" icon={
             <Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
