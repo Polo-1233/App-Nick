@@ -477,14 +477,20 @@ export default function OnboardingScreen() {
                       },
                     ]}
                   />
-                  {/* Text — absolute over ring, full opacity always */}
-                  <View style={[StyleSheet.absoluteFill, s.slide2Inner]}>
+                  {/* Text — scale with breathing, opacity always 1 */}
+                  <Animated.View
+                    style={[
+                      StyleSheet.absoluteFill,
+                      s.slide2Inner,
+                      { transform: [{ scale: circlePulse2 }] },
+                    ]}
+                  >
                     <Text style={s.slide2DevelopedBy}>Developed by</Text>
                     <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
                     <Text style={s.slide2Credential}>
                       {"The R90 method used by elite athletes\n(Cristiano Ronaldo, Manchester United, Team Sky)"}
                     </Text>
-                  </View>
+                  </Animated.View>
                 </View>
 
               </Animated.View>
