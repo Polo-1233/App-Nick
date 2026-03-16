@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput,
   KeyboardAvoidingView, Platform, ScrollView, Modal,
-  Animated, Dimensions, Image,
+  Animated, Dimensions, Image, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }        from 'expo-router';
@@ -119,43 +119,79 @@ function getSmartCards(hour: number, lastCycles: number | null): SmartCard[] {
 
 // ─── SmartCarousel ────────────────────────────────────────────────────────────
 
+const CARDS_PER_PAGE = 3;
+const CARD_GAP       = 8;
+const CAROUSEL_H_PAD = 14;
+
 function SmartCarousel({ onPress, disabled, lastCycles }: {
   onPress:    (prompt: string) => void;
   disabled?:  boolean;
   lastCycles: number | null;
 }) {
-  const hour  = new Date().getHours();
-  const cards = getSmartCards(hour, lastCycles);
+  const { width: screenW } = useWindowDimensions();
+  const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
+  const snapW  = cardW + CARD_GAP;
+
+  const hour   = new Date().getHours();
+  const cards  = getSmartCards(hour, lastCycles);
+  const total  = cards.length;
+  const pages  = Math.ceil(total / CARDS_PER_PAGE);
+
+  const scrollRef       = useRef<ScrollView>(null);
+  const [page, setPage] = useState(0);
+
+  function handleScroll(e: { nativeEvent: { contentOffset: { x: number } } }) {
+    const x       = e.nativeEvent.contentOffset.x;
+    const newPage = Math.round(x / (snapW * CARDS_PER_PAGE));
+    setPage(Math.max(0, Math.min(newPage, pages - 1)));
+  }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={sm.scroll}
-      decelerationRate="fast"
-    >
-      {cards.map(card => (
-        <Pressable
-          key={card.label}
-          style={({ pressed }) => [sm.card, (pressed || disabled) && { opacity: 0.65 }]}
-          onPress={() => onPress(card.prompt)}
-          disabled={disabled}
-        >
-          <View style={[sm.iconWrap, { backgroundColor: `${card.color}18`, borderColor: `${card.color}30` }]}>
-            <Ionicons name={card.icon as any} size={16} color={card.color} />
-          </View>
-          <Text style={sm.label} numberOfLines={2}>{card.label}</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+    <View>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[sm.scroll, { paddingHorizontal: CAROUSEL_H_PAD }]}
+        decelerationRate="fast"
+        snapToInterval={snapW * CARDS_PER_PAGE}
+        snapToAlignment="start"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {cards.map((card, i) => (
+          <Pressable
+            key={card.label}
+            style={({ pressed }) => [
+              sm.card,
+              { width: cardW, marginRight: i < total - 1 ? CARD_GAP : 0 },
+              (pressed || disabled) && { opacity: 0.65 },
+            ]}
+            onPress={() => onPress(card.prompt)}
+            disabled={disabled}
+          >
+            <View style={[sm.iconWrap, { backgroundColor: `${card.color}18`, borderColor: `${card.color}30` }]}>
+              <Ionicons name={card.icon as any} size={16} color={card.color} />
+            </View>
+            <Text style={sm.label} numberOfLines={2}>{card.label}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {pages > 1 && (
+        <View style={sm.dots}>
+          {Array.from({ length: pages }).map((_, i) => (
+            <View key={i} style={[sm.dot, i === page && sm.dotActive]} />
+          ))}
+        </View>
+      )}
+    </View>
   );
 }
 
 const sm = StyleSheet.create({
-  scroll:   { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 0, gap: 8 },
-  card:     {
-    width:             104,
-    width:             104,
+  scroll:    { paddingTop: 8, paddingBottom: 2, gap: 0 },
+  card:      {
     backgroundColor:   CARD,
     borderRadius:      12,
     borderWidth:       1,
@@ -165,8 +201,11 @@ const sm = StyleSheet.create({
     gap:               5,
     alignItems:        'flex-start',
   },
-  iconWrap: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  label:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 14 },
+  iconWrap:  { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  label:     { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 14 },
+  dots:      { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5, paddingVertical: 4 },
+  dot:       { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
+  dotActive: { backgroundColor: 'rgba(255,255,255,0.65)', width: 14, borderRadius: 3 },
 });
 
 // Guided
