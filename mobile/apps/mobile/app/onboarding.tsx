@@ -322,6 +322,7 @@ export default function OnboardingScreen() {
 
   const nextLabel =
     page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Begin with R-Lo') :
+    page === 0 ? "Let's fix it" :
     'Continue';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -359,7 +360,7 @@ export default function OnboardingScreen() {
                 {/* Speech bubble */}
                 <View style={s.bubble}>
                   <Text style={s.bubbleText}>
-                    {"Most sleep problems\naren't about sleep."}
+                    {"Your sleep schedule is probably wrong."}
                   </Text>
                   {/* Triangle pointer pointing down toward R-Lo */}
                   <View style={s.bubbleTip} />
@@ -376,7 +377,7 @@ export default function OnboardingScreen() {
 
                 {/* Supporting sentence */}
                 <Text style={s.slide0Sub}>
-                  {"Your body works in\n90-minute recovery cycles."}
+                  {"Most people don't sleep according to their natural cycles."}
                 </Text>
 
               </Animated.View>
