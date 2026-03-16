@@ -179,14 +179,20 @@ const bbl = StyleSheet.create({
 });
 
 // ─── Top info bar (transparent, overlays the full-page video) ────────────────
+function scoreColor(s: number): string {
+  if (s >= 75) return '#4ADE80'; // green
+  if (s >= 50) return '#FACC15'; // yellow
+  return '#F87171';              // red
+}
+
 function TopInfoBar({
   name, score, topInset, bedtime, wake,
 }: {
   name: string | null; score: number; topInset: number;
   bedtime: number | null; wake: number | null;
 }) {
-  const { line1, line2 } = coachGreeting(name, score);
   const showPlan = bedtime !== null || wake !== null;
+  const col = scoreColor(score);
 
   return (
     <View style={[ih.topRow, { top: topInset + 14 }]}>
@@ -200,6 +206,18 @@ function TopInfoBar({
           </Text>
         </View>
       )}
+
+      {/* Spacer */}
+      <View style={{ flex: 1 }} />
+
+      {/* Energy score */}
+      <View style={ih.scoreLabel}>
+        <Text style={ih.planTitle}>Energy</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+          <Text style={[ih.scoreValue, { color: col }]}>{score}</Text>
+          <Text style={[ih.scoreUnit, { color: col }]}>/100</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -231,6 +249,18 @@ const ih = StyleSheet.create({
     borderWidth:       1,
     borderColor:       'rgba(255,255,255,0.10)',
   },
+  scoreLabel: {
+    alignSelf:         'flex-start',
+    backgroundColor:   'rgba(11,18,32,0.55)',
+    borderRadius:      10,
+    paddingHorizontal: 12,
+    paddingVertical:   7,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.10)',
+    alignItems:        'flex-end',
+  },
+  scoreValue: { fontSize: 18, fontWeight: '800', lineHeight: 22 },
+  scoreUnit:  { fontSize: 10, fontWeight: '600', opacity: 0.7, marginBottom: 1 },
   line1: { fontSize: 13, fontWeight: '700', color: '#FFF', lineHeight: 18, marginBottom: 2, textAlign: 'right' },
   line2: { fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 15, textAlign: 'right' },
 });
