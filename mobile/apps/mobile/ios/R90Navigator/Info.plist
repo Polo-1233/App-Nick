@@ -90,5 +90,9 @@
 	<string>Dark</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>R-Lo · Sleep Coach reads your sleep, heart rate and HRV data from Apple Health to personalise your recovery coaching.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>R-Lo · Sleep Coach may write sleep session data to Apple Health.</string>
 </dict>
 </plist>

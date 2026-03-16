@@ -56,6 +56,11 @@ import {
   calendarUpcomingHandler,
 } from "./handlers/calendar-context-handler.js";
 import {
+  wearableSyncHandler,
+  wearableStatusHandler,
+  wearableLatestHandler,
+} from "./handlers/wearable-handlers.js";
+import {
   calculateSummaryHandler,
   recentSummariesHandler,
 } from "./handlers/summary-handler.js";
@@ -131,6 +136,10 @@ const routes: AnyRoute[] = [
   { method: "GET",    path: "/reports/weekly/latest", handler: latestReportHandler },
   { method: "GET",    path: "/notifications/proactive", handler: proactiveNotificationHandler },
   { method: "POST",   path: "/notifications/dismiss",  handler: dismissNotificationHandler },
+  // Wearables
+  { method: "POST",   path: "/wearables/sync",    handler: wearableSyncHandler },
+  { method: "GET",    path: "/wearables/status",  handler: wearableStatusHandler },
+  { method: "GET",    path: "/wearables/latest",  handler: wearableLatestHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────

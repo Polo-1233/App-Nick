@@ -460,3 +460,33 @@ export async function getProactiveTrigger(): Promise<ApiResponse<{ trigger: Proa
 export async function dismissTrigger(trigger_type: string): Promise<ApiResponse<{ ok: boolean }>> {
   return request('POST', '/notifications/dismiss', { trigger_type });
 }
+
+// ─── /wearables ───────────────────────────────────────────────────────────────
+
+export interface WearableSourceStatus {
+  connected: boolean;
+  lastSync:  string | null;
+}
+
+export async function getWearableStatus(): Promise<ApiResponse<{
+  sources: Record<string, WearableSourceStatus>;
+}>> {
+  return request('GET', '/wearables/status');
+}
+
+export async function getWearableLatest(): Promise<ApiResponse<{
+  data: Record<string, {
+    source:             string;
+    collected_at:       string;
+    sleep_duration_min: number | null;
+    sleep_efficiency:   number | null;
+    hrv_ms:             number | null;
+    resting_hr:         number | null;
+    readiness_score:    number | null;
+    strain_score:       number | null;
+    rem_min:            number | null;
+    deep_min:           number | null;
+  }>;
+}>> {
+  return request('GET', '/wearables/latest');
+}

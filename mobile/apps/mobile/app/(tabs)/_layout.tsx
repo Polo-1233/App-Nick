@@ -14,6 +14,7 @@ import {
   type OnboardingPhase,
 } from "../../lib/storage";
 import { useAuth } from "../../lib/auth-context";
+import { initAppleHealth } from "../../lib/apple-health";
 
 export default function TabsLayout() {
   const router                    = useRouter();
@@ -31,8 +32,6 @@ export default function TabsLayout() {
   useEffect(() => {
     if (authLoading) return; // wait for auth to settle
     getOnboardingPhase().then(p => {
-      // Authenticated users should never be blocked by onboarding overlays.
-      // If any stale phase is found, reset to 'done'.
       if (isAuthenticated && p !== 'done') {
         setOnboardingPhase('done');
         setPhaseState('done');
@@ -41,6 +40,10 @@ export default function TabsLayout() {
       }
       setPhaseReady(true);
     });
+    // Sync Apple Health after auth — background, non-blocking
+    if (isAuthenticated) {
+      void initAppleHealth();
+    }
   }, [authLoading, isAuthenticated]);
 
   // ── Phase transition ───────────────────────────────────────────────────────
