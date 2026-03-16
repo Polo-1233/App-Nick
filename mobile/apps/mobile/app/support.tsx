@@ -45,7 +45,7 @@ const SUBSCR_URL    = 'https://apps.apple.com/account/subscriptions';
 const FAQ_ITEMS = [
   {
     q: 'How does the sleep plan work?',
-    a: "R90 Navigator uses Nick Littlehales' R90 method to build your sleep plan around 90-minute sleep cycles. It calculates your optimal bedtime by working backwards from your wake time in multiples of 90 minutes.",
+    a: "R-Lo · Sleep Coach uses Nick Littlehales' R90 method to build your sleep plan around 90-minute sleep cycles. It calculates your optimal bedtime by working backwards from your wake time in multiples of 90 minutes.",
   },
   {
     q: 'How is my bedtime calculated?',
@@ -139,7 +139,7 @@ export default function SupportScreen() {
   const router = useRouter();
 
   function openEmail() {
-    const url = `mailto:${SUPPORT_EMAIL}?subject=R90 Navigator Support`;
+    const url = `mailto:${SUPPORT_EMAIL}?subject=R-Lo · Sleep Coach Support`;
     Linking.openURL(url).catch(() =>
       Alert.alert('Cannot open email', `Send us a message at ${SUPPORT_EMAIL}`)
     );

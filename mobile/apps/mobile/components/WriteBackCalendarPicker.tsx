@@ -97,7 +97,7 @@ export function WriteBackCalendarPicker() {
           <View style={s.handle} />
           <Text style={[s.sheetTitle, { color: c.text }]}>Write sleep blocks to</Text>
           <Text style={[s.sheetSubtitle, { color: c.textMuted }]}>
-            R90 Navigator will create Pre-sleep and Sleep window events in this calendar.
+            R-Lo · Sleep Coach will create Pre-sleep and Sleep window events in this calendar.
           </Text>
           <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
             {/* Auto option */}

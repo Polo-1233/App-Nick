@@ -396,7 +396,7 @@ export async function writeSleepBlocksToCalendar(plan: DayPlan): Promise<void> {
     // Sleep window block
     await Calendar.createEventAsync(writeable.id, {
       title:     'Sleep window',
-      notes:     `R90 Navigator — ${cycleCount} cycles`,
+      notes:     `R-Lo · Sleep Coach — ${cycleCount} cycles`,
       startDate: bedtimeDate,
       endDate:   wakeDate,
       alarms:    [],

@@ -516,7 +516,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={s.version}>R90 Navigator v0.1.0</Text>
+        <Text style={s.version}>R-Lo · Sleep Coach v0.1.0</Text>
       </ScrollView>
 
       <DataSecurityModal

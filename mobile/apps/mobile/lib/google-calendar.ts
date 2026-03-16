@@ -334,7 +334,7 @@ export async function writeGoogleSleepBlocks(
       },
       {
         summary:     'Sleep window',
-        description: `R90 Navigator — ${cycleCount} cycles`,
+        description: `R-Lo · Sleep Coach — ${cycleCount} cycles`,
         start: { dateTime: minuteToISO(bedtime),   timeZone: tz },
         end:   { dateTime: minuteToISO(wakeTime, true), timeZone: tz },
         reminders: { useDefault: false, overrides: [] },

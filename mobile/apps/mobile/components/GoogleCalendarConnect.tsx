@@ -67,7 +67,7 @@ export function GoogleCalendarConnect({ onConnectionChange }: Props) {
   const handleDisconnect = useCallback(() => {
     Alert.alert(
       'Disconnect Google Calendar',
-      'R90 Navigator will no longer read your Google Calendar events.',
+      'R-Lo · Sleep Coach will no longer read your Google Calendar events.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

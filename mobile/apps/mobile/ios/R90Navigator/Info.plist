@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>R90 Navigator</string>
+	<string>R-Lo · Sleep Coach</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -54,9 +54,9 @@
 		<true/>
 	</dict>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>R90 Navigator reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
+	<string>R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>R90 Navigator reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
+	<string>R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
