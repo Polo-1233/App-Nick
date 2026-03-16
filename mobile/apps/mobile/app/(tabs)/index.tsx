@@ -152,10 +152,10 @@ export default function PagerLayout() {
           <HomeScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
-          <InsightsScreen />
+          <CalendarScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
-          <CalendarScreen />
+          <InsightsScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
@@ -180,7 +180,7 @@ export default function PagerLayout() {
           } />
         </Pressable>
 
-        {/* Insights */}
+        {/* Planning */}
         <Pressable
           style={[styles.tabItem, isOnboarding && styles.tabLocked]}
           onPress={() => goToPage(1)}
@@ -188,12 +188,12 @@ export default function PagerLayout() {
         >
           <TabIcon anim={anim1} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon}
-            label="Insights"
-            icon={<Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
+            label="Planning"
+            icon={<Ionicons name={activeIndex === 1 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
           />
         </Pressable>
 
-        {/* Calendar */}
+        {/* Insights */}
         <Pressable
           style={[styles.tabItem, isOnboarding && styles.tabLocked]}
           onPress={() => goToPage(2)}
@@ -201,8 +201,8 @@ export default function PagerLayout() {
         >
           <TabIcon anim={anim2} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon}
-            label="Planning"
-            icon={<Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
+            label="Insights"
+            icon={<Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
           />
         </Pressable>
 
