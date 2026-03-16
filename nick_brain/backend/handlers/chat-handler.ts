@@ -18,7 +18,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { URLSearchParams } from "node:url";
 import type { AuthContext } from "../middleware/auth.js";
 import type { ChatInput } from "../services/chat-service.js";
-import { streamChatResponse, loadChatHistory } from "../services/chat-service.js";
+import { streamChatResponse, loadChatHistory, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
 import { readBody, sendError, sendJson } from "../server.js";
 
 export async function chatHandler(
@@ -33,8 +33,26 @@ export async function chatHandler(
     return;
   }
 
+  const userMessage = body.message.trim();
+
+  // Off-topic pre-filter — refuse before touching OpenAI
+  if (isOffTopic(userMessage)) {
+    res.writeHead(200, {
+      "Content-Type":  "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection":    "keep-alive",
+    });
+    const words = OFF_TOPIC_REPLY.split(" ");
+    for (const word of words) {
+      res.write(`data: ${JSON.stringify({ delta: word + " " })}\n\n`);
+    }
+    res.write("data: [DONE]\n\n");
+    res.end();
+    return;
+  }
+
   const input: ChatInput = {
-    message:    body.message.trim(),
+    message:    userMessage,
     history:    Array.isArray(body.history) ? body.history : [],
     session_id: typeof body.session_id === "string" ? body.session_id : undefined,
   };

@@ -13,7 +13,7 @@
  *   Returns recent conversation history for chat screen initialisation.
  *   Response: { messages: [{role, content}] }
  */
-import { streamChatResponse, loadChatHistory } from "../services/chat-service.js";
+import { streamChatResponse, loadChatHistory, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
 import { readBody, sendError, sendJson } from "../server.js";
 export async function chatHandler(req, res, auth, _query) {
     const body = await readBody(req);
@@ -21,8 +21,24 @@ export async function chatHandler(req, res, auth, _query) {
         sendError(res, 400, "message is required", "MISSING_MESSAGE");
         return;
     }
+    const userMessage = body.message.trim();
+    // Off-topic pre-filter — refuse before touching OpenAI
+    if (isOffTopic(userMessage)) {
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        });
+        const words = OFF_TOPIC_REPLY.split(" ");
+        for (const word of words) {
+            res.write(`data: ${JSON.stringify({ delta: word + " " })}\n\n`);
+        }
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+    }
     const input = {
-        message: body.message.trim(),
+        message: userMessage,
         history: Array.isArray(body.history) ? body.history : [],
         session_id: typeof body.session_id === "string" ? body.session_id : undefined,
     };

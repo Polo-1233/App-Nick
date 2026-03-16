@@ -24,6 +24,8 @@ export interface ChatInput {
     history?: ChatMessage[];
     session_id?: string;
 }
+export declare function isOffTopic(message: string): boolean;
+export declare const OFF_TOPIC_REPLY = "I'm R-Lo, your sleep coach \u2014 that's outside my area. Ask me anything about your sleep, recovery, or your R90 plan. \uD83C\uDF19";
 /**
  * Stream a response to the HTTP response object via SSE.
  *

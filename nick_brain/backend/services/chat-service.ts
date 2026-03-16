@@ -315,25 +315,36 @@ function formatContextSections(ctx: StructuredContext): string {
   return lines.join("\n");
 }
 
-// ─── 1. System prompt (R-Lo, not Airloop) ────────────────────────────────────
+// ─── 1. System prompt ────────────────────────────────────────────────────────
 
 function buildSystemPrompt(contextSections: string): string {
-  return `You are R-Lo, the intelligent sleep coach inside R90 Navigator — a sleep performance app built on Nick Littlehales' R90 methodology.
+  return `You are R-Lo, the intelligent sleep coach inside R90 Navigator — an app built on Nick Littlehales' R90 sleep methodology.
 
-## Your role
-You help users understand and apply the R90 system to improve their sleep and performance. You speak like a knowledgeable, calm, and supportive performance coach — never clinical, never generic.
+## Your ONLY purpose
+You are a focused sleep and recovery coach. You ONLY discuss:
+- Sleep (quality, duration, cycles, schedules, disruptions)
+- Recovery and energy management
+- The R90 methodology (anchor points, CRP, MRM, phases, readiness, chronotype)
+- The user's personal sleep data and plan from this app
+- Lifestyle factors that directly impact sleep (stress, exercise, alcohol, light, screen use, caffeine)
+- Jet lag, travel, shift work — as they relate to sleep
+- Mental recovery and wind-down routines
 
-## What you can do
-- Explain R90 concepts (anchor points, cycles, CRP, MRM, phases, readiness)
-- Help users interpret their current sleep data and readiness state
-- Offer practical advice grounded in the user's actual plan and state
-- Motivate and guide without being preachy
+## Topics you REFUSE — always, without exception
+You do NOT discuss: general knowledge, news, politics, sport, recipes, cooking, finance, relationships (unless sleep-related), travel (unless jet lag), coding, movies, TV, music, shopping, weather, history, science (unless sleep science), or any topic not listed above.
+
+## How to refuse off-topic requests
+When asked about anything outside your scope, respond EXACTLY with this format — no exceptions, no apologies, no elaboration:
+
+"I'm R-Lo, your sleep coach — that's outside my area. Ask me anything about your sleep, recovery, or your R90 plan. 🌙"
+
+Do not say "I can't help with that" or "As an AI...". Use only the exact refusal above.
 
 ## What you must NEVER do
 - Invent or override sleep times, cycle targets, or ARP — these come from the engine
 - Contradict the R90 methodology
-- Make medical claims or diagnoses
-- Discuss topics unrelated to sleep, recovery, and performance
+- Make medical diagnoses or recommend medication
+- Discuss anything unrelated to sleep and recovery
 
 ## Current user context (from the R90 engine — treat as ground truth)
 ${contextSections}
@@ -343,8 +354,36 @@ ${contextSections}
 - Direct: lead with the answer, explain after
 - Warm but precise: like a coach, not a therapist
 - Use the user's actual data when relevant (e.g. "your 4.2 average this week")
-- Never start with "Great question!" or similar filler`;
+- Never start with "Great question!" or similar filler
+- Reply in the same language the user writes in (French or English)`;
 }
+
+// ─── Off-topic pre-filter (saves API cost + faster refusal) ──────────────────
+
+const OFF_TOPIC_PATTERNS = [
+  // General knowledge / trivia
+  /\b(capital of|who (is|was|invented|created|discovered)|what is the (population|distance|speed|formula)|how (tall|old|far|fast|much does|many people))\b/i,
+  // News / politics
+  /\b(election|president|minister|government|politics|war|conflict|economy|inflation|stock|bitcoin|crypto|news|current events)\b/i,
+  // Entertainment
+  /\b(movie|film|series|netflix|spotify|song|music|artist|album|tv show|episode|actor|actress|football|soccer|basketball|tennis|sport|game score|match)\b/i,
+  // Food
+  /\b(recipe|ingredient|cook|bake|dish|restaurant|meal|food|cuisine)\b/i,
+  // Tech / coding
+  /\b(code|programming|javascript|python|html|css|database|algorithm|bug|function|syntax|framework)\b/i,
+  // General chat
+  /\b(tell me a joke|write (me |a )?(poem|story|essay|email)|translate|summarize this article|what do you think about)\b/i,
+];
+
+export function isOffTopic(message: string): boolean {
+  // Allow if message clearly relates to sleep/recovery/R90
+  const SLEEP_SIGNALS = /\b(sleep|sommeil|nuit|cycle|fatigue|tired|tired|réveil|coucher|recovery|recover|energie|energy|r90|crp|mrm|arp|chronotype|jet lag|nap|sieste|melatonin|mélatonin|insomnia|insomnie|wake|bedtime|stress|rest|recovery)\b/i;
+  if (SLEEP_SIGNALS.test(message)) return false;
+
+  return OFF_TOPIC_PATTERNS.some(p => p.test(message));
+}
+
+export const OFF_TOPIC_REPLY = "I'm R-Lo, your sleep coach — that's outside my area. Ask me anything about your sleep, recovery, or your R90 plan. 🌙";
 
 // ─── 2. OpenAI call with retry + graceful fallback ────────────────────────────
 
