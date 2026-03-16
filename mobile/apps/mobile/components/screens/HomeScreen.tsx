@@ -303,11 +303,11 @@ const bbl = StyleSheet.create({
 const ZONE_COLOR: Record<string, string> = {
   green:  '#4ADE80',
   yellow: '#FACC15',
-  orange: '#F97316',
+  orange: '#F97171',
 };
 const ZONE_LABEL: Record<string, string> = {
-  green:  'Recovered',
-  yellow: 'Fair',
+  green:  'Rested',
+  yellow: 'Getting there',
   orange: 'Tired',
 };
 
@@ -382,9 +382,12 @@ function TopInfoBar({
   const zColor = zone ? (ZONE_COLOR[zone] ?? '#9CA3AF') : '#9CA3AF';
   const zLabel = zone ? (ZONE_LABEL[zone] ?? zone) : '—';
 
-  // Average cycles over available nights (max 3)
-  const avg = recentCycles.length > 0
-    ? (recentCycles.reduce((a, b) => a + b, 0) / recentCycles.length).toFixed(1)
+  // Convert avg cycles → hours (1 cycle = 90 min)
+  const avgCycles = recentCycles.length > 0
+    ? recentCycles.reduce((a, b) => a + b, 0) / recentCycles.length
+    : null;
+  const avgHours = avgCycles !== null
+    ? `~${(avgCycles * 1.5).toFixed(1)}h avg`
     : null;
 
   return (
@@ -396,14 +399,11 @@ function TopInfoBar({
 
         <View style={ih.divider} />
 
-        {/* Avg cycles / target */}
-        {avg !== null ? (
-          <Text style={ih.pillSection}>
-            <Text style={ih.pillBold}>{avg}</Text>
-            <Text style={ih.pillMuted}>/{targetCycles} avg</Text>
-          </Text>
+        {/* Avg sleep hours */}
+        {avgHours !== null ? (
+          <Text style={ih.pillAction}>{avgHours}</Text>
         ) : (
-          <Text style={ih.pillMuted}>No data</Text>
+          <Text style={ih.pillMuted}>Log your sleep</Text>
         )}
 
         <View style={ih.divider} />
