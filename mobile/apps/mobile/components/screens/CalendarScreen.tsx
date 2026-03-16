@@ -1,17 +1,17 @@
 /**
- * Planning tab — "Tonight's Plan"
+ * Planning tab — R90 Weekly Plan
  *
- * Vertical timeline: Wind-down → Ideal bedtime → Latest bedtime → Wake up → Morning routine
- * Grounded in R90 methodology. No calendar grid.
+ * Tonight · This Week · Insights · R90 Score
+ * Grounded in R90 methodology.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
   Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,17 +21,18 @@ import type { UserProfile } from '@r90/types';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const BG      = '#0B1220';
-const CARD    = '#1A2436';
-const SURFACE = '#243046';
-const ACCENT  = '#4DA3FF';
-const TEXT    = '#F0F4FF';
-const TEXT_SUB= '#8899BB';
-const TEXT_MUTED = '#5A6A88';
-const BORDER  = 'rgba(255,255,255,0.06)';
-const GREEN   = '#4ADE80';
-const YELLOW  = '#FACC15';
-const ORANGE  = '#F97171';
+const BG        = '#0B1220';
+const CARD      = '#1A2436';
+const SURFACE   = '#243046';
+const ACCENT    = '#4DA3FF';
+const TEXT      = '#F0F4FF';
+const TEXT_SUB  = '#8899BB';
+const TEXT_MUTED= '#5A6A88';
+const BORDER    = 'rgba(255,255,255,0.06)';
+const GREEN     = '#4ADE80';
+const YELLOW    = '#FACC15';
+const ORANGE    = '#F97171';
+const PURPLE    = '#A78BFA';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,174 +43,193 @@ function minToHHMM(min: number): string {
   return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
-function getCurrentMinute(): number {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
-}
-
-function isNowBetween(startMin: number, endMin: number): boolean {
-  const now = getCurrentMinute();
-  // Handle overnight spans (e.g. 22:30 → 07:30)
-  if (startMin <= endMin) return now >= startMin && now < endMin;
-  return now >= startMin || now < endMin;
+function cyclesToDuration(cycles: number): string {
+  const totalMin = cycles * 90;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}h` : `${h}h${m}`;
 }
 
 function todayLabel(): string {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
-// ─── Timeline event types ─────────────────────────────────────────────────────
+// ─── Weekly plan builder ──────────────────────────────────────────────────────
 
-type EventKind = 'winddown' | 'bedtime' | 'latest' | 'wake' | 'morning';
-
-interface TimelineEvent {
-  kind:     EventKind;
-  time:     number; // minutes
-  label:    string;
-  sublabel: string;
-  icon:     string;
-  color:    string;
-  bgColor:  string;
+interface WeekDay {
+  dayShort:   string;   // "Mon"
+  dayDate:    string;   // "Mar 17"
+  isToday:    boolean;
+  isPast:     boolean;
+  cycles:     number;   // 4 or 5
+  bedtimeMin: number;
+  wakeMin:    number;
+  isRecovery: boolean;  // lighter night (4 cycles)
 }
 
-function buildTimeline(profile: UserProfile): TimelineEvent[] {
-  const wake    = profile.anchorTime;          // e.g. 450 = 07:30
-  const cycles  = profile.idealCyclesPerNight; // e.g. 5
-  const bedtime = ((wake - cycles * 90) + 1440) % 1440; // sleep onset
-  const windDown = ((bedtime - 90) + 1440) % 1440;      // pre-sleep start
-  const latest   = (bedtime + 180) % 1440;               // 2 cycles late max
-  const morning  = (wake + 30) % 1440;                   // 30 min morning routine
+function buildWeek(profile: UserProfile): WeekDay[] {
+  const today = new Date();
+  const wake  = profile.anchorTime;          // e.g. 450 = 07:30
+  const target= profile.idealCyclesPerNight; // e.g. 5
 
-  return [
-    {
-      kind:     'winddown',
-      time:     windDown,
-      label:    'Wind-down',
-      sublabel: 'Screens off, dim the lights',
-      icon:     'moon-outline',
-      color:    '#A78BFA',
-      bgColor:  '#A78BFA18',
-    },
-    {
-      kind:     'bedtime',
-      time:     bedtime,
-      label:    'Ideal bedtime',
-      sublabel: `${cycles} cycles · ${minToHHMM(wake)} wake`,
-      icon:     'bed-outline',
-      color:    ACCENT,
-      bgColor:  `${ACCENT}18`,
-    },
-    {
-      kind:     'latest',
-      time:     latest,
-      label:    'Latest bedtime',
-      sublabel: 'After this, drop to 4 cycles',
-      icon:     'alert-circle-outline',
-      color:    YELLOW,
-      bgColor:  `${YELLOW}18`,
-    },
-    {
-      kind:     'wake',
-      time:     wake,
-      label:    'Wake up',
-      sublabel: 'Rise — your ARP anchor',
-      icon:     'sunny-outline',
-      color:    GREEN,
-      bgColor:  `${GREEN}18`,
-    },
-    {
-      kind:     'morning',
-      time:     morning,
-      label:    'Morning routine',
-      sublabel: '30 min — no rush, no screens',
-      icon:     'cafe-outline',
-      color:    '#FCA5A5',
-      bgColor:  '#FCA5A518',
-    },
-  ];
+  // R90 pattern: vary cycles across week — not every night is peak
+  // Recovery nights (4 cycles) typically fall mid-week and before rest days
+  const cyclePattern = [target, target, target - 1, target, target - 1, target, target];
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + 1 + i); // Mon=0 offset
+    const dayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayDate  = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const todayStr = today.toDateString();
+    const isToday  = d.toDateString() === todayStr;
+    const isPast   = d < today && !isToday;
+    const cycles   = Math.max(1, cyclePattern[i] ?? target);
+    const bedtimeMin = ((wake - cycles * 90) + 1440) % 1440;
+
+    return {
+      dayShort,
+      dayDate,
+      isToday,
+      isPast,
+      cycles,
+      bedtimeMin,
+      wakeMin: wake,
+      isRecovery: cycles < target,
+    };
+  });
 }
 
-// ─── Readiness section ────────────────────────────────────────────────────────
+// ─── Insight generator ────────────────────────────────────────────────────────
 
-function ReadinessBadge({ zone }: { zone: 'green' | 'yellow' | 'orange' | null }) {
-  if (!zone) return null;
-  const map = {
-    green:  { label: 'Well recovered',   color: GREEN,  bg: `${GREEN}18`  },
-    yellow: { label: 'Moderate recovery', color: YELLOW, bg: `${YELLOW}18` },
-    orange: { label: 'Needs recovery',    color: ORANGE, bg: `${ORANGE}18` },
-  };
-  const { label, color, bg } = map[zone];
-  return (
-    <View style={[rb.badge, { backgroundColor: bg, borderColor: `${color}40` }]}>
-      <View style={[rb.dot, { backgroundColor: color }]} />
-      <Text style={[rb.text, { color }]}>{label}</Text>
-    </View>
+function buildInsights(
+  profile: UserProfile,
+  recentCycles: number[],
+  wearableNote: string | null,
+): string[] {
+  const insights: string[] = [];
+
+  // Wearable-driven insight (real data)
+  if (wearableNote) {
+    insights.push(wearableNote);
+  }
+
+  // Cycle adherence
+  if (recentCycles.length >= 3) {
+    const avg = recentCycles.reduce((a, b) => a + b, 0) / recentCycles.length;
+    if (avg >= profile.idealCyclesPerNight - 0.3) {
+      insights.push(
+        `You've averaged ${avg.toFixed(1)} cycles over the last ${recentCycles.length} nights — right on target.`,
+      );
+    } else {
+      const deficit = profile.idealCyclesPerNight - avg;
+      insights.push(
+        `You're running ${deficit.toFixed(1)} cycles below your target this week. Consider an earlier wind-down tonight.`,
+      );
+    }
+  }
+
+  // Wake time consistency note
+  insights.push(
+    `Your ARP is ${minToHHMM(profile.anchorTime)}. Keeping your wake time consistent is the single most important R90 habit.`,
   );
+
+  return insights.slice(0, 3);
 }
 
-const rb = StyleSheet.create({
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, alignSelf: 'flex-start' },
-  dot:   { width: 6, height: 6, borderRadius: 3 },
-  text:  { fontSize: 12, fontWeight: '600' },
-});
+// ─── R90 Score calculator ─────────────────────────────────────────────────────
 
-// ─── Cycle count summary ──────────────────────────────────────────────────────
-
-function CycleBar({ cycles, target }: { cycles: number; target: number }) {
-  const filled = Math.min(cycles, target);
-  return (
-    <View style={cb.row}>
-      {Array.from({ length: target }).map((_, i) => (
-        <View
-          key={i}
-          style={[cb.pill, i < filled && cb.pillFilled]}
-        />
-      ))}
-    </View>
-  );
+function calcR90Score(recentCycles: number[], target: number): number {
+  if (recentCycles.length === 0) return 0;
+  const achieved = recentCycles.reduce((a, b) => a + b, 0);
+  const planned  = target * recentCycles.length;
+  const adherence = Math.min(1, achieved / planned);
+  return Math.round(adherence * 100);
 }
 
-const cb = StyleSheet.create({
-  row:        { flexDirection: 'row', gap: 4 },
-  pill:       { flex: 1, height: 6, borderRadius: 3, backgroundColor: SURFACE },
-  pillFilled: { backgroundColor: ACCENT },
-});
+function scoreLabel(score: number): { text: string; color: string } {
+  if (score >= 85) return { text: 'Excellent adherence',  color: GREEN  };
+  if (score >= 65) return { text: 'Good — keep it up',    color: YELLOW };
+  return                  { text: 'Needs improvement',    color: ORANGE };
+}
 
-// ─── Timeline event row ───────────────────────────────────────────────────────
+// ─── Tonight Card ─────────────────────────────────────────────────────────────
 
-function EventRow({
-  event,
-  isLast,
-  isNow,
+function TonightCard({
+  profile,
+  adjustedCycles,
+  wearableActive,
 }: {
-  event:  TimelineEvent;
-  isLast: boolean;
-  isNow:  boolean;
+  profile:        UserProfile;
+  adjustedCycles: number;
+  wearableActive: boolean;
 }) {
-  return (
-    <View style={er.wrap}>
-      {/* Left column: dot + line */}
-      <View style={er.track}>
-        <View style={[er.dot, { backgroundColor: event.color, shadowColor: event.color }]}>
-          <Ionicons name={event.icon as any} size={14} color={event.color === YELLOW || event.color === '#FCA5A5' ? '#0B1220' : '#0B1220'} />
-        </View>
-        {!isLast && <View style={er.line} />}
-      </View>
+  const wake     = profile.anchorTime;
+  const bedtime  = ((wake - adjustedCycles * 90) + 1440) % 1440;
+  const winddown = ((bedtime - 90) + 1440) % 1440;
+  const latest   = (bedtime + 180) % 1440;
 
-      {/* Right column: content card */}
-      <View style={[er.card, isNow && { borderColor: `${event.color}60`, backgroundColor: event.bgColor }]}>
-        {isNow && (
-          <View style={[er.nowBadge, { backgroundColor: event.color }]}>
-            <Text style={er.nowText}>NOW</Text>
+  return (
+    <View style={tc.card}>
+      {/* Title row */}
+      <View style={tc.titleRow}>
+        <Text style={tc.title}>Tonight</Text>
+        {wearableActive && (
+          <View style={tc.wearablePill}>
+            <View style={[tc.wearableDot, { backgroundColor: ACCENT }]} />
+            <Text style={tc.wearableText}>Wearable adjusted</Text>
           </View>
         )}
-        <View style={er.cardInner}>
-          <View style={er.timeWrap}>
-            <Text style={[er.time, { color: event.color }]}>{minToHHMM(event.time)}</Text>
+      </View>
+
+      {/* Bedtime — hero number */}
+      <View style={tc.heroRow}>
+        <View>
+          <Text style={tc.heroTime}>{minToHHMM(bedtime)}</Text>
+          <Text style={tc.heroLabel}>Ideal bedtime</Text>
+        </View>
+        <View style={tc.cycleBlock}>
+          <View style={tc.cyclePills}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <View
+                key={i}
+                style={[tc.cyclePill, i < adjustedCycles && { backgroundColor: ACCENT }]}
+              />
+            ))}
           </View>
-          <View style={er.info}>
-            <Text style={er.label}>{event.label}</Text>
-            <Text style={er.sub}>{event.sublabel}</Text>
+          <Text style={tc.cycleLabel}>
+            {adjustedCycles} cycles · {cyclesToDuration(adjustedCycles)}
+          </Text>
+        </View>
+      </View>
+
+      {/* Secondary row */}
+      <View style={tc.rowGrid}>
+        <View style={tc.rowItem}>
+          <Ionicons name="moon-outline" size={14} color={PURPLE} />
+          <View>
+            <Text style={tc.rowTime}>{minToHHMM(winddown)}</Text>
+            <Text style={tc.rowSub}>Wind-down</Text>
+          </View>
+        </View>
+        <View style={tc.divider} />
+        <View style={tc.rowItem}>
+          <Ionicons name="alert-circle-outline" size={14} color={YELLOW} />
+          <View>
+            <Text style={[tc.rowTime, { color: YELLOW }]}>{minToHHMM(latest)}</Text>
+            <Text style={tc.rowSub}>Latest bedtime</Text>
+          </View>
+        </View>
+        <View style={tc.divider} />
+        <View style={tc.rowItem}>
+          <Ionicons name="sunny-outline" size={14} color={GREEN} />
+          <View>
+            <Text style={[tc.rowTime, { color: GREEN }]}>{minToHHMM(wake)}</Text>
+            <Text style={tc.rowSub}>Wake up</Text>
           </View>
         </View>
       </View>
@@ -217,72 +237,204 @@ function EventRow({
   );
 }
 
-const er = StyleSheet.create({
-  wrap:      { flexDirection: 'row', gap: 14, marginBottom: 0 },
-  track:     { alignItems: 'center', width: 36 },
-  dot:       { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 4 },
-  line:      { flex: 1, width: 2, backgroundColor: BORDER, marginVertical: 4, minHeight: 20 },
-  card:      { flex: 1, backgroundColor: CARD, borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: BORDER },
-  nowBadge:  { position: 'absolute', top: 10, right: 10, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
-  nowText:   { fontSize: 10, fontWeight: '800', color: '#0B1220' },
-  cardInner: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  timeWrap:  { minWidth: 44 },
-  time:      { fontSize: 17, fontWeight: '800', letterSpacing: -0.5 },
-  info:      { flex: 1 },
-  label:     { fontSize: 15, fontWeight: '700', color: TEXT },
-  sub:       { fontSize: 12, color: TEXT_SUB, marginTop: 2 },
+const tc = StyleSheet.create({
+  card:        { backgroundColor: CARD, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: BORDER, gap: 18 },
+  titleRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title:       { fontSize: 13, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2, textTransform: 'uppercase' },
+  wearablePill:{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: `${ACCENT}15`, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: `${ACCENT}30` },
+  wearableDot: { width: 5, height: 5, borderRadius: 3 },
+  wearableText:{ fontSize: 11, fontWeight: '600', color: ACCENT },
+  heroRow:     { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  heroTime:    { fontSize: 48, fontWeight: '800', color: TEXT, letterSpacing: -2 },
+  heroLabel:   { fontSize: 13, color: TEXT_SUB, marginTop: 2 },
+  cycleBlock:  { alignItems: 'flex-end', gap: 6, paddingBottom: 6 },
+  cyclePills:  { flexDirection: 'row', gap: 4 },
+  cyclePill:   { width: 18, height: 6, borderRadius: 3, backgroundColor: SURFACE },
+  cycleLabel:  { fontSize: 12, color: TEXT_SUB },
+  rowGrid:     { flexDirection: 'row', alignItems: 'center' },
+  rowItem:     { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  divider:     { width: 1, height: 32, backgroundColor: BORDER, marginHorizontal: 8 },
+  rowTime:     { fontSize: 15, fontWeight: '700', color: TEXT },
+  rowSub:      { fontSize: 11, color: TEXT_MUTED, marginTop: 1 },
 });
 
-// ─── R-Lo insight card ────────────────────────────────────────────────────────
+// ─── This Week ────────────────────────────────────────────────────────────────
 
-function InsightCard({ message }: { message: string }) {
+function WeekDayCard({ day, isSelected }: { day: WeekDay; isSelected: boolean }) {
+  const cycleColor = day.isRecovery ? YELLOW : ACCENT;
+  const opacity    = day.isPast ? 0.5 : 1;
+
   return (
-    <View style={ic.wrap}>
-      <View style={ic.avatar}>
-        <Text style={ic.avatarText}>R</Text>
+    <View style={[wd.card, isSelected && wd.cardSelected, { opacity }]}>
+      <Text style={[wd.dayLabel, isSelected && wd.dayLabelSelected]}>{day.dayShort}</Text>
+      <Text style={wd.dateLabel}>{day.dayDate.split(' ')[1]}</Text>
+
+      {/* Cycle dots */}
+      <View style={wd.dots}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              wd.dot,
+              i < day.cycles && { backgroundColor: cycleColor },
+            ]}
+          />
+        ))}
       </View>
-      <View style={ic.bubble}>
-        <Text style={ic.text}>{message}</Text>
+
+      {/* Bedtime */}
+      <Text style={[wd.time, { color: cycleColor }]}>{minToHHMM(day.bedtimeMin)}</Text>
+      <Text style={wd.timeSub}>{day.cycles}c</Text>
+
+      {/* Recovery badge */}
+      {day.isRecovery && (
+        <View style={wd.recoveryBadge}>
+          <Text style={wd.recoveryText}>REC</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const wd = StyleSheet.create({
+  card:            { width: 72, backgroundColor: CARD, borderRadius: 16, padding: 12, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: BORDER },
+  cardSelected:    { borderColor: `${ACCENT}60`, backgroundColor: `${ACCENT}10` },
+  dayLabel:        { fontSize: 12, fontWeight: '700', color: TEXT_SUB },
+  dayLabelSelected:{ color: ACCENT },
+  dateLabel:       { fontSize: 10, color: TEXT_MUTED },
+  dots:            { flexDirection: 'row', gap: 2, marginVertical: 4 },
+  dot:             { width: 7, height: 7, borderRadius: 4, backgroundColor: SURFACE },
+  time:            { fontSize: 13, fontWeight: '700' },
+  timeSub:         { fontSize: 10, color: TEXT_MUTED },
+  recoveryBadge:   { backgroundColor: `${YELLOW}20`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
+  recoveryText:    { fontSize: 9, fontWeight: '800', color: YELLOW, letterSpacing: 0.5 },
+});
+
+// ─── Insight item ─────────────────────────────────────────────────────────────
+
+function InsightItem({ text, index }: { text: string; index: number }) {
+  const icons: Array<keyof typeof Ionicons.glyphMap> = ['trending-down-outline', 'calendar-outline', 'time-outline'];
+  const icon = icons[index % icons.length]!;
+  return (
+    <View style={ii.row}>
+      <View style={ii.iconWrap}>
+        <Ionicons name={icon} size={16} color={ACCENT} />
+      </View>
+      <Text style={ii.text}>{text}</Text>
+    </View>
+  );
+}
+
+const ii = StyleSheet.create({
+  row:     { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  iconWrap:{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ACCENT}15`, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  text:    { flex: 1, fontSize: 13, color: TEXT_SUB, lineHeight: 19 },
+});
+
+// ─── R90 Score card ───────────────────────────────────────────────────────────
+
+function R90ScoreCard({
+  score,
+  cycles,
+  target,
+  nights,
+}: {
+  score:  number;
+  cycles: number;
+  target: number;
+  nights: number;
+}) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  const { text: slabel, color: scolor } = scoreLabel(score);
+
+  useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: score / 100,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [score, widthAnim]);
+
+  return (
+    <View style={sc.card}>
+      <View style={sc.topRow}>
+        <View>
+          <Text style={sc.label}>R90 Score</Text>
+          <Text style={sc.sublabel}>Weekly adherence</Text>
+        </View>
+        <View style={sc.scoreWrap}>
+          <Text style={[sc.score, { color: scolor }]}>{score}</Text>
+          <Text style={sc.scoreMax}>/100</Text>
+        </View>
+      </View>
+
+      {/* Progress bar */}
+      <View style={sc.barBg}>
+        <Animated.View
+          style={[
+            sc.barFill,
+            {
+              backgroundColor: scolor,
+              width: widthAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%'],
+              }),
+            },
+          ]}
+        />
+      </View>
+
+      <Text style={[sc.statusText, { color: scolor }]}>{slabel}</Text>
+
+      {/* Stats row */}
+      <View style={sc.statsRow}>
+        <View style={sc.stat}>
+          <Text style={sc.statValue}>{cycles}</Text>
+          <Text style={sc.statLabel}>cycles achieved</Text>
+        </View>
+        <View style={sc.statDivider} />
+        <View style={sc.stat}>
+          <Text style={sc.statValue}>{target * nights}</Text>
+          <Text style={sc.statLabel}>cycles planned</Text>
+        </View>
+        <View style={sc.statDivider} />
+        <View style={sc.stat}>
+          <Text style={sc.statValue}>{nights}</Text>
+          <Text style={sc.statLabel}>nights tracked</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-const ic = StyleSheet.create({
-  wrap:       { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  avatar:     { width: 32, height: 32, borderRadius: 16, backgroundColor: `${ACCENT}25`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}40`, marginTop: 2 },
-  avatarText: { fontSize: 14, fontWeight: '800', color: ACCENT },
-  bubble:     { flex: 1, backgroundColor: CARD, borderRadius: 14, borderTopLeftRadius: 4, padding: 14, borderWidth: 1, borderColor: BORDER },
-  text:       { fontSize: 13, color: TEXT_SUB, lineHeight: 19 },
+const sc = StyleSheet.create({
+  card:       { backgroundColor: CARD, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: BORDER, gap: 14 },
+  topRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  label:      { fontSize: 13, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2, textTransform: 'uppercase' },
+  sublabel:   { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
+  scoreWrap:  { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  score:      { fontSize: 42, fontWeight: '800', letterSpacing: -1 },
+  scoreMax:   { fontSize: 16, color: TEXT_MUTED, marginBottom: 6 },
+  barBg:      { height: 6, backgroundColor: SURFACE, borderRadius: 3, overflow: 'hidden' },
+  barFill:    { height: 6, borderRadius: 3 },
+  statusText: { fontSize: 13, fontWeight: '600' },
+  statsRow:   { flexDirection: 'row', alignItems: 'center', paddingTop: 4 },
+  stat:       { flex: 1, alignItems: 'center', gap: 2 },
+  statDivider:{ width: 1, height: 28, backgroundColor: BORDER },
+  statValue:  { fontSize: 18, fontWeight: '800', color: TEXT },
+  statLabel:  { fontSize: 11, color: TEXT_MUTED },
 });
 
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
-  return <Text style={sh.title}>{title}</Text>;
-}
-
-const sh = StyleSheet.create({
-  title: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12, marginTop: 4 },
-});
-
-// ─── Sleep summary row (last 3 nights) ────────────────────────────────────────
-
-function NightDot({ cycles, target }: { cycles: number; target: number }) {
-  const ratio = cycles / target;
-  const color = ratio >= 0.9 ? GREEN : ratio >= 0.6 ? YELLOW : ORANGE;
   return (
-    <View style={nd.col}>
-      <View style={[nd.bar, { backgroundColor: color, height: Math.max(8, Math.round(ratio * 40)) }]} />
-      <Text style={nd.label}>{cycles}c</Text>
-    </View>
+    <Text style={sh.title}>{title}</Text>
   );
 }
 
-const nd = StyleSheet.create({
-  col:   { alignItems: 'center', gap: 4 },
-  bar:   { width: 24, borderRadius: 4, minHeight: 8 },
-  label: { fontSize: 11, color: TEXT_MUTED },
+const sh = StyleSheet.create({
+  title: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2, textTransform: 'uppercase' },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -295,32 +447,36 @@ export default function CalendarScreen() {
     loadProfile().then(p => { if (p) setProfile(p); });
   }, []);
 
-  // Timeline data
-  const timeline = profile ? buildTimeline(profile) : null;
-  const now      = getCurrentMinute();
+  if (!profile) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={s.empty}>
+          <Ionicons name="moon-outline" size={36} color={TEXT_MUTED} />
+          <Text style={s.emptyText}>Complete your profile to see your plan</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  // Detect current event (which window we're in right now)
-  const nowEventIdx = timeline
-    ? (() => {
-        for (let i = 0; i < timeline.length - 1; i++) {
-          const curr = timeline[i]!;
-          const next = timeline[i + 1]!;
-          if (isNowBetween(curr.time, next.time)) return i;
-        }
-        return -1;
-      })()
-    : -1;
+  const recentCycles  = dayPlan?.readiness?.recentCycles ?? [];
+  const target        = profile.idealCyclesPerNight;
+  const wearableNote  = dayPlan?.rloMessage?.text ?? null;
 
-  // Readiness from dayPlan
-  const zone       = dayPlan?.readiness?.zone ?? null;
-  const recentCycles = dayPlan?.readiness?.recentCycles ?? [];
-  const target     = profile?.idealCyclesPerNight ?? 5;
+  // Wearable-adjusted cycles: if readiness zone is orange, recommend +1
+  const zone            = dayPlan?.readiness?.zone ?? null;
+  const adjustedCycles  = zone === 'orange' ? Math.min(target + 1, 6) : target;
+  const wearableActive  = !!dayPlan?.readiness;
 
-  // R-Lo message
-  const rloMsg = dayPlan?.rloMessage?.text
-    ?? (profile
-      ? `Your target is ${profile.idealCyclesPerNight} sleep cycles tonight. Wind-down starts ${minToHHMM(((profile.anchorTime - profile.idealCyclesPerNight * 90 - 90) + 1440) % 1440)} — protect that window.`
-      : 'Load your profile to see your personalised sleep plan.');
+  // Week
+  const week       = buildWeek(profile);
+  const todayIdx   = week.findIndex(d => d.isToday);
+
+  // Insights
+  const insights = buildInsights(profile, recentCycles, wearableNote);
+
+  // R90 Score
+  const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
+  const r90Score      = calcR90Score(recentCycles, target);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -331,77 +487,69 @@ export default function CalendarScreen() {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <View style={s.headerTop}>
-            <View>
-              <Text style={s.title}>Tonight's Plan</Text>
-              <Text style={s.date}>{todayLabel()}</Text>
-            </View>
-            <ReadinessBadge zone={zone as any} />
-          </View>
+          <Text style={s.title}>Planning</Text>
+          <Text style={s.date}>{todayLabel()}</Text>
         </View>
 
-        {/* ── R-Lo message ── */}
-        <InsightCard message={rloMsg} />
+        {/* ── Tonight ── */}
+        <TonightCard
+          profile={profile}
+          adjustedCycles={adjustedCycles}
+          wearableActive={wearableActive}
+        />
 
-        {/* ── Timeline ── */}
-        {timeline ? (
-          <View style={s.section}>
-            <SectionHeader title="Sleep timeline" />
-            <View style={s.timeline}>
-              {timeline.map((ev, i) => (
-                <EventRow
-                  key={ev.kind}
-                  event={ev}
-                  isLast={i === timeline.length - 1}
-                  isNow={i === nowEventIdx}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={s.placeholder}>
-            <Ionicons name="moon-outline" size={32} color={TEXT_MUTED} />
-            <Text style={s.placeholderText}>Complete your profile to see your plan</Text>
-          </View>
-        )}
-
-        {/* ── Last 3 nights ── */}
-        {recentCycles.length > 0 && (
-          <View style={s.section}>
-            <SectionHeader title="Recent nights" />
-            <View style={s.nightsCard}>
-              <View style={s.nightsBars}>
-                {[...recentCycles].reverse().map((c, i) => (
-                  <NightDot key={i} cycles={c} target={target} />
-                ))}
-              </View>
-              <View style={s.nightsRight}>
-                <Text style={s.weeklyText}>
-                  {recentCycles.reduce((a, b) => a + b, 0)} cycles
-                </Text>
-                <Text style={s.weeklySub}>last {recentCycles.length} nights</Text>
-                {profile && (
-                  <View style={{ marginTop: 8, width: '100%' }}>
-                    <CycleBar
-                      cycles={recentCycles.reduce((a, b) => a + b, 0)}
-                      target={target * recentCycles.length}
-                    />
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ── R90 reminder ── */}
+        {/* ── This Week ── */}
         <View style={s.section}>
-          <View style={s.tipCard}>
-            <Ionicons name="information-circle-outline" size={16} color={TEXT_MUTED} />
-            <Text style={s.tipText}>
-              R90 targets 5 cycles (7h30) as the optimal nightly minimum. Consistency of wake time matters more than total sleep.
+          <SectionHeader title="This Week" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.weekScroll}
+          >
+            {week.map((day, i) => (
+              <WeekDayCard key={day.dayShort} day={day} isSelected={i === todayIdx} />
+            ))}
+          </ScrollView>
+
+          {/* R90 note */}
+          <View style={s.r90Note}>
+            <Ionicons name="information-circle-outline" size={13} color={TEXT_MUTED} />
+            <Text style={s.r90NoteText}>
+              R90 varies cycles across the week. Recovery nights (4 cycles) are planned — not failures.
             </Text>
           </View>
         </View>
+
+        {/* ── Insights ── */}
+        <View style={s.section}>
+          <SectionHeader title="R-Lo Insights" />
+          <View style={s.insightsCard}>
+            {insights.map((txt, i) => (
+              <View key={i}>
+                <InsightItem text={txt} index={i} />
+                {i < insights.length - 1 && <View style={s.insightDivider} />}
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* ── R90 Score ── */}
+        {recentCycles.length > 0 ? (
+          <R90ScoreCard
+            score={r90Score}
+            cycles={totalAchieved}
+            target={target}
+            nights={recentCycles.length}
+          />
+        ) : (
+          <View style={s.section}>
+            <SectionHeader title="R90 Score" />
+            <View style={s.scoreEmpty}>
+              <Ionicons name="stats-chart-outline" size={28} color={TEXT_MUTED} />
+              <Text style={s.scoreEmptyText}>Track a few nights to see your R90 score</Text>
+            </View>
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -411,22 +559,20 @@ export default function CalendarScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: BG },
-  scroll:        { flex: 1 },
-  content:       { padding: 20, paddingBottom: 100, gap: 20 },
-  header:        { gap: 10 },
-  headerTop:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
-  title:         { fontSize: 28, fontWeight: '800', color: TEXT },
-  date:          { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
-  section:       { gap: 0 },
-  timeline:      { gap: 0 },
-  placeholder:   { alignItems: 'center', gap: 12, paddingVertical: 40 },
-  placeholderText:{ fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
-  nightsCard:    { backgroundColor: CARD, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', borderWidth: 1, borderColor: BORDER },
-  nightsBars:    { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  nightsRight:   { alignItems: 'flex-end', flex: 1, paddingLeft: 16 },
-  weeklyText:    { fontSize: 22, fontWeight: '800', color: TEXT },
-  weeklySub:     { fontSize: 12, color: TEXT_MUTED },
-  tipCard:       { flexDirection: 'row', gap: 10, backgroundColor: CARD, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: BORDER, alignItems: 'flex-start' },
-  tipText:       { fontSize: 12, color: TEXT_MUTED, flex: 1, lineHeight: 18 },
+  safe:           { flex: 1, backgroundColor: BG },
+  scroll:         { flex: 1 },
+  content:        { padding: 20, paddingBottom: 120, gap: 24 },
+  header:         { gap: 4 },
+  title:          { fontSize: 28, fontWeight: '800', color: TEXT, letterSpacing: -0.5 },
+  date:           { fontSize: 13, color: TEXT_MUTED },
+  section:        { gap: 12 },
+  weekScroll:     { gap: 8, paddingRight: 4 },
+  r90Note:        { flexDirection: 'row', gap: 6, alignItems: 'flex-start', marginTop: 4 },
+  r90NoteText:    { flex: 1, fontSize: 11, color: TEXT_MUTED, lineHeight: 16 },
+  insightsCard:   { backgroundColor: CARD, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: BORDER, gap: 14 },
+  insightDivider: { height: 1, backgroundColor: BORDER, marginVertical: 2 },
+  scoreEmpty:     { backgroundColor: CARD, borderRadius: 20, padding: 24, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: BORDER },
+  scoreEmptyText: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
+  empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  emptyText:      { fontSize: 14, color: TEXT_MUTED, textAlign: 'center' },
 });
