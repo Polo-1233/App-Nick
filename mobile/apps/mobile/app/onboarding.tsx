@@ -50,7 +50,7 @@ interface AVSound {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 4;
+const TOTAL_PAGES = 5;
 
 const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
@@ -188,11 +188,18 @@ export default function OnboardingScreen() {
     }
   }, [page, fadeAnim2]);
 
-  // ── Slide 3: fade-in + isolated mascot/glow animations ───────────────────
+  // ── Slide 3 (plan mockup): fade-in ───────────────────────────────────────
   useEffect(() => {
     if (page !== 3) return;
     fadeAnim3.setValue(0);
-    Animated.timing(fadeAnim3, { toValue: 1, duration: 700, delay: 80, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim3, { toValue: 1, duration: 600, delay: 80, useNativeDriver: true }).start();
+  }, [page, fadeAnim3]);
+
+  // ── Slide 4 (Meet R-Lo): fade-in + isolated mascot/glow animations ────────
+  useEffect(() => {
+    if (page !== 4) return;
+    fadeAnim4.setValue(0);
+    Animated.timing(fadeAnim4, { toValue: 1, duration: 700, delay: 80, useNativeDriver: true }).start();
 
     // Mascot breathing: scale 1 → 1.03, 2500ms easeInOut loop
     slide3MascotScale.setValue(1);
@@ -215,7 +222,7 @@ export default function OnboardingScreen() {
     glowLoop.start();
 
     return () => { mascotLoop.stop(); glowLoop.stop(); };
-  }, [page, fadeAnim3, slide3MascotScale, slide3GlowOpacity]);
+  }, [page, fadeAnim4, slide3MascotScale, slide3GlowOpacity]);
 
   
 
@@ -322,7 +329,7 @@ export default function OnboardingScreen() {
   const isNextDisabled = saving;
 
   const nextLabel =
-    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Begin with R-Lo') :
+    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Create my plan') :
     page === 0 ? "Let's fix it" :
     'Continue';
 
@@ -467,8 +474,76 @@ export default function OnboardingScreen() {
             </View>}
 
             {/* ── Slide 3: Meet R-Lo ───────────────────────────────────── */}
-            {page === 3 && <View style={s.slide3}>
-              <Animated.View style={[s.slide3Content, { opacity: fadeAnim3 }]}>
+            {/* ── Slide 4: Plan mockup ──────────────────────────────────── */}
+            {page === 3 && <View style={s.slidePlan}>
+              <Animated.View style={[s.slidePlanContent, { opacity: fadeAnim3 }]}>
+
+                {/* ── Plan mockup card ── */}
+                <View style={s.planMockCard}>
+                  {/* Header */}
+                  <View style={s.planMockHeader}>
+                    <Text style={s.planMockTitle}>Tonight's plan</Text>
+                    <View style={s.planMockBadge}><Text style={s.planMockBadgeText}>5 cycles</Text></View>
+                  </View>
+
+                  {/* Bedtime row */}
+                  <View style={s.planMockRow}>
+                    <View style={[s.planMockDot, { backgroundColor: '#A78BFA' }]} />
+                    <View style={s.planMockLine} />
+                    <View style={s.planMockInfo}>
+                      <Text style={s.planMockTime}>22:30</Text>
+                      <Text style={s.planMockLabel}>Wind-down</Text>
+                    </View>
+                  </View>
+                  <View style={s.planMockRow}>
+                    <View style={[s.planMockDot, { backgroundColor: ACCENT }]} />
+                    <View style={s.planMockLine} />
+                    <View style={s.planMockInfo}>
+                      <Text style={[s.planMockTime, { color: ACCENT }]}>23:00</Text>
+                      <Text style={s.planMockLabel}>Ideal bedtime · 5 cycles</Text>
+                    </View>
+                  </View>
+                  <View style={s.planMockRow}>
+                    <View style={[s.planMockDot, { backgroundColor: '#4ADE80' }]} />
+                    <View style={[s.planMockLine, { backgroundColor: 'transparent' }]} />
+                    <View style={s.planMockInfo}>
+                      <Text style={[s.planMockTime, { color: '#4ADE80' }]}>06:30</Text>
+                      <Text style={s.planMockLabel}>Wake up · ARP anchor</Text>
+                    </View>
+                  </View>
+
+                  {/* R-Lo bubble */}
+                  <View style={s.planMockBubble}>
+                    <View style={s.planMockAvatar}><Text style={s.planMockAvatarText}>R</Text></View>
+                    <Text style={s.planMockBubbleText}>Go to sleep at 23:00 for optimal recovery tonight.</Text>
+                  </View>
+                </View>
+
+                {/* Titre */}
+                <Text style={s.planSlideTitle}>
+                  {"Every day you receive\na personalized plan"}
+                </Text>
+
+                {/* Features */}
+                <View style={s.planFeatures}>
+                  {[
+                    'Your optimal bedtime',
+                    'Your energy prediction',
+                    'Your recovery strategy',
+                  ].map((f, i) => (
+                    <View key={i} style={s.planFeatureRow}>
+                      <View style={s.planFeatureDot} />
+                      <Text style={s.planFeatureText}>{f}</Text>
+                    </View>
+                  ))}
+                </View>
+
+              </Animated.View>
+            </View>}
+
+            {/* ── Slide 5: Meet R-Lo ───────────────────────────────────── */}
+            {page === 4 && <View style={s.slide3}>
+              <Animated.View style={[s.slide3Content, { opacity: fadeAnim4 }]}>
 
                 {/* Mascot — 30% screen height, isolated breathing */}
                 <View style={s.slide3MascotArea}>
@@ -915,6 +990,51 @@ const s = StyleSheet.create({
     backgroundColor: ACCENT,
     borderRadius:    1,
   },
+
+  // ── Slide 4 — Plan mockup ─────────────────────────────────────────────────
+  slidePlan: {
+    flex:              1,
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 24,
+  },
+  slidePlanContent: {
+    width:      '100%',
+    alignItems: 'center',
+    gap:        20,
+  },
+  planMockCard: {
+    width:           '100%',
+    backgroundColor: SURFACE,
+    borderRadius:    20,
+    padding:         18,
+    borderWidth:     1,
+    borderColor:     BORDER,
+    gap:             12,
+  },
+  planMockHeader: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+  },
+  planMockTitle:     { fontSize: 14, fontWeight: '700', color: TEXT },
+  planMockBadge:     { backgroundColor: `${ACCENT}22`, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: `${ACCENT}40` },
+  planMockBadgeText: { fontSize: 11, fontWeight: '600', color: ACCENT },
+  planMockRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  planMockDot:       { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  planMockLine:      { width: 1, position: 'absolute', left: 4, top: 14, bottom: -12, backgroundColor: BORDER },
+  planMockInfo:      { flex: 1, gap: 1 },
+  planMockTime:      { fontSize: 17, fontWeight: '800', color: TEXT, letterSpacing: -0.3 },
+  planMockLabel:     { fontSize: 11, color: TEXT_MUTED },
+  planMockBubble:    { flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: BG, borderRadius: 12, padding: 12, marginTop: 4 },
+  planMockAvatar:    { width: 26, height: 26, borderRadius: 13, backgroundColor: `${ACCENT}25`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}40` },
+  planMockAvatarText:{ fontSize: 12, fontWeight: '800', color: ACCENT },
+  planMockBubbleText:{ flex: 1, fontSize: 12, color: TEXT_SUB, lineHeight: 18 },
+  planSlideTitle:    { fontSize: 22, fontWeight: '700', color: TEXT, textAlign: 'center', lineHeight: 32, letterSpacing: -0.3 },
+  planFeatures:      { gap: 10, alignSelf: 'flex-start' },
+  planFeatureRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  planFeatureDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT },
+  planFeatureText:   { fontSize: 15, color: TEXT_SUB },
 
   // ── Slide 3 — Schéma R90 ──────────────────────────────────────────────────
   slide3Schema: {
