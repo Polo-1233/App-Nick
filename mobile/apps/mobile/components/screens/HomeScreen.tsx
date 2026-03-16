@@ -53,7 +53,7 @@ const BORDER  = 'rgba(255,255,255,0.06)';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const HEADER_H   = Math.round(SCREEN_H * 0.38);
-const PANEL_H    = 160; // expandable panel height
+// (panel removed — replaced by SmartCarousel)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatMin(m: number): string {
@@ -73,22 +73,100 @@ function coachGreeting(name: string | null, score: number) {
   };
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const SUGGESTIONS = [
-  { icon: 'stats-chart-outline', color: '#4DA3FF', label: 'Analyze my week',   sub: 'See your recovery trend',      prompt: 'How am I doing this week?' },
-  { icon: 'moon-outline',        color: '#9B59B6', label: 'Prepare tonight',   sub: "Plan tonight's sleep window",  prompt: 'Help me plan my sleep for tonight' },
-  { icon: 'bed-outline',         color: '#F5A623', label: 'I slept late',      sub: 'Adjust for a late night',      prompt: 'I slept later than usual last night' },
-  { icon: 'refresh-outline',     color: '#3DDC97', label: 'Adjust my rhythm',  sub: 'Recalibrate your schedule',    prompt: 'Help me adjust my sleep rhythm' },
-  { icon: 'flash-outline',       color: '#F87171', label: 'Improve recovery',  sub: 'Faster bounce-back tips',      prompt: 'How can I improve my recovery?' },
+// ─── Smart cards data ────────────────────────────────────────────────────────
+
+type SmartCard = { icon: string; color: string; label: string; prompt: string };
+
+const CARDS_MORNING: SmartCard[] = [
+  { icon: 'partly-sunny-outline', color: '#FACC15', label: 'How did you sleep?',  prompt: 'How did I sleep last night based on my data?' },
+  { icon: 'stats-chart-outline',  color: '#4DA3FF', label: 'See your score',      prompt: 'What is my sleep score today and what does it mean?' },
+  { icon: 'hourglass-outline',    color: '#F87171', label: 'Sleep debt update',   prompt: 'How much sleep debt do I have and how can I recover?' },
+  { icon: 'flash-outline',        color: '#3DDC97', label: 'Energy forecast',     prompt: 'How will my energy levels look throughout the day?' },
+  { icon: 'cafe-outline',         color: '#F5A623', label: 'Caffeine window',     prompt: 'What is the best time for caffeine today based on my schedule?' },
 ];
-const MODES = [
-  { icon: 'airplane-outline', color: '#4DA3FF', label: 'Jet lag recovery',  sub: 'Reset after time zones',         prompt: 'Help me recover from jet lag' },
-  { icon: 'book-outline',     color: '#9B59B6', label: 'Learning mode',     sub: 'Sleep for memory & focus',       prompt: 'Optimize my sleep for learning and memory' },
-  { icon: 'globe-outline',    color: '#3DDC97', label: 'Travel recovery',   sub: 'Maintain rhythm while travelling',prompt: 'I am travelling soon, help me plan my sleep' },
-  { icon: 'home-outline',     color: '#F5A623', label: 'Sleep environment', sub: 'Optimize your room setup',       prompt: 'How can I improve my sleep environment?' },
-  { icon: 'flash-outline',    color: '#F87171', label: 'Fatigue reset',     sub: 'Recover when exhausted',         prompt: 'I am exhausted, help me recover fast' },
-  { icon: 'moon-outline',     color: '#6B7F99', label: 'Night shift',       sub: 'Adjust for irregular hours',     prompt: 'I work night shifts, help me adjust my sleep' },
+
+const CARDS_EVENING: SmartCard[] = [
+  { icon: 'moon-outline',         color: '#9B59B6', label: 'Prepare tonight',     prompt: 'Help me prepare for tonight\'s sleep' },
+  { icon: 'leaf-outline',         color: '#3DDC97', label: 'Wind-down routine',   prompt: 'What should my wind-down routine look like tonight?' },
+  { icon: 'time-outline',         color: '#4DA3FF', label: 'Adjust bedtime',      prompt: 'Should I adjust my bedtime tonight?' },
+  { icon: 'phone-portrait-outline',color: '#F5A623', label: 'Screen cutoff',      prompt: 'When should I stop using screens tonight?' },
+  { icon: 'thermometer-outline',  color: '#F87171', label: 'Room setup',          prompt: 'How should I set up my room for optimal sleep tonight?' },
 ];
+
+const CARDS_BAD_NIGHT: SmartCard[] = [
+  { icon: 'medkit-outline',       color: '#F87171', label: 'Recovery plan',       prompt: 'I had a bad night. What is the best recovery plan for today?' },
+  { icon: 'bed-outline',          color: '#F5A623', label: 'I slept late',        prompt: 'I slept much later than usual last night. How do I adjust?' },
+  { icon: 'sunny-outline',        color: '#FACC15', label: 'Nap calculator',      prompt: 'Should I nap today? If so, when and for how long?' },
+  { icon: 'trending-up-outline',  color: '#4DA3FF', label: 'Get back on track',   prompt: 'How do I get back on my sleep schedule after a bad night?' },
+  { icon: 'cafe-outline',         color: '#9B59B6', label: 'Manage fatigue',      prompt: 'How do I manage fatigue today after a rough night?' },
+];
+
+const CARDS_DEFAULT: SmartCard[] = [
+  { icon: 'stats-chart-outline',  color: '#4DA3FF', label: 'My week in review',   prompt: 'How am I doing this week overall?' },
+  { icon: 'moon-outline',         color: '#9B59B6', label: 'Prepare tonight',     prompt: 'Help me plan my sleep for tonight' },
+  { icon: 'airplane-outline',     color: '#3DDC97', label: 'Jet lag recovery',    prompt: 'Help me recover from jet lag' },
+  { icon: 'refresh-outline',      color: '#F5A623', label: 'Adjust my rhythm',    prompt: 'Help me recalibrate my sleep rhythm' },
+  { icon: 'flash-outline',        color: '#F87171', label: 'Improve recovery',    prompt: 'How can I improve my recovery?' },
+  { icon: 'book-outline',         color: '#6B7F99', label: 'Optimize for focus',  prompt: 'How can I optimize my sleep for better focus and learning?' },
+];
+
+function getSmartCards(hour: number, lastCycles: number | null): SmartCard[] {
+  if (lastCycles !== null && lastCycles < 3) return CARDS_BAD_NIGHT;
+  if (hour >= 5 && hour < 13)              return CARDS_MORNING;
+  if (hour >= 19)                          return CARDS_EVENING;
+  return CARDS_DEFAULT;
+}
+
+// ─── SmartCarousel ────────────────────────────────────────────────────────────
+
+function SmartCarousel({ onPress, disabled, lastCycles }: {
+  onPress:    (prompt: string) => void;
+  disabled?:  boolean;
+  lastCycles: number | null;
+}) {
+  const hour  = new Date().getHours();
+  const cards = getSmartCards(hour, lastCycles);
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={sm.scroll}
+      decelerationRate="fast"
+    >
+      {cards.map(card => (
+        <Pressable
+          key={card.label}
+          style={({ pressed }) => [sm.card, (pressed || disabled) && { opacity: 0.65 }]}
+          onPress={() => onPress(card.prompt)}
+          disabled={disabled}
+        >
+          <View style={[sm.iconWrap, { backgroundColor: `${card.color}18`, borderColor: `${card.color}30` }]}>
+            <Ionicons name={card.icon as any} size={16} color={card.color} />
+          </View>
+          <Text style={sm.label} numberOfLines={2}>{card.label}</Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+
+const sm = StyleSheet.create({
+  scroll:   { paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+  card:     {
+    width:             108,
+    backgroundColor:   'rgba(255,255,255,0.06)',
+    borderRadius:      14,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.09)',
+    paddingVertical:   10,
+    paddingHorizontal: 10,
+    gap:               7,
+    alignItems:        'flex-start',
+  },
+  iconWrap: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  label:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 15 },
+});
 
 // Guided
 const WAKE_OPTS = [
@@ -241,122 +319,9 @@ const ih = StyleSheet.create({
 });
 
 // ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
-type CarouselItem = { icon: string; color: string; label: string; sub: string; prompt: string };
 
-function ExpandablePanel({
-  visible, activeTab, onChangeTab, onPress, disabled,
-}: {
-  visible:     boolean;
-  activeTab:   'suggestions' | 'modes';
-  onChangeTab: (t: 'suggestions' | 'modes') => void;
-  onPress:     (p: string) => void;
-  disabled?:   boolean;
-}) {
-  const anim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    Animated.spring(anim, {
-      toValue:        visible ? 1 : 0,
-      useNativeDriver: false,
-      bounciness:     4,
-      speed:          16,
-    }).start();
-  }, [visible, anim]);
 
-  const panelHeight = anim.interpolate({ inputRange: [0, 1], outputRange: [0, PANEL_H] });
-  const opacity     = anim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] });
-  const items: CarouselItem[] = activeTab === 'suggestions' ? SUGGESTIONS : MODES;
-
-  return (
-    <Animated.View style={[panel.wrap, { height: panelHeight, opacity }]}>
-      {/* Cards carousel */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={panel.scroll}
-        decelerationRate="fast"
-        snapToInterval={150}
-        snapToAlignment="start"
-      >
-        {items.map(item => (
-          <Pressable
-            key={item.label}
-            style={({ pressed }) => [panel.card, (pressed || disabled) && { opacity: 0.7 }]}
-            onPress={() => onPress(item.prompt)}
-            disabled={disabled}
-          >
-            <View style={[panel.icon, { backgroundColor: `${item.color}15`, borderColor: `${item.color}28` }]}>
-              <Ionicons name={item.icon as any} size={20} color={item.color} />
-            </View>
-            <Text style={panel.cardTitle}>{item.label}</Text>
-            <Text style={panel.cardSub} numberOfLines={2}>{item.sub}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </Animated.View>
-  );
-}
-const panel = StyleSheet.create({
-  wrap:         { overflow: 'hidden' },
-  tabRow:       { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 8 },
-  tab:          { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: SURFACE2 },
-  tabActive:    { backgroundColor: ACCENT },
-  tabLabel:     { fontSize: 13, fontWeight: '600', color: MUTED },
-  tabLabelActive:{ color: '#000' },
-  scroll:       { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
-  card:         { width: 130, backgroundColor: SURFACE2, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12, gap: 6, alignItems: 'flex-start' },
-  icon:         { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  cardTitle:    { fontSize: 12, fontWeight: '700', color: TEXT, lineHeight: 16 },
-  cardSub:      { fontSize: 11, color: MUTED, lineHeight: 14 },
-});
-
-// ─── Toggle buttons (below input) ─────────────────────────────────────────────
-function ToggleBar({ panelOpen, activeTab, onToggle, onSwitchTab }: {
-  panelOpen:    boolean;
-  activeTab:    'suggestions' | 'modes';
-  onToggle:     () => void;
-  onSwitchTab:  (t: 'suggestions' | 'modes') => void;
-}) {
-  return (
-    <View style={tog.row}>
-      {(['suggestions', 'modes'] as const).map(tab => {
-        const isActive = panelOpen && activeTab === tab;
-        return (
-          <Pressable
-            key={tab}
-            style={[tog.pill, isActive && tog.pillActive]}
-            onPress={() => {
-              if (!panelOpen) { onToggle(); onSwitchTab(tab); }
-              else if (activeTab !== tab) { onSwitchTab(tab); }
-              else { onToggle(); }
-            }}
-          >
-            <Ionicons
-              name={tab === 'suggestions' ? 'bulb-outline' : 'options-outline'}
-              size={13}
-              color={isActive ? '#000' : MUTED}
-            />
-            <Text style={[tog.label, isActive && tog.labelActive]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-            <Ionicons
-              name={isActive ? 'chevron-down' : 'chevron-up'}
-              size={12}
-              color={isActive ? '#000' : MUTED}
-            />
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-const tog = StyleSheet.create({
-  row:         { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  pill:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: SURFACE2, borderWidth: 1, borderColor: BORDER },
-  pillActive:  { backgroundColor: ACCENT, borderColor: ACCENT },
-  label:       { fontSize: 13, fontWeight: '600', color: MUTED },
-  labelActive: { color: '#000' },
-});
 
 // ─── Guided sub-components ────────────────────────────────────────────────────
 function OptionCard({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
@@ -422,8 +387,6 @@ export default function HomeScreen() {
 
   const [input,          setInput]         = useState('');
   const [inputFocused,   setInputFocused]  = useState(false);
-  const [activeTab,      setActiveTab]     = useState<'suggestions' | 'modes'>('suggestions');
-  const [panelOpen,      setPanelOpen]     = useState(false);
   const [chatExpanded,   setChatExpanded]  = useState(false);
   const [profile,        setProfile]       = useState<UserProfile | null>(null);
   const [energyScore,    setEnergyScore]   = useState(72);
@@ -545,10 +508,7 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [phase, fetchGreeting]);
 
-  // Close panel when keyboard opens
-  useEffect(() => {
-    if (inputFocused && panelOpen) setPanelOpen(false);
-  }, [inputFocused, panelOpen]);
+
 
   // ── Guided handlers ───────────────────────────────────────────────────────
   function handleWakePick(_l: string, value: number | string) {
@@ -600,7 +560,6 @@ export default function HomeScreen() {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
-    setPanelOpen(false);
     void sendMessage(txt);
   }
 
@@ -798,21 +757,11 @@ export default function HomeScreen() {
               </Pressable>
             )}
 
-            {/* 5. Expandable panel — above toggle */}
-            <ExpandablePanel
-              visible={panelOpen}
-              activeTab={activeTab}
-              onChangeTab={setActiveTab}
+            {/* Smart cards carousel — always visible above input */}
+            <SmartCarousel
               onPress={send}
               disabled={isStreaming}
-            />
-
-            {/* 4. Toggle bar */}
-            <ToggleBar
-              panelOpen={panelOpen}
-              activeTab={activeTab}
-              onToggle={() => setPanelOpen(v => !v)}
-              onSwitchTab={setActiveTab}
+              lastCycles={dayPlan?.readiness?.recentCycles?.[0] ?? null}
             />
 
             {/* 3. Input bar */}
