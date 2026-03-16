@@ -32,6 +32,7 @@ import {
   markPlanOnboardingComplete,
 } from '../lib/storage';
 import { requestCalendar, requestNotifications } from '../lib/permissions';
+import { connectGoogleCalendar } from '../lib/google-calendar';
 import { Ionicons } from '@expo/vector-icons';
 import { updateProfile } from '../lib/api';
 import { signIn, signUp } from '../lib/supabase';
@@ -383,7 +384,7 @@ function PermissionStep({
   onComplete: () => void;
 }) {
   const [permStep, setPermStep] = useState<'calendar' | 'notifications' | 'saving'>('calendar');
-  const [calGranted, setCalGranted] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Save profile and complete after permissions
   useEffect(() => {
@@ -417,9 +418,15 @@ function PermissionStep({
     return () => clearTimeout(t);
   }, [permStep, plan, onComplete]);
 
-  async function handleCalendar() {
+  async function handleNativeCalendar() {
     await requestCalendar();
-    setCalGranted(true);
+    setPermStep('notifications');
+  }
+
+  async function handleGoogleCalendar() {
+    setGoogleLoading(true);
+    try { await connectGoogleCalendar(); } catch { /* non-critical */ }
+    setGoogleLoading(false);
     setPermStep('notifications');
   }
 
@@ -428,63 +435,111 @@ function PermissionStep({
     setPermStep('saving');
   }
 
-  const isCalendar = permStep === 'calendar';
-  const icon       = isCalendar ? 'calendar-outline' : 'notifications-outline';
-  const title      = isCalendar ? 'Sync your calendar' : 'Stay on track';
-  const body       = isCalendar
-    ? 'R-Lo uses your calendar to protect your sleep window and avoid conflicts.'
-    : 'Get a nudge before your wind-down and when your sleep window opens.';
-  const primaryLabel   = isCalendar ? 'Allow Calendar Access' : 'Allow Notifications';
-  const secondaryLabel = isCalendar ? 'Skip' : 'Skip';
-  const handlePrimary  = isCalendar ? handleCalendar : handleNotifications;
-  const handleSecondary = () => {
-    if (isCalendar) setPermStep('notifications');
-    else setPermStep('saving');
-  };
+  if (permStep === 'calendar') {
+    return (
+      <View style={bs.overlay}>
+        <View style={bs.sheet}>
+          <View style={bs.handle} />
+          <View style={bs.iconRow}>
+            <View style={bs.iconWrap}>
+              <Ionicons name="calendar-outline" size={28} color={ACCENT} />
+            </View>
+          </View>
+          <Text style={bs.title}>Sync your calendar</Text>
+          <Text style={bs.body}>
+            R-Lo can read your upcoming schedule to protect your sleep window.
+          </Text>
+          <View style={bs.actions}>
+            <Pressable style={bs.btnApple} onPress={handleNativeCalendar}>
+              <Ionicons name="calendar" size={18} color="#0B1220" />
+              <Text style={bs.btnAppleText}>Allow Calendar Access</Text>
+            </Pressable>
+            <Pressable style={bs.btnGoogle} onPress={handleGoogleCalendar} disabled={googleLoading}>
+              <Ionicons name="logo-google" size={16} color={ACCENT} />
+              <Text style={bs.btnGoogleText}>{googleLoading ? 'Connecting…' : 'Connect Google Calendar'}</Text>
+            </Pressable>
+            <Pressable style={bs.btnSkip} onPress={() => setPermStep('notifications')}>
+              <Text style={bs.btnSkipText}>Skip for now</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={perm.safe} edges={['top', 'bottom']}>
-      <View style={perm.card}>
-        <View style={perm.iconWrap}>
-          <Ionicons name={icon as any} size={36} color={ACCENT} />
+    <View style={bs.overlay}>
+      <View style={bs.sheet}>
+        <View style={bs.handle} />
+        <View style={bs.iconRow}>
+          <View style={bs.iconWrap}>
+            <Ionicons name="notifications-outline" size={28} color={ACCENT} />
+          </View>
         </View>
-        <Text style={perm.title}>{title}</Text>
-        <Text style={perm.body}>{body}</Text>
-
-        <View style={perm.dots}>
-          <View style={[perm.dot, !isCalendar && perm.dotDone]} />
-          <View style={[perm.dot, isCalendar && perm.dotInactive, !isCalendar && perm.dotActive]} />
-        </View>
-
-        <View style={perm.actions}>
-          <Pressable style={perm.btnPrimary} onPress={handlePrimary}>
-            <Text style={perm.btnPrimaryText}>{primaryLabel}</Text>
+        <Text style={bs.title}>Stay on track</Text>
+        <Text style={bs.body}>
+          Get a gentle nudge before your wind-down and when it's time to sleep.
+        </Text>
+        <View style={bs.actions}>
+          <Pressable style={bs.btnApple} onPress={handleNotifications}>
+            <Ionicons name="notifications" size={18} color="#0B1220" />
+            <Text style={bs.btnAppleText}>Allow Notifications</Text>
           </Pressable>
-          <Pressable style={perm.btnSecondary} onPress={handleSecondary}>
-            <Text style={perm.btnSecondaryText}>{secondaryLabel}</Text>
+          <Pressable style={bs.btnSkip} onPress={() => setPermStep('saving')}>
+            <Text style={bs.btnSkipText}>Skip for now</Text>
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
-const perm = StyleSheet.create({
-  safe:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  card:       { width: '88%', backgroundColor: SURFACE, borderRadius: 24, padding: 28, alignItems: 'center', gap: 14, borderWidth: 1, borderColor: BORDER },
-  iconWrap:   { width: 72, height: 72, borderRadius: 22, backgroundColor: `${ACCENT}18`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}30` },
-  title:      { fontSize: 20, fontWeight: '700', color: TEXT, textAlign: 'center' },
-  body:       { fontSize: 15, color: TEXT_SUB, textAlign: 'center', lineHeight: 22 },
-  dots:       { flexDirection: 'row', gap: 6, marginTop: 4 },
-  dot:        { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
-  dotInactive:{ backgroundColor: BORDER },
-  dotDone:    { backgroundColor: `${ACCENT}55` },
-  dotActive:  { backgroundColor: ACCENT },
-  actions:    { width: '100%', gap: 10, marginTop: 4 },
-  btnPrimary:     { backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  btnPrimaryText: { fontSize: 16, fontWeight: '600', color: '#0B1220' },
-  btnSecondary:     { backgroundColor: 'transparent', borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-  btnSecondaryText: { fontSize: 15, fontWeight: '500', color: TEXT_MUTED },
+const bs = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor:   SURFACE,
+    borderTopLeftRadius:  28,
+    borderTopRightRadius: 28,
+    paddingTop:  12,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    gap: 12,
+  },
+  handle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  iconRow: { alignItems: 'center', marginBottom: 4 },
+  iconWrap: {
+    width: 60, height: 60, borderRadius: 18,
+    backgroundColor: `${ACCENT}18`,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: `${ACCENT}30`,
+  },
+  title: { fontSize: 20, fontWeight: '700', color: TEXT, textAlign: 'center' },
+  body:  { fontSize: 14, color: TEXT_SUB, textAlign: 'center', lineHeight: 21 },
+  actions: { gap: 10, marginTop: 4 },
+  btnApple: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: ACCENT, borderRadius: 14,
+    paddingVertical: 15,
+  },
+  btnAppleText: { fontSize: 16, fontWeight: '600', color: '#0B1220' },
+  btnGoogle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: 'transparent', borderRadius: 14,
+    paddingVertical: 14, borderWidth: 1, borderColor: ACCENT,
+  },
+  btnGoogleText: { fontSize: 15, fontWeight: '500', color: ACCENT },
+  btnSkip: { alignItems: 'center', paddingVertical: 10 },
+  btnSkipText: { fontSize: 14, color: TEXT_MUTED },
 });
 
 
@@ -544,7 +599,7 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
   }, [calendarOnly, onComplete]);
 
   // ── Background: fully opaque for 10–11, translucent for 12 ───────────────
-  const bgColor = step === 12 ? 'rgba(0,0,0,0.45)' : BG;
+  const bgColor = step === 12 ? 'transparent' : BG;
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { backgroundColor: bgColor }]}>
