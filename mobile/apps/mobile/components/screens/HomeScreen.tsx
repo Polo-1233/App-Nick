@@ -348,12 +348,12 @@ function nextAction(bedtime: number | null, wake: number | null, nowMin: number)
 }
 
 function TopInfoBar({
-  topInset, zone, weeklyCycles, weeklyTarget, bedtime, wake, onPress,
+  topInset, zone, recentCycles, targetCycles, bedtime, wake, onPress,
 }: {
   topInset:      number;
   zone:          string | null;
-  weeklyCycles:  number;
-  weeklyTarget:  number;
+  recentCycles:  number[];
+  targetCycles:  number;
   bedtime:       number | null;
   wake:          number | null;
   onPress:       () => void;
@@ -365,6 +365,11 @@ function TopInfoBar({
   const zColor = zone ? (ZONE_COLOR[zone] ?? '#9CA3AF') : '#9CA3AF';
   const zLabel = zone ? (ZONE_LABEL[zone] ?? zone) : '—';
 
+  // Average cycles over available nights (max 3)
+  const avg = recentCycles.length > 0
+    ? (recentCycles.reduce((a, b) => a + b, 0) / recentCycles.length).toFixed(1)
+    : null;
+
   return (
     <View style={[ih.topRow, { top: topInset + 14 }]}>
       <Pressable style={ih.pill} onPress={onPress}>
@@ -374,12 +379,15 @@ function TopInfoBar({
 
         <View style={ih.divider} />
 
-        {/* Weekly cycles */}
-        <Text style={ih.pillSection}>
-          <Text style={ih.pillBold}>{weeklyCycles}</Text>
-          <Text style={ih.pillMuted}>/{weeklyTarget}</Text>
-        </Text>
-        <Text style={ih.pillMuted}>cycles</Text>
+        {/* Avg cycles / target */}
+        {avg !== null ? (
+          <Text style={ih.pillSection}>
+            <Text style={ih.pillBold}>{avg}</Text>
+            <Text style={ih.pillMuted}>/{targetCycles} avg</Text>
+          </Text>
+        ) : (
+          <Text style={ih.pillMuted}>No data</Text>
+        )}
 
         <View style={ih.divider} />
 
@@ -743,11 +751,11 @@ export default function HomeScreen() {
             <TopInfoBar
               topInset={insets.top}
               zone={dayPlan?.readiness?.zone ?? null}
-              weeklyCycles={dayPlan?.readiness?.recentCycles?.reduce((a, b) => a + b, 0) ?? 0}
-              weeklyTarget={profile?.idealCyclesPerNight ? profile.idealCyclesPerNight * 7 : 35}
+              recentCycles={dayPlan?.readiness?.recentCycles ?? []}
+              targetCycles={profile?.idealCyclesPerNight ?? 5}
               bedtime={bedtime}
               wake={wakeTime}
-              onPress={() => goToPage(2)}
+              onPress={() => goToPage(1)}
             />
 
             {/* Calendar event banner */}
