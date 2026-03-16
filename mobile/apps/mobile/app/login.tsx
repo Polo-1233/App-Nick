@@ -19,12 +19,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useAuth } from '../lib/auth-context';
 import { useTheme } from '../lib/theme-context';
 import { MascotImage } from '../components/ui/MascotImage';
 import { Button } from '../components/ui/Button';
-import { PERMISSION_KEYS } from '../lib/storage';
+
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { bootstrapUser } from '../lib/api';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -59,8 +59,7 @@ export default function LoginScreen() {
       if (result.session?.access_token) {
         await bootstrapUser(result.session.access_token).catch(() => {});
       }
-      const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
-      router.replace(shown ? '/(tabs)' : '/permissions');
+      router.replace('/(tabs)');
     } finally {
       setGoogleLoading(false);
     }
@@ -80,8 +79,7 @@ export default function LoginScreen() {
       if (result.session?.access_token) {
         await bootstrapUser(result.session.access_token).catch(() => {});
       }
-      const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
-      router.replace(shown ? '/(tabs)' : '/permissions');
+      router.replace('/(tabs)');
     } finally {
       setAppleLoading(false);
     }
@@ -105,13 +103,9 @@ export default function LoginScreen() {
         return;
       }
 
-      if (mode === 'signup') {
-        router.replace('/onboarding');
-      } else {
-        // First login → show permission flow; subsequent logins → go straight to Home
-        const shown = await AsyncStorage.getItem(PERMISSION_KEYS.PROMPT_SHOWN);
-        router.replace(shown ? '/(tabs)' : '/permissions');
-      }
+      // Permissions are handled by the OnboardingPlanOverlay (phase 'calendar')
+      // Always go to /(tabs) — the overlay shows if phase === 'calendar'
+      router.replace('/(tabs)');
     } finally {
       setLoading(false);
     }
