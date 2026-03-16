@@ -600,7 +600,7 @@ export default function HomeScreen() {
     if (phase === 'guided_chat') {
       setOnboardingStep('name');
       const t = setTimeout(() => {
-        injectMessage("Hey! 👋 I'm R-Lo, your personal sleep coach.\n\nTo build your sleep rhythm, I need a couple of things. Let's start — what's your name?");
+        injectMessage("Hi, I'm R-Lo — your personal sleep coach.\n\nTo build your sleep plan, I need a few things from you.\n\nWhat's your name?");
       }, 600);
       return () => clearTimeout(t);
     }

@@ -181,24 +181,42 @@ export default function PagerLayout() {
         </Pressable>
 
         {/* Insights */}
-        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(1)}>
-          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Insights" icon={
-            <Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
-          } />
+        <Pressable
+          style={[styles.tabItem, isOnboarding && styles.tabLocked]}
+          onPress={() => goToPage(1)}
+          disabled={isOnboarding}
+        >
+          <TabIcon anim={anim1} bubbleColor={tabBarBubble}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            label="Insights"
+            icon={<Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+          />
         </Pressable>
 
         {/* Calendar */}
-        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(2)}>
-          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Planning" icon={
-            <Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
-          } />
+        <Pressable
+          style={[styles.tabItem, isOnboarding && styles.tabLocked]}
+          onPress={() => goToPage(2)}
+          disabled={isOnboarding}
+        >
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            label="Planning"
+            icon={<Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+          />
         </Pressable>
 
         {/* Profile */}
-        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(3)}>
-          <TabIcon anim={anim3} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Profile" icon={
-            <Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
-          } />
+        <Pressable
+          style={[styles.tabItem, isOnboarding && styles.tabLocked]}
+          onPress={() => goToPage(3)}
+          disabled={isOnboarding}
+        >
+          <TabIcon anim={anim3} bubbleColor={tabBarBubble}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            label="Profile"
+            icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+          />
         </Pressable>
       </View>
 
@@ -218,7 +236,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop:     6,
   },
-  tabLocked: { opacity: 0.3, pointerEvents: 'none' },
+  tabLocked: { opacity: 0.28 },
   tabItem: {
     flex:           1,
     alignItems:     "center",
