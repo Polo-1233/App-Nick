@@ -31,7 +31,7 @@ export interface UseChatResult {
   sendMessage:     (text: string) => Promise<void>;
   fetchGreeting:   () => Promise<void>; // personalized opening from LLM
   clearHistory:    () => void;
-  injectMessage:   (content: string) => void; // local R-Lo message, no API call
+  injectMessage:   (content: string, role?: 'assistant' | 'user') => void; // local message, no API call
 }
 
 function uid(): string {
@@ -192,9 +192,9 @@ export function useChat(): UseChatResult {
   }, []);
 
   // Inject a local R-Lo message (no API call)
-  const injectMessage = useCallback((content: string) => {
-    const msg: ChatMessage = { id: uid(), role: 'assistant', content, status: 'done' };
-    setMessages(prev => (prev.length === 0 ? [msg] : prev));
+  const injectMessage = useCallback((content: string, role: 'assistant' | 'user' = 'assistant') => {
+    const msg: ChatMessage = { id: uid(), role, content, status: 'done' };
+    setMessages(prev => [...prev, msg]);
   }, []);
 
   // Fetch personalized greeting from backend (streamed, context-aware)

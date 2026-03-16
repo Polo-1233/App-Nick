@@ -788,7 +788,11 @@ export default function HomeScreen() {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
-    if (isOnboarding) { handleOnboardingReply(txt); return; }
+    if (isOnboarding) {
+      injectMessage(txt, 'user'); // affiche le message de l'user dans le chat
+      handleOnboardingReply(txt);
+      return;
+    }
     void sendMessage(txt);
   }
 
