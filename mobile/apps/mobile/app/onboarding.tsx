@@ -390,7 +390,7 @@ export default function OnboardingScreen() {
 
                 {/* Image centrée */}
                 <Image
-                  source={require('../assets/shemav1.png')}
+                  source={require('../assets/images/shemav1.png')}
                   style={s.schemaImage}
                   resizeMode="contain"
                 />
