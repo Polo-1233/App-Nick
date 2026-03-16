@@ -432,7 +432,7 @@ function PermissionStep({
   const icon       = isCalendar ? 'calendar-outline' : 'notifications-outline';
   const title      = isCalendar ? 'Sync your calendar' : 'Stay on track';
   const body       = isCalendar
-    ? 'R-Lo can check your schedule and protect your sleep window automatically.'
+    ? 'R-Lo uses your calendar to protect your sleep window and avoid conflicts.'
     : 'Get a nudge before your wind-down and when your sleep window opens.';
   const primaryLabel   = isCalendar ? 'Allow Calendar Access' : 'Allow Notifications';
   const secondaryLabel = isCalendar ? 'Skip' : 'Skip';
@@ -544,7 +544,7 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
   }, [calendarOnly, onComplete]);
 
   // ── Background: fully opaque for 10–11, translucent for 12 ───────────────
-  const bgColor = step === 12 ? 'rgba(11,18,32,0.90)' : BG;
+  const bgColor = step === 12 ? 'rgba(0,0,0,0.45)' : BG;
 
   return (
     <View style={[StyleSheet.absoluteFillObject, { backgroundColor: bgColor }]}>
