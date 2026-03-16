@@ -45,12 +45,12 @@ export const BLOCK_STYLE: Record<BlockType, BlockStyle> = {
 /** Human-readable label for each block type. */
 export const BLOCK_LABEL: Record<BlockType, string> = {
   sleep_cycle:    'Sleep',
-  pre_sleep:      'Pre-Sleep Routine',
-  crp:            'Recovery Nap',
-  down_period:    'Down Period',
-  wake:           'Wake',
-  calendar_event: 'Calendar Event',
-  free:           'Free',
+  pre_sleep:      'Wind-down',
+  crp:            'Nap Window',
+  down_period:    'Rest Break',
+  wake:           'Wake Up',
+  calendar_event: 'Event',
+  free:           '',
 };
 
 // ─── Conflict styling ─────────────────────────────────────────────────────────

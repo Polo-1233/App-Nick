@@ -159,7 +159,7 @@ export function EventSheet({
           {/* Conflict section */}
           {conflict && (
             <View style={s.conflictWrap}>
-              <Text style={s.conflictSectionLabel}>⚠ Conflict</Text>
+              <Text style={s.conflictSectionLabel}>⚠ Schedule conflict</Text>
               <ConflictCard
                 conflict={conflict}
                 options={conflictOptions}

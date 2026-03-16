@@ -91,8 +91,8 @@ function phantomBlocks(profile: UserProfile): TimeBlock[] {
   const bedtime  = ((profile.anchorTime - profile.idealCyclesPerNight * 90) + 1440) % 1440;
   const preSleep = ((bedtime - 90) + 1440) % 1440;
   return [
-    { start: preSleep, end: bedtime,            type: 'pre_sleep',   label: 'Pre-sleep' },
-    { start: bedtime,  end: profile.anchorTime, type: 'sleep_cycle', label: `${profile.idealCyclesPerNight}c target` },
+    { start: preSleep, end: bedtime,            type: 'pre_sleep',   label: 'Wind-down' },
+    { start: bedtime,  end: profile.anchorTime, type: 'sleep_cycle', label: 'Ideal bedtime' },
   ];
 }
 
@@ -173,21 +173,21 @@ export default function CalendarScreen() {
       const startMin = hhmm(entry.time);
       const endMin   = nextEntry ? hhmm(nextEntry.time) : (startMin + 90) % 1440;
       if (entry.type === 'sleep_onset') {
-        blocks.push({ start: startMin, end: hhmm(backendPlan.crp_window.open), type: 'sleep_cycle', label: entry.label });
+        blocks.push({ start: startMin, end: hhmm(backendPlan.crp_window.open), type: 'sleep_cycle', label: 'Bedtime' });
       } else if (entry.is_crp_window) {
-        blocks.push({ start: startMin, end: endMin, type: 'crp', label: 'CRP window' });
+        blocks.push({ start: startMin, end: endMin, type: 'crp', label: 'Nap window' });
       } else if (entry.type === 'arp') {
-        blocks.push({ start: startMin, end: endMin, type: 'wake', label: 'ARP — Wake' });
+        blocks.push({ start: startMin, end: endMin, type: 'wake', label: 'Wake up' });
       } else if (entry.type === 'mrm') {
-        blocks.push({ start: startMin, end: endMin, type: 'down_period', label: `MRM C${entry.cycle}` });
+        blocks.push({ start: startMin, end: endMin, type: 'down_period', label: `Rest break ${entry.cycle}` });
       } else if (entry.type === 'phase_boundary') {
-        blocks.push({ start: startMin, end: endMin, type: 'free', label: `Phase ${entry.phase}` });
+        // Skip phase boundary labels — they clutter the grid
       }
     }
     // Pre-sleep block
     const sleepOnset = hhmm(backendPlan.sleep_onset['5cycle']);
     const preSleep   = ((sleepOnset - 90) + 1440) % 1440;
-    blocks.push({ start: preSleep, end: sleepOnset, type: 'pre_sleep', label: 'Pre-sleep' });
+    blocks.push({ start: preSleep, end: sleepOnset, type: 'pre_sleep', label: 'Wind-down' });
     return blocks;
   }, [backendPlan]);
 

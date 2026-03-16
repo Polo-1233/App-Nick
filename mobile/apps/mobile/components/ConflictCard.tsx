@@ -17,10 +17,10 @@ const SEVERITY_COLORS = {
 };
 
 const OVERLAP_LABELS: Record<string, string> = {
-  pre_sleep: "Pre-sleep",
-  sleep_cycle: "Sleep window",
-  down_period: "Down period",
-  crp: "CRP",
+  pre_sleep:   "Wind-down",
+  sleep_cycle: "Sleep",
+  down_period: "Rest break",
+  crp:         "Nap window",
 };
 
 interface Props {
@@ -103,7 +103,7 @@ export function ConflictCard({
       {/* No options: major conflict info only */}
       {options.length === 0 && (
         <Text style={styles.noOptions}>
-          Consider rescheduling the event or adjusting your anchor time.
+          This event overlaps with your sleep schedule. Consider rescheduling it or adjusting your wake-up time.
         </Text>
       )}
     </View>
