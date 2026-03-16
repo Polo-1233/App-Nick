@@ -55,10 +55,13 @@ export default function TabsLayout() {
   }, []);
 
   // ── Plan overlay: after reveal → login ────────────────────────────────────
-  const handlePlanToLogin = useCallback(() => {
-    advance('calendar');
+  // Must await the AsyncStorage write before navigating — otherwise the phase
+  // effect re-reads the old value when isAuthenticated changes post-login.
+  const handlePlanToLogin = useCallback(async () => {
+    await setOnboardingPhase('calendar');
+    setPhaseState('calendar');
     router.replace('/login');
-  }, [advance, router]);
+  }, [router]);
 
   // ── Calendar step done → full app ─────────────────────────────────────────
   const handleCalendarDone = useCallback(() => {
@@ -90,8 +93,8 @@ export default function TabsLayout() {
               />
             )}
 
-            {/* Calendar step — post-login, authenticated new users */}
-            {phase === 'calendar' && isAuthenticated && (
+            {/* Calendar step — permission flow (calendar → wearables → notifications) */}
+            {phase === 'calendar' && (
               <OnboardingPlanOverlay
                 onComplete={handleCalendarDone}
                 calendarOnly
