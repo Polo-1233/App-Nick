@@ -152,20 +152,21 @@ function SmartCarousel({ onPress, disabled, lastCycles }: {
 }
 
 const sm = StyleSheet.create({
-  scroll:   { paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
+  scroll:   { paddingHorizontal: 14, paddingVertical: 8, gap: 8, alignItems: 'flex-start' },
   card:     {
-    width:             108,
+    width:             104,
     backgroundColor:   'rgba(255,255,255,0.06)',
-    borderRadius:      14,
+    borderRadius:      12,
     borderWidth:       1,
     borderColor:       'rgba(255,255,255,0.09)',
-    paddingVertical:   10,
-    paddingHorizontal: 10,
-    gap:               7,
+    paddingVertical:   8,
+    paddingHorizontal: 9,
+    gap:               5,
     alignItems:        'flex-start',
+    alignSelf:         'flex-start',
   },
-  iconWrap: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  label:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 15 },
+  iconWrap: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  label:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 14 },
 });
 
 // Guided
