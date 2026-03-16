@@ -31,7 +31,8 @@ import {
   saveProfile,
   markPlanOnboardingComplete,
 } from '../lib/storage';
-import { requestCalendar } from '../lib/permissions';
+import { requestCalendar, requestNotifications } from '../lib/permissions';
+import { Ionicons } from '@expo/vector-icons';
 import { updateProfile } from '../lib/api';
 import { signIn, signUp } from '../lib/supabase';
 
@@ -61,7 +62,6 @@ function parseHHMM(str: string, fallback: number): number {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type PlanStep  = 10 | 11 | 12;
-type CalPhase  = 'typing' | 'awaiting' | 'reacting' | 'done';
 
 interface PlanData {
   onsetDisplay: string;  // e.g. "23:00"
@@ -373,177 +373,31 @@ const r = StyleSheet.create({
 
 // ─── Step 12 — Calendar connection ───────────────────────────────────────────
 
-type CalMsg = { id: string; role: 'rlo' | 'user'; text: string };
 
-interface CalendarStepProps {
+
+function PermissionStep({
+  plan,
+  onComplete,
+}: {
   plan:       PlanData;
   onComplete: () => void;
-}
+}) {
+  const [permStep, setPermStep] = useState<'calendar' | 'notifications' | 'saving'>('calendar');
+  const [calGranted, setCalGranted] = useState(false);
 
-// ─── Step 11.5 — Login / Create account ──────────────────────────────────────
-
-function LoginStep({ onComplete }: { onComplete: () => void }) {
-  const c = { text: '#E6EDF7', textSub: '#9FB0C5', textMuted: '#6B7F99', accent: '#F5A623', surface2: '#243046', error: '#F87171' };
-  const [mode,     setMode]     = useState<'signin' | 'signup'>('signup');
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  async function handleSubmit() {
-    if (!email.trim() || !password.trim()) { setErrorMsg('Please fill in all fields.'); return; }
-    setLoading(true); setErrorMsg('');
-    try {
-      const result = mode === 'signup'
-        ? await signUp(email.trim(), password.trim())
-        : await signIn(email.trim(), password.trim());
-      if (!result.ok) { setErrorMsg(result.error ?? 'Authentication failed.'); setLoading(false); return; }
-      onComplete();
-    } catch {
-      setErrorMsg('Something went wrong. Please try again.');
-      setLoading(false);
-    }
-  }
-
-  return (
-    <View style={ls.root}>
-      <MascotImage emotion="encourageant" size="sm" />
-      <View style={ls.header}>
-        <Text style={[ls.title, { color: c.text }]}>
-          {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-        </Text>
-        <Text style={[ls.sub, { color: c.textSub }]}>
-          {mode === 'signup'
-            ? 'Your R90 plan is ready. Save it to your account.'
-            : 'Sign in to continue with your plan.'}
-        </Text>
-      </View>
-
-      {/* Tab toggle */}
-      <View style={[ls.tabs, { backgroundColor: '#1A2436' }]}>
-        {(['signup', 'signin'] as const).map(m => (
-          <Pressable
-            key={m}
-            style={[ls.tab, mode === m && { backgroundColor: '#243046' }]}
-            onPress={() => { setMode(m); setErrorMsg(''); }}
-          >
-            <Text style={[ls.tabText, { color: mode === m ? c.accent : c.textMuted }]}>
-              {m === 'signup' ? 'Create account' : 'Sign in'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* Inputs */}
-      <View style={ls.inputs}>
-        <TextInput
-          style={[ls.input, { backgroundColor: c.surface2, color: c.text }]}
-          placeholder="Email"
-          placeholderTextColor={c.textMuted}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-          editable={!loading}
-        />
-        <TextInput
-          style={[ls.input, { backgroundColor: c.surface2, color: c.text }]}
-          placeholder="Password"
-          placeholderTextColor={c.textMuted}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-          editable={!loading}
-        />
-      </View>
-
-      {errorMsg ? <Text style={[ls.error, { color: c.error }]}>{errorMsg}</Text> : null}
-
-      <Button
-        variant="primary"
-        size="lg"
-        label={loading ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
-        onPress={() => { void handleSubmit(); }}
-        loading={loading}
-        fullWidth
-      />
-    </View>
-  );
-}
-
-const ls = StyleSheet.create({
-  root:   { flex: 1, paddingHorizontal: 28, justifyContent: 'center', gap: 20 },
-  header: { gap: 6 },
-  title:  { fontSize: 24, fontWeight: '700', textAlign: 'center' },
-  sub:    { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  tabs:   { flexDirection: 'row', borderRadius: 12, padding: 4 },
-  tab:    { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  tabText:{ fontSize: 14, fontWeight: '600' },
-  inputs: { gap: 12 },
-  input:  { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
-  error:  { fontSize: 13, textAlign: 'center' },
-});
-
-// ─── Step 12 — Calendar ───────────────────────────────────────────────────────
-
-function CalendarStep({ plan, onComplete }: CalendarStepProps) {
-  const [phase,    setPhase]    = useState<CalPhase>('typing');
-  const [messages, setMessages] = useState<CalMsg[]>([]);
-  const animsRef   = useRef<Record<string, Animated.Value>>({});
-  const scrollRef  = useRef<ScrollView>(null);
-
-  const addMsg = useCallback((role: 'rlo' | 'user', text: string) => {
-    const id   = `${Date.now()}_${role}`;
-    const anim = new Animated.Value(0);
-    animsRef.current[id] = anim;
-    setMessages(prev => [...prev, { id, role, text }]);
-    setTimeout(() => {
-      Animated.timing(anim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-    }, 30);
-  }, []);
-
-  // Scroll when messages or typing state change
+  // Save profile and complete after permissions
   useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
-  }, [messages.length, phase]);
-
-  // Typing → show R-Lo question
-  useEffect(() => {
-    if (phase !== 'typing') return;
-    const t = setTimeout(() => {
-      addMsg('rlo', 'Your schedule affects\nyour recovery.\n\nI can check your calendar\nto protect your sleep window.');
-      setPhase('awaiting');
-    }, 900);
-    return () => clearTimeout(t);
-  }, [phase, addMsg]);
-
-  // Reacting → show R-Lo reaction → done
-  useEffect(() => {
-    if (phase !== 'reacting') return;
-    const t = setTimeout(() => setPhase('done'), 2200);
-    return () => clearTimeout(t);
-  }, [phase]);
-
-  // Done → save profile + complete
-  useEffect(() => {
-    if (phase !== 'done') return;
+    if (permStep !== 'saving') return;
     const t = setTimeout(async () => {
       try {
-        // Persist a UserProfile to AsyncStorage so useDayPlan stops redirecting
         const anchorMin = parseHHMM(plan.wakeDisplay, 390);
         const h   = Math.floor(anchorMin / 60);
         const m   = anchorMin % 60;
         const rMM = m >= 15 ? '30' : '00';
         const arpTime = `${String(h).padStart(2, '0')}:${rMM}`;
-
         await Promise.all([
           saveProfile({
             anchorTime:          anchorMin,
-            // 'Neither' is a placeholder; the real chronotype is held by the backend
-            // (sent from OnboardingChatOverlay). Local profile only needs anchorTime
-            // and idealCyclesPerNight to unlock useDayPlan.
             chronotype:          'Neither',
             idealCyclesPerNight: plan.cycles,
             weeklyTarget:        plan.cycles * 7,
@@ -556,152 +410,83 @@ function CalendarStep({ plan, onComplete }: CalendarStepProps) {
             onboarding_step:      12,
           }),
         ]);
-      } catch (e) {
-        console.warn('[PlanOverlay] profile save failed', e);
-      }
+      } catch { /* non-blocking */ }
       markPlanOnboardingComplete().catch(() => {});
       onComplete();
-    }, 600);
+    }, 400);
     return () => clearTimeout(t);
-  }, [phase, plan, onComplete]);
+  }, [permStep, plan, onComplete]);
 
-  const handleCalendar = useCallback(async () => {
-    addMsg('user', 'Connect calendar');
-    setPhase('reacting');
-    const result = await requestCalendar();
-    if (result === 'granted') {
-      addMsg('rlo', 'Great.\n\nLet me check your schedule.');
-    } else {
-      addMsg('rlo', 'No problem.\n\nYou can connect it later\nin settings.');
-    }
-  }, [addMsg]);
+  async function handleCalendar() {
+    await requestCalendar();
+    setCalGranted(true);
+    setPermStep('notifications');
+  }
 
-  const handleSkip = useCallback(() => {
-    addMsg('user', 'Skip for now');
-    addMsg('rlo', 'No problem.\n\nYou can connect it later\nin settings.');
-    setPhase('reacting');
-  }, [addMsg]);
+  async function handleNotifications() {
+    await requestNotifications();
+    setPermStep('saving');
+  }
 
-  const showTyping = phase === 'typing';
+  const isCalendar = permStep === 'calendar';
+  const icon       = isCalendar ? 'calendar-outline' : 'notifications-outline';
+  const title      = isCalendar ? 'Sync your calendar' : 'Stay on track';
+  const body       = isCalendar
+    ? 'R-Lo can check your schedule and protect your sleep window automatically.'
+    : 'Get a nudge before your wind-down and when your sleep window opens.';
+  const primaryLabel   = isCalendar ? 'Allow Calendar Access' : 'Allow Notifications';
+  const secondaryLabel = isCalendar ? 'Skip' : 'Skip';
+  const handlePrimary  = isCalendar ? handleCalendar : handleNotifications;
+  const handleSecondary = () => {
+    if (isCalendar) setPermStep('notifications');
+    else setPermStep('saving');
+  };
 
   return (
-    <SafeAreaView style={cal.safe} edges={['top', 'bottom']}>
-      {/* Pushes chat area to the bottom */}
-      <View style={{ flex: 1 }} />
+    <SafeAreaView style={perm.safe} edges={['top', 'bottom']}>
+      <View style={perm.card}>
+        <View style={perm.iconWrap}>
+          <Ionicons name={icon as any} size={36} color={ACCENT} />
+        </View>
+        <Text style={perm.title}>{title}</Text>
+        <Text style={perm.body}>{body}</Text>
 
-      {/* R-Lo header */}
-      <View style={cal.header}>
-        <MascotImage emotion="rassurante" size="sm" />
-        <View style={cal.headerMeta}>
-          <Text style={cal.headerName}>R-Lo</Text>
-          <Text style={cal.headerSub}>your sleep coach</Text>
+        <View style={perm.dots}>
+          <View style={[perm.dot, !isCalendar && perm.dotDone]} />
+          <View style={[perm.dot, isCalendar && perm.dotInactive, !isCalendar && perm.dotActive]} />
+        </View>
+
+        <View style={perm.actions}>
+          <Pressable style={perm.btnPrimary} onPress={handlePrimary}>
+            <Text style={perm.btnPrimaryText}>{primaryLabel}</Text>
+          </Pressable>
+          <Pressable style={perm.btnSecondary} onPress={handleSecondary}>
+            <Text style={perm.btnSecondaryText}>{secondaryLabel}</Text>
+          </Pressable>
         </View>
       </View>
-
-      {/* Messages */}
-      <ScrollView
-        ref={scrollRef}
-        style={cal.thread}
-        contentContainerStyle={cal.threadContent}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
-      >
-        {messages.map(msg => {
-          const anim  = animsRef.current[msg.id] ?? new Animated.Value(1);
-          const isRlo = msg.role === 'rlo';
-          return (
-            <Animated.View
-              key={msg.id}
-              style={[
-                cal.msgRow,
-                isRlo ? cal.msgRlo : cal.msgUser,
-                {
-                  opacity: anim,
-                  transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
-                },
-              ]}
-            >
-              <View style={[cal.bubble, isRlo ? cal.bubbleRlo : cal.bubbleUser]}>
-                <Text style={[cal.bubbleText, isRlo ? cal.textRlo : cal.textUser]}>
-                  {msg.text}
-                </Text>
-              </View>
-            </Animated.View>
-          );
-        })}
-        {showTyping && (
-          <View style={cal.msgRlo}>
-            <TypingDots />
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Action buttons */}
-      {phase === 'awaiting' && (
-        <View style={cal.actions}>
-          <Pressable style={cal.btnPrimary} onPress={handleCalendar}>
-            <Text style={cal.btnPrimaryText}>Connect calendar</Text>
-          </Pressable>
-          <Pressable style={cal.btnSecondary} onPress={handleSkip}>
-            <Text style={cal.btnSecondaryText}>Skip for now</Text>
-          </Pressable>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
 
-const cal = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 10, gap: 12,
-    borderTopWidth: 1, borderTopColor: BORDER,
-    paddingTop: 12,
-  },
-  headerMeta: { gap: 2 },
-  headerName: { fontSize: 15, fontFamily: 'Inter-SemiBold', fontWeight: '600', color: TEXT },
-  headerSub:  { fontSize: 12, fontFamily: 'Inter-Regular', color: TEXT_MUTED },
-  thread:        { flexShrink: 1, maxHeight: 260 },
-  threadContent: { paddingHorizontal: 20, gap: 8, paddingTop: 8 },
-  msgRow:   { maxWidth: '82%' },
-  msgRlo:   { alignSelf: 'flex-start' },
-  msgUser:  { alignSelf: 'flex-end' },
-  bubble:   { borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12 },
-  bubbleRlo: { backgroundColor: SURFACE, borderTopLeftRadius: 4, borderWidth: 1, borderColor: BORDER },
-  bubbleUser: { backgroundColor: ACCENT, borderTopRightRadius: 4 },
-  bubbleText: { fontSize: 16, fontFamily: 'Inter-Regular', lineHeight: 24 },
-  textRlo:  { color: TEXT },
-  textUser: { color: USER_TEXT, fontFamily: 'Inter-Medium', fontWeight: '500' },
-  actions: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 8,
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  btnPrimary: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  btnPrimaryText: {
-    fontSize: 16, fontFamily: 'Inter-SemiBold', fontWeight: '600', color: USER_TEXT,
-  },
-  btnSecondary: {
-    backgroundColor: SURFACE,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  btnSecondaryText: {
-    fontSize: 16, fontFamily: 'Inter-Medium', fontWeight: '500', color: TEXT_SUB,
-  },
+const perm = StyleSheet.create({
+  safe:       { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  card:       { width: '88%', backgroundColor: SURFACE, borderRadius: 24, padding: 28, alignItems: 'center', gap: 14, borderWidth: 1, borderColor: BORDER },
+  iconWrap:   { width: 72, height: 72, borderRadius: 22, backgroundColor: `${ACCENT}18`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}30` },
+  title:      { fontSize: 20, fontWeight: '700', color: TEXT, textAlign: 'center' },
+  body:       { fontSize: 15, color: TEXT_SUB, textAlign: 'center', lineHeight: 22 },
+  dots:       { flexDirection: 'row', gap: 6, marginTop: 4 },
+  dot:        { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
+  dotInactive:{ backgroundColor: BORDER },
+  dotDone:    { backgroundColor: `${ACCENT}55` },
+  dotActive:  { backgroundColor: ACCENT },
+  actions:    { width: '100%', gap: 10, marginTop: 4 },
+  btnPrimary:     { backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  btnPrimaryText: { fontSize: 16, fontWeight: '600', color: '#0B1220' },
+  btnSecondary:     { backgroundColor: 'transparent', borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  btnSecondaryText: { fontSize: 15, fontWeight: '500', color: TEXT_MUTED },
 });
+
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -777,7 +562,7 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
         )}
 
         {step === 12 && (
-          <CalendarStep plan={plan} onComplete={onComplete} />
+          <PermissionStep plan={plan} onComplete={onComplete} />
         )}
       </Animated.View>
     </View>
