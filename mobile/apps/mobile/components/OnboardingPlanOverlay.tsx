@@ -810,7 +810,8 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
 
     loadPlan();
 
-    // Auto-advance to step 11 after 6 s — let the user feel the plan is being built
+    // Auto-advance to step 11 only during the plan generation flow (not calendarOnly)
+    if (calendarOnly) return;
     const t = setTimeout(() => {
       Animated.timing(contentAnim, { toValue: 0, duration: 280, useNativeDriver: true })
         .start(() => {
