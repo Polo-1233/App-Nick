@@ -28,6 +28,7 @@ import { homeScreenHandler, dayPlanHandler, checkInPayloadHandler, } from "./han
 import { createUserHandler, updateProfileHandler, updateEnvironmentHandler, recommendationActionHandler, } from "./handlers/profile-handlers.js";
 import { chatHandler, chatHistoryHandler } from "./handlers/chat-handler.js";
 import { deleteAccountHandler } from "./handlers/account-handlers.js";
+import { chatGreetingHandler } from "./handlers/chat-handler.js";
 import { updateLifestyleHandler, getLifeEventsHandler, createLifeEventHandler, deleteLifeEventHandler, } from "./handlers/lifestyle-handlers.js";
 import { calendarSyncHandler, calendarUpcomingHandler, } from "./handlers/calendar-context-handler.js";
 import { calculateSummaryHandler, recentSummariesHandler, } from "./handlers/summary-handler.js";
@@ -50,6 +51,7 @@ const routes = [
     { method: "POST", path: "/chat", handler: chatHandler },
     { method: "GET", path: "/chat/history", handler: chatHistoryHandler },
     { method: "DELETE", path: "/account", handler: deleteAccountHandler },
+    { method: "GET", path: "/chat/greeting", handler: chatGreetingHandler },
     { method: "PUT", path: "/profile/lifestyle", handler: updateLifestyleHandler },
     { method: "GET", path: "/events/life", handler: getLifeEventsHandler },
     { method: "POST", path: "/events/life", handler: createLifeEventHandler },

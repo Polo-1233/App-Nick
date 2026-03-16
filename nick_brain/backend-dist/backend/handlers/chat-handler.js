@@ -13,7 +13,7 @@
  *   Returns recent conversation history for chat screen initialisation.
  *   Response: { messages: [{role, content}] }
  */
-import { streamChatResponse, loadChatHistory, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
+import { streamChatResponse, loadChatHistory, streamGreeting, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
 import { readBody, sendError, sendJson } from "../server.js";
 export async function chatHandler(req, res, auth, _query) {
     const body = await readBody(req);
@@ -48,5 +48,8 @@ export async function chatHistoryHandler(_req, res, auth, query) {
     const limit = Math.min(parseInt(query.get("limit") ?? "20", 10), 50);
     const messages = await loadChatHistory(auth.client, auth.userId, limit);
     sendJson(res, 200, { messages });
+}
+export async function chatGreetingHandler(_req, res, auth, _query) {
+    await streamGreeting(auth.client, auth.userId, res);
 }
 //# sourceMappingURL=chat-handler.js.map

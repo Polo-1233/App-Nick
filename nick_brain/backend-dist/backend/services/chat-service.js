@@ -636,4 +636,68 @@ export async function loadChatHistory(client, userId, limit = 20) {
         return [];
     }
 }
+// ─── Greeting — personalized context-aware opening ────────────────────────────
+const GREETING_SYSTEM_PROMPT = `You are R-Lo, the intelligent sleep coach inside R90 Navigator.
+
+Your task: write a SHORT, personalized opening message (2-3 sentences max) that:
+1. Immediately shows you know the user's current situation (use their actual data)
+2. Takes initiative — YOU lead the conversation, don't wait for them to ask
+3. Ends with ONE concrete, specific question based on their situation
+
+Situation-based approach:
+- After a bad night (< 3 cycles) → acknowledge it, ask what happened or offer recovery strategy
+- After a great night (≥ 5 cycles) → celebrate briefly, ask about energy or what's next
+- Morning → focus on how they feel now vs their sleep data
+- Evening (3h before ARP) → check if they've started wind-down
+- Upcoming event (travel, important day) → proactively mention it
+- No sleep logged yet today → ask them to log last night
+- Multiple bad nights in a row → flag the pattern, take action
+
+NEVER start with "How can I help you today?" or any generic opener.
+NEVER be generic. Every word should be based on their actual data.
+Reply in the same language as the user's interface (check context for clues, default English).
+Be direct, warm, like a coach who already knows them.`;
+export async function streamGreeting(client, userId, res) {
+    const apiKey = process.env["OPENAI_API_KEY"];
+    if (!apiKey) {
+        await fakeStreamResponse(res, "Good to see you. How did you sleep last night?");
+        return;
+    }
+    let ctx;
+    try {
+        ctx = await buildStructuredContext(client, userId);
+    }
+    catch {
+        await fakeStreamResponse(res, "Good to see you. How did you sleep last night?");
+        return;
+    }
+    const contextSections = formatContextSections(ctx);
+    const body = JSON.stringify({
+        model: "gpt-4o",
+        max_tokens: 120,
+        temperature: 0.85,
+        messages: [
+            { role: "system", content: GREETING_SYSTEM_PROMPT },
+            { role: "user", content: `Current user context:\n${contextSections}\n\nWrite the personalized opening message now.` },
+        ],
+    });
+    try {
+        const response = await fetch(OPENAI_CHAT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            body,
+            signal: AbortSignal.timeout(12000),
+        });
+        if (!response.ok) {
+            await fakeStreamResponse(res, "Good to see you. How did you sleep last night?");
+            return;
+        }
+        const json = await response.json();
+        const text = json.choices?.[0]?.message?.content?.trim() ?? "Good to see you. How did you sleep last night?";
+        await fakeStreamResponse(res, text);
+    }
+    catch {
+        await fakeStreamResponse(res, "Good to see you. How did you sleep last night?");
+    }
+}
 //# sourceMappingURL=chat-service.js.map

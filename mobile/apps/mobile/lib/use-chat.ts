@@ -29,6 +29,7 @@ export interface UseChatResult {
   isStreaming:     boolean;
   isThinking:      boolean;
   sendMessage:     (text: string) => Promise<void>;
+  fetchGreeting:   () => Promise<void>; // personalized opening from LLM
   clearHistory:    () => void;
   injectMessage:   (content: string) => void; // local R-Lo message, no API call
 }
@@ -190,11 +191,56 @@ export function useChat(): UseChatResult {
     setMessages([]);
   }, []);
 
-  // Inject a local R-Lo message (no API call — used for proactive greetings)
+  // Inject a local R-Lo message (no API call)
   const injectMessage = useCallback((content: string) => {
     const msg: ChatMessage = { id: uid(), role: 'assistant', content, status: 'done' };
     setMessages(prev => (prev.length === 0 ? [msg] : prev));
   }, []);
 
-  return { messages, isStreaming, isThinking, sendMessage, clearHistory, injectMessage };
+  // Fetch personalized greeting from backend (streamed, context-aware)
+  const fetchGreeting = useCallback(async () => {
+    if (isStreaming) return;
+    xhrRef.current?.abort();
+    parsedRef.current = 0;
+
+    const assistantId  = uid();
+    const assistantMsg: ChatMessage = { id: assistantId, role: 'assistant', content: '', status: 'streaming' };
+    setMessages([assistantMsg]);
+    setIsStreaming(true);
+
+    let accumulated = '';
+    try {
+      const token = await getAccessToken();
+      await new Promise<void>((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+        xhr.open('GET', `${BASE_URL}/chat/greeting`);
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.setRequestHeader('Accept', 'text/event-stream');
+
+        xhr.onprogress = () => {
+          const raw = xhr.responseText;
+          const result = parseSSEChunks(raw, parsedRef.current);
+          parsedRef.current = result.consumed;
+          if (result.deltas.length) {
+            accumulated += result.deltas.join('');
+            setMessages([{ id: assistantId, role: 'assistant', content: accumulated, status: 'streaming' }]);
+          }
+          if (result.done) {
+            setMessages([{ id: assistantId, role: 'assistant', content: accumulated, status: 'done' }]);
+            setIsStreaming(false);
+            resolve();
+          }
+        };
+        xhr.onload  = () => { setMessages([{ id: assistantId, role: 'assistant', content: accumulated || 'Good to see you — how did you sleep last night?', status: 'done' }]); setIsStreaming(false); resolve(); };
+        xhr.onerror = () => { setMessages([{ id: assistantId, role: 'assistant', content: 'Good to see you — how did you sleep last night?', status: 'done' }]); setIsStreaming(false); resolve(); };
+        xhr.send();
+      });
+    } catch {
+      setMessages([{ id: assistantId, role: 'assistant', content: 'Good to see you — how did you sleep last night?', status: 'done' }]);
+      setIsStreaming(false);
+    }
+  }, [isStreaming]);
+
+  return { messages, isStreaming, isThinking, sendMessage, fetchGreeting, clearHistory, injectMessage };
 }

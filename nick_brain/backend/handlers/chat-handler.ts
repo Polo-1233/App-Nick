@@ -18,7 +18,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { URLSearchParams } from "node:url";
 import type { AuthContext } from "../middleware/auth.js";
 import type { ChatInput } from "../services/chat-service.js";
-import { streamChatResponse, loadChatHistory, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
+import { streamChatResponse, loadChatHistory, streamGreeting, isOffTopic, OFF_TOPIC_REPLY } from "../services/chat-service.js";
 import { readBody, sendError, sendJson } from "../server.js";
 
 export async function chatHandler(
@@ -69,4 +69,13 @@ export async function chatHistoryHandler(
   const limit = Math.min(parseInt(query.get("limit") ?? "20", 10), 50);
   const messages = await loadChatHistory(auth.client, auth.userId, limit);
   sendJson(res, 200, { messages });
+}
+
+export async function chatGreetingHandler(
+  _req: IncomingMessage,
+  res:  ServerResponse,
+  auth: AuthContext,
+  _query: URLSearchParams,
+): Promise<void> {
+  await streamGreeting(auth.client, auth.userId, res);
 }

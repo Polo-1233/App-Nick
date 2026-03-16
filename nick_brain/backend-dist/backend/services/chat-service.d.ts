@@ -44,3 +44,4 @@ export declare function streamChatResponse(client: AppClient, userId: string, in
  * Called by the chat init API to pre-populate conversation.
  */
 export declare function loadChatHistory(client: AppClient, userId: string, limit?: number): Promise<ChatMessage[]>;
+export declare function streamGreeting(client: AppClient, userId: string, res: ServerResponse): Promise<void>;

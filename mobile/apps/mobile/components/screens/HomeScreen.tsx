@@ -412,7 +412,7 @@ export default function HomeScreen() {
   const { phase, advance }    = useOnboardingPhase();
   const router                = useRouter();
   const insets                = useSafeAreaInsets();
-  const { messages, isStreaming, isThinking, sendMessage, injectMessage } = useChat();
+  const { messages, isStreaming, isThinking, sendMessage, fetchGreeting, injectMessage } = useChat();
 
   const [input,          setInput]         = useState('');
   const [inputFocused,   setInputFocused]  = useState(false);
@@ -531,12 +531,13 @@ export default function HomeScreen() {
     })();
   }, [phase]);
 
-  // Greeting
+  // Personalized greeting — R-Lo takes initiative
   useEffect(() => {
     if (phase !== 'done' || hasGreeted.current) return;
-    const t = setTimeout(() => { hasGreeted.current = true; injectMessage('How can I help you today?'); }, 400);
+    hasGreeted.current = true;
+    const t = setTimeout(() => { void fetchGreeting(); }, 600);
     return () => clearTimeout(t);
-  }, [phase, injectMessage]);
+  }, [phase, fetchGreeting]);
 
   // Close panel when keyboard opens
   useEffect(() => {
