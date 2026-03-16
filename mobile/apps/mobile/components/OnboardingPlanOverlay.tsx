@@ -19,6 +19,7 @@ import {
   Animated,
   ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MascotImage } from './ui/MascotImage';
@@ -32,6 +33,8 @@ import {
   markPlanOnboardingComplete,
 } from '../lib/storage';
 import { requestCalendar, requestNotifications } from '../lib/permissions';
+import { getCurrentOffering, purchasePackage } from '../lib/purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { connectGoogleCalendar } from '../lib/google-calendar';
 import { initAppleHealth } from '../lib/apple-health';
 import { connectOura } from '../lib/oura';
@@ -223,6 +226,174 @@ function CycleDots({ count }: { count: number }) {
     </View>
   );
 }
+
+// ─── Paywall ──────────────────────────────────────────────────────────────────
+
+const FEATURES = [
+  { icon: 'moon-outline',         text: 'Personalised sleep cycles & bedtime' },
+  { icon: 'chatbubble-outline',   text: 'Unlimited R-Lo AI coaching' },
+  { icon: 'pulse-outline',        text: 'HRV & wearable data integration' },
+  { icon: 'calendar-outline',     text: 'Calendar-aware sleep planning' },
+  { icon: 'stats-chart-outline',  text: 'Weekly recovery reports' },
+  { icon: 'notifications-outline',text: 'Smart wind-down reminders' },
+];
+
+function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => void }) {
+  const [packages,   setPackages]   = useState<PurchasesPackage[]>([]);
+  const [selected,   setSelected]   = useState<'monthly' | 'yearly'>('yearly');
+  const [loading,    setLoading]    = useState(false);
+  const [loadingRC,  setLoadingRC]  = useState(true);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    getCurrentOffering().then(res => {
+      if (res.ok && res.offering?.availablePackages) {
+        setPackages(res.offering.availablePackages);
+      }
+      setLoadingRC(false);
+    });
+  }, []);
+
+  const monthlyPkg = packages.find(p =>
+    p.packageType === 'MONTHLY' || p.identifier.includes('monthly')
+  );
+  const yearlyPkg = packages.find(p =>
+    p.packageType === 'ANNUAL' || p.identifier.includes('yearly') || p.identifier.includes('annual')
+  );
+
+  const selectedPkg = selected === 'yearly' ? yearlyPkg : monthlyPkg;
+
+  async function handleSubscribe() {
+    if (!selectedPkg) { onComplete(); return; }
+    setLoading(true);
+    const result = await purchasePackage(selectedPkg);
+    setLoading(false);
+    if (result.ok || result.error === 'cancelled') onComplete();
+  }
+
+  const monthlyPrice = monthlyPkg?.product.priceString ?? '—';
+  const yearlyPrice  = yearlyPkg?.product.priceString  ?? '—';
+  const yearlyMonthly = yearlyPkg
+    ? `${yearlyPkg.product.currencyCode} ${(yearlyPkg.product.price / 12).toFixed(2)}/mo`
+    : null;
+
+  return (
+    <SafeAreaView style={pw.safe} edges={['top', 'bottom']}>
+      <Animated.ScrollView
+        style={{ opacity: fadeAnim }}
+        contentContainerStyle={pw.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={pw.header}>
+          <View style={pw.badge}>
+            <Text style={pw.badgeText}>Your plan is ready</Text>
+          </View>
+          <Text style={pw.title}>Unlock R-Lo{'\n'}Sleep Coaching</Text>
+          <Text style={pw.sub}>
+            Based on your profile, R-Lo will guide you to{' '}
+            <Text style={pw.subBold}>{plan.cycles} cycles</Text> per night, waking at{' '}
+            <Text style={pw.subBold}>{plan.wakeDisplay}</Text>.
+          </Text>
+        </View>
+
+        {/* Features */}
+        <View style={pw.features}>
+          {FEATURES.map(f => (
+            <View key={f.text} style={pw.featureRow}>
+              <View style={pw.featureIcon}>
+                <Ionicons name={f.icon as any} size={16} color={ACCENT} />
+              </View>
+              <Text style={pw.featureText}>{f.text}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Plan selector */}
+        {!loadingRC && (
+          <View style={pw.plans}>
+            <Pressable
+              style={[pw.plan, selected === 'yearly' && pw.planSelected]}
+              onPress={() => setSelected('yearly')}
+            >
+              <View style={pw.planBadgeWrap}>
+                <View style={pw.saveBadge}><Text style={pw.saveBadgeText}>Best value</Text></View>
+              </View>
+              <Text style={pw.planLabel}>Yearly</Text>
+              <Text style={pw.planPrice}>{yearlyPrice}</Text>
+              {yearlyMonthly && <Text style={pw.planSub}>{yearlyMonthly}</Text>}
+            </Pressable>
+
+            <Pressable
+              style={[pw.plan, selected === 'monthly' && pw.planSelected]}
+              onPress={() => setSelected('monthly')}
+            >
+              <View style={pw.planBadgeWrap} />
+              <Text style={pw.planLabel}>Monthly</Text>
+              <Text style={pw.planPrice}>{monthlyPrice}</Text>
+              <Text style={pw.planSub}>per month</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* CTA */}
+        <Pressable
+          style={[pw.cta, loading && { opacity: 0.7 }]}
+          onPress={handleSubscribe}
+          disabled={loading}
+        >
+          {loading
+            ? <ActivityIndicator color="#000" />
+            : <Text style={pw.ctaText}>Start 7-day free trial</Text>
+          }
+        </Pressable>
+        <Text style={pw.ctaSub}>Cancel anytime · No charge during trial</Text>
+
+        {/* Skip */}
+        <Pressable style={pw.skip} onPress={onComplete}>
+          <Text style={pw.skipText}>Continue without trial</Text>
+        </Pressable>
+
+        <Text style={pw.legal}>
+          Subscription auto-renews unless cancelled at least 24 hours before the end of the current period.
+        </Text>
+      </Animated.ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const pw = StyleSheet.create({
+  safe:       { flex: 1 },
+  scroll:     { padding: 24, paddingBottom: 40, gap: 20 },
+  header:     { alignItems: 'center', gap: 10 },
+  badge:      { backgroundColor: `${ACCENT}22`, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, borderWidth: 1, borderColor: `${ACCENT}40` },
+  badgeText:  { fontSize: 12, fontWeight: '600', color: ACCENT },
+  title:      { fontSize: 30, fontWeight: '800', color: TEXT, textAlign: 'center', lineHeight: 36 },
+  sub:        { fontSize: 15, color: TEXT_SUB, textAlign: 'center', lineHeight: 22 },
+  subBold:    { fontWeight: '700', color: TEXT },
+  features:   { gap: 10 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  featureIcon:{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ACCENT}18`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}30` },
+  featureText:{ fontSize: 14, color: TEXT, flex: 1 },
+  plans:      { flexDirection: 'row', gap: 10 },
+  plan:       { flex: 1, backgroundColor: SURFACE, borderRadius: 16, padding: 14, alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: BORDER },
+  planSelected:{ borderColor: ACCENT, backgroundColor: `${ACCENT}0D` },
+  planBadgeWrap:{ height: 20, justifyContent: 'center' },
+  saveBadge:  { backgroundColor: ACCENT, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  saveBadgeText:{ fontSize: 10, fontWeight: '700', color: '#0B1220' },
+  planLabel:  { fontSize: 15, fontWeight: '700', color: TEXT },
+  planPrice:  { fontSize: 18, fontWeight: '800', color: TEXT },
+  planSub:    { fontSize: 11, color: TEXT_MUTED, textAlign: 'center' },
+  cta:        { backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
+  ctaText:    { fontSize: 17, fontWeight: '700', color: '#0B1220' },
+  ctaSub:     { fontSize: 12, color: TEXT_MUTED, textAlign: 'center' },
+  skip:       { alignItems: 'center', paddingVertical: 4 },
+  skipText:   { fontSize: 14, color: TEXT_MUTED },
+  legal:      { fontSize: 11, color: TEXT_MUTED, textAlign: 'center', lineHeight: 16 },
+});
+
+// ─── Plan reveal ──────────────────────────────────────────────────────────────
 
 function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
   const cardAnim = useRef(new Animated.Value(0)).current;
@@ -606,9 +777,10 @@ interface Props {
 }
 
 export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Props) {
-  const [step, setStep]       = useState<PlanStep>(calendarOnly ? 12 : 10);
-  const [plan, setPlan]       = useState<PlanData>({ onsetDisplay: '23:00', wakeDisplay: '06:30', cycles: 5 });
-  const contentAnim           = useRef(new Animated.Value(1)).current;
+  const [step, setStep]         = useState<PlanStep>(calendarOnly ? 12 : 10);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [plan, setPlan]         = useState<PlanData>({ onsetDisplay: '23:00', wakeDisplay: '06:30', cycles: 5 });
+  const contentAnim             = useRef(new Animated.Value(1)).current;
 
   // ── Load plan data and auto-advance step 10 ───────────────────────────────
   useEffect(() => {
@@ -644,15 +816,17 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
     return () => clearTimeout(t);
   }, [contentAnim]);
 
-  // ── Step 11 → login (plan reveal done, navigate to login) ────────────────
-  const handleContinueToCalendar = useCallback(() => {
-    if (!calendarOnly) {
-      // Phase 'plan': after reveal → login (caller handles navigation)
-      onComplete();
-    }
-  }, [calendarOnly, onComplete]);
+  // ── Step 11 → paywall → login ────────────────────────────────────────────
+  const handlePlanContinue = useCallback(() => {
+    if (!calendarOnly) setShowPaywall(true);
+  }, [calendarOnly]);
 
-  // ── Background: fully opaque for 10–11, translucent for 12 ───────────────
+  const handlePaywallDone = useCallback(() => {
+    setShowPaywall(false);
+    onComplete(); // → login
+  }, [onComplete]);
+
+  // ── Background ────────────────────────────────────────────────────────────
   const bgColor = step === 12 ? 'transparent' : BG;
 
   return (
@@ -664,10 +838,14 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
           </SafeAreaView>
         )}
 
-        {step === 11 && (
+        {step === 11 && !showPaywall && (
           <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
-            <PlanRevealStep plan={plan} onContinue={handleContinueToCalendar} />
+            <PlanRevealStep plan={plan} onContinue={handlePlanContinue} />
           </SafeAreaView>
+        )}
+
+        {step === 11 && showPaywall && (
+          <PaywallStep plan={plan} onComplete={handlePaywallDone} />
         )}
 
         {step === 12 && (
