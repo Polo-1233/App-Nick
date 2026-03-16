@@ -298,36 +298,96 @@ const bbl = StyleSheet.create({
 });
 
 // ─── Top info bar (transparent, overlays the full-page video) ────────────────
+// ─── Header pill helpers ──────────────────────────────────────────────────────
+
+const ZONE_COLOR: Record<string, string> = {
+  green:  '#4ADE80',
+  yellow: '#FACC15',
+  orange: '#F97316',
+};
+const ZONE_LABEL: Record<string, string> = {
+  green:  'Recovered',
+  yellow: 'Fair',
+  orange: 'Tired',
+};
+
+function nextAction(bedtime: number | null, wake: number | null, nowMin: number): string {
+  const preSleep = bedtime !== null ? ((bedtime - 90) + 1440) % 1440 : null;
+
+  // Morning: after wake, before noon
+  if (wake !== null) {
+    const mornEnd = (wake + 240) % 1440; // up to 4h after wake
+    if (nowMin >= wake && nowMin < mornEnd) return 'ARP ✓ today';
+  }
+
+  // Evening: wind-down approaching (within 3h before pre-sleep)
+  if (preSleep !== null) {
+    const diff = ((preSleep - nowMin) + 1440) % 1440;
+    if (diff <= 180 && diff > 0) {
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      const label = h > 0 ? `${h}h ${m > 0 ? m + 'm' : ''}` : `${m}m`;
+      return `Wind-down in ${label.trim()}`;
+    }
+    if (diff === 0 || (diff > 1350)) return 'Wind-down now';
+  }
+
+  // Bedtime approaching
+  if (bedtime !== null) {
+    const diff = ((bedtime - nowMin) + 1440) % 1440;
+    if (diff <= 90 && diff > 0) {
+      return `Bedtime in ${diff}m`;
+    }
+  }
+
+  // Afternoon default
+  const h = Math.floor(nowMin / 60);
+  if (h >= 13 && h < 19) return 'Afternoon recovery';
+
+  return bedtime !== null ? `Bed ${formatMin(bedtime)}` : 'View plan';
+}
+
 function TopInfoBar({
-  topInset, bedtime, wake, cycles, onPress,
+  topInset, zone, weeklyCycles, weeklyTarget, bedtime, wake, onPress,
 }: {
-  topInset: number;
-  bedtime:  number | null;
-  wake:     number | null;
-  cycles:   number;
-  onPress:  () => void;
+  topInset:      number;
+  zone:          string | null;
+  weeklyCycles:  number;
+  weeklyTarget:  number;
+  bedtime:       number | null;
+  wake:          number | null;
+  onPress:       () => void;
 }) {
-  const hasPlan = bedtime !== null || wake !== null;
-  if (!hasPlan) return null;
+  const now    = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const action = nextAction(bedtime, wake, nowMin);
+
+  const zColor = zone ? (ZONE_COLOR[zone] ?? '#9CA3AF') : '#9CA3AF';
+  const zLabel = zone ? (ZONE_LABEL[zone] ?? zone) : '—';
 
   return (
     <View style={[ih.topRow, { top: topInset + 14 }]}>
       <Pressable style={ih.pill} onPress={onPress}>
-        {/* "Tonight" label */}
-        <Text style={ih.pillSection}>Tonight</Text>
+        {/* Zone dot + label */}
+        <View style={[ih.zoneDot, { backgroundColor: zColor }]} />
+        <Text style={[ih.zoneLabel, { color: zColor }]}>{zLabel}</Text>
+
         <View style={ih.divider} />
-        {/* Bed */}
-        <Ionicons name="moon-outline" size={11} color="rgba(255,255,255,0.6)" />
-        <Text style={ih.pillTime}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
+
+        {/* Weekly cycles */}
+        <Text style={ih.pillSection}>
+          <Text style={ih.pillBold}>{weeklyCycles}</Text>
+          <Text style={ih.pillMuted}>/{weeklyTarget}</Text>
+        </Text>
+        <Text style={ih.pillMuted}>cycles</Text>
+
         <View style={ih.divider} />
-        {/* Wake */}
-        <Ionicons name="sunny-outline" size={12} color="rgba(255,255,255,0.6)" />
-        <Text style={ih.pillTime}>{wake !== null ? formatMin(wake) : '—'}</Text>
-        <View style={ih.divider} />
-        {/* Cycles */}
-        <Text style={ih.pillCycles}>{cycles} cycles</Text>
+
+        {/* Dynamic next action */}
+        <Text style={ih.pillAction}>{action}</Text>
+
         {/* Chevron */}
-        <Ionicons name="chevron-forward" size={12} color="rgba(255,255,255,0.35)" style={{ marginLeft: 2 }} />
+        <Ionicons name="chevron-forward" size={12} color="rgba(255,255,255,0.30)" style={{ marginLeft: 1 }} />
       </Pressable>
     </View>
   );
@@ -344,7 +404,7 @@ const ih = StyleSheet.create({
     flexDirection:     'row',
     alignItems:        'center',
     alignSelf:         'flex-start',
-    backgroundColor:   'rgba(11,18,32,0.60)',
+    backgroundColor:   'rgba(11,18,32,0.65)',
     borderRadius:      20,
     paddingHorizontal: 14,
     paddingVertical:   9,
@@ -352,10 +412,13 @@ const ih = StyleSheet.create({
     borderColor:       'rgba(255,255,255,0.12)',
     gap:               7,
   },
-  pillSection: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.4 },
-  pillTime:    { fontSize: 13, fontWeight: '700', color: '#FFF' },
-  pillCycles:  { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
-  divider:     { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.15)' },
+  zoneDot:    { width: 7, height: 7, borderRadius: 4 },
+  zoneLabel:  { fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  pillSection:{ fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  pillBold:   { fontSize: 13, fontWeight: '800', color: '#FFF' },
+  pillMuted:  { fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: '500' },
+  pillAction: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.80)' },
+  divider:    { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.15)' },
 });
 
 // ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
@@ -679,9 +742,11 @@ export default function HomeScreen() {
             {/* Top info bar */}
             <TopInfoBar
               topInset={insets.top}
+              zone={dayPlan?.readiness?.zone ?? null}
+              weeklyCycles={dayPlan?.readiness?.recentCycles?.reduce((a, b) => a + b, 0) ?? 0}
+              weeklyTarget={profile?.idealCyclesPerNight ? profile.idealCyclesPerNight * 7 : 35}
               bedtime={bedtime}
               wake={wakeTime}
-              cycles={profile?.idealCyclesPerNight ?? 5}
               onPress={() => goToPage(2)}
             />
 
