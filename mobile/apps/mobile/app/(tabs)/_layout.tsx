@@ -32,7 +32,9 @@ export default function TabsLayout() {
   useEffect(() => {
     if (authLoading) return; // wait for auth to settle
     getOnboardingPhase().then(p => {
-      if (isAuthenticated && p !== 'done') {
+      // Allow 'calendar' phase through — it's the post-login permission flow
+    // Only force 'done' for phases that shouldn't persist after auth (plan, guided_chat)
+    if (isAuthenticated && p !== 'done' && p !== 'calendar') {
         setOnboardingPhase('done');
         setPhaseState('done');
       } else {

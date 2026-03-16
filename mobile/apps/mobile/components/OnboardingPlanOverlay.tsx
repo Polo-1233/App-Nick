@@ -623,6 +623,7 @@ function PermissionStep({
     setPermStep('saving');
   }
 
+  // ── Step 1: Calendar ────────────────────────────────────────────────────────
   if (permStep === 'calendar') {
     return (
       <View style={bs.overlay}>
@@ -647,6 +648,40 @@ function PermissionStep({
               <Ionicons name="logo-google" size={16} color={ACCENT} />
               <Text style={bs.btnGoogleText}>{googleLoading ? 'Connecting…' : 'Connect Google Calendar'}</Text>
             </Pressable>
+            <Pressable style={bs.btnSkip} onPress={() => setPermStep('wearables')}>
+              <Text style={bs.btnSkipText}>Skip for now</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Step 2: Wearables ────────────────────────────────────────────────────────
+  if (permStep === 'wearables') {
+    return (
+      <View style={bs.overlay}>
+        <View style={bs.sheet}>
+          <View style={bs.handle} />
+          <View style={bs.iconRow}>
+            <View style={bs.iconWrap}>
+              <Ionicons name="watch-outline" size={28} color={ACCENT} />
+            </View>
+          </View>
+          <Text style={bs.title}>Connect your health data</Text>
+          <Text style={bs.body}>R-Lo uses your sleep and recovery data to give you personalised coaching.</Text>
+          <View style={bs.dots}>
+            <View style={bs.dotDone} /><View style={bs.dotActive} /><View style={bs.dotInactive} />
+          </View>
+          <View style={bs.actions}>
+            <Pressable style={bs.btnApple} onPress={handleAppleHealthOnboard}>
+              <Ionicons name="heart" size={18} color="#0B1220" />
+              <Text style={bs.btnAppleText}>Connect Apple Health</Text>
+            </Pressable>
+            <Pressable style={[bs.btnGoogle, ouraLoading && { opacity: 0.6 }]} onPress={handleOuraOnboard} disabled={ouraLoading}>
+              <Ionicons name="radio-outline" size={16} color={ACCENT} />
+              <Text style={bs.btnGoogleText}>{ouraLoading ? 'Connecting…' : 'Connect Oura Ring'}</Text>
+            </Pressable>
             <Pressable style={bs.btnSkip} onPress={() => setPermStep('notifications')}>
               <Text style={bs.btnSkipText}>Skip for now</Text>
             </Pressable>
@@ -656,59 +691,27 @@ function PermissionStep({
     );
   }
 
-  if (permStep === 'wearables') {
-    return (
-      <View style={bs.overlay}>
-        <View style={bs.sheet}>
-          <View style={bs.handle} />
-          <View style={bs.iconRow}>
-            <View style={bs.iconWrap}>
-              <Ionicons name="notifications-outline" size={28} color={ACCENT} />
-            </View>
-          </View>
-          <Text style={bs.title}>Stay on track</Text>
-        <Text style={bs.body}>
-          Get a gentle nudge before your wind-down and when it's time to sleep.
-        </Text>
-        <View style={bs.actions}>
-          <Pressable style={bs.btnApple} onPress={handleNotifications}>
-            <Ionicons name="notifications" size={18} color="#0B1220" />
-            <Text style={bs.btnAppleText}>Allow Notifications</Text>
-          </Pressable>
-          <Pressable style={bs.btnSkip} onPress={() => setPermStep('wearables')}>
-            <Text style={bs.btnSkipText}>Skip for now</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
-    );
-  }
-
-  // Step 3 — Wearables
+  // ── Step 3: Notifications (final) ────────────────────────────────────────────
   return (
     <View style={bs.overlay}>
       <View style={bs.sheet}>
         <View style={bs.handle} />
         <View style={bs.iconRow}>
           <View style={bs.iconWrap}>
-            <Ionicons name="watch-outline" size={28} color={ACCENT} />
+            <Ionicons name="notifications-outline" size={28} color={ACCENT} />
           </View>
         </View>
-        <Text style={bs.title}>Connect your health data</Text>
-        <Text style={bs.body}>R-Lo uses your sleep and recovery data to give you personalised coaching.</Text>
+        <Text style={bs.title}>Stay on track</Text>
+        <Text style={bs.body}>Get a gentle nudge before your wind-down and when it's time to sleep.</Text>
         <View style={bs.dots}>
           <View style={bs.dotDone} /><View style={bs.dotDone} /><View style={bs.dotActive} />
         </View>
         <View style={bs.actions}>
-          <Pressable style={bs.btnApple} onPress={handleAppleHealthOnboard}>
-            <Ionicons name="heart" size={18} color="#0B1220" />
-            <Text style={bs.btnAppleText}>Connect Apple Health</Text>
+          <Pressable style={bs.btnApple} onPress={handleNotifications}>
+            <Ionicons name="notifications" size={18} color="#0B1220" />
+            <Text style={bs.btnAppleText}>Allow Notifications</Text>
           </Pressable>
-          <Pressable style={[bs.btnGoogle, ouraLoading && { opacity: 0.6 }]} onPress={handleOuraOnboard} disabled={ouraLoading}>
-            <Ionicons name="radio-outline" size={16} color={ACCENT} />
-            <Text style={bs.btnGoogleText}>{ouraLoading ? 'Connecting…' : 'Connect Oura Ring'}</Text>
-          </Pressable>
-          <Pressable style={bs.btnSkip} onPress={() => setPermStep('notifications')}>
+          <Pressable style={bs.btnSkip} onPress={() => setPermStep('saving')}>
             <Text style={bs.btnSkipText}>Skip for now</Text>
           </Pressable>
         </View>
