@@ -185,12 +185,18 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
   const snapW  = cardW + CARD_GAP;
 
-  // greeting + name steps → no cards
+  // Hooks TOUJOURS en premier (règle des hooks React)
+  const scrollRef       = useRef<ScrollView>(null);
+  const [page, setPage] = useState(0);
+
+  // greeting + name steps → no cards (après les hooks)
   if (onboardingStep === 'greeting' || onboardingStep === 'name') return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void ONBOARDING_START_CARDS; // référence pour éviter l'erreur unused
+
   let cards: SmartCard[];
-  if (false as boolean)       cards = ONBOARDING_START_CARDS; // kept to avoid unused-var error
-  else if (onboardingStep === 'wake')           cards = ONBOARDING_WAKE_CARDS;
+  if      (onboardingStep === 'wake')           cards = ONBOARDING_WAKE_CARDS;
   else if (onboardingStep === 'goal')           cards = ONBOARDING_GOAL_CARDS;
   else if (onboardingStep === 'sleep_duration') cards = ONBOARDING_DURATION_CARDS;
   else if (onboardingStep === 'sleep_issue')    cards = ONBOARDING_ISSUE_CARDS;
@@ -204,9 +210,6 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
   }
   const total  = cards.length;
   const pages  = Math.ceil(total / CARDS_PER_PAGE);
-
-  const scrollRef       = useRef<ScrollView>(null);
-  const [page, setPage] = useState(0);
 
   function handleScroll(e: { nativeEvent: { contentOffset: { x: number } } }) {
     const x       = e.nativeEvent.contentOffset.x;
