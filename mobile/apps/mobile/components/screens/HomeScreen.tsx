@@ -433,6 +433,62 @@ function nextAction(bedtime: number | null, wake: number | null, nowMin: number)
 }
 
 // ─── Mock fallback (dev / no backend) ────────────────────────────────────────
+// ─── Onboarding header pill ───────────────────────────────────────────────────
+
+const ONBOARDING_STEPS = ['name', 'wake', 'goal', 'sleep_duration', 'sleep_issue', 'training', 'chronotype', 'device', 'summary'];
+
+function OnboardingPill({
+  topInset,
+  step,
+  data,
+}: {
+  topInset: number;
+  step:     string;
+  data:     { name: string; wakeLabel: string; goal: string; sleep_duration: string };
+}) {
+  // greeting / name → nothing (clean slate, R-Lo intro)
+  if (step === 'greeting' || step === 'name') return null;
+
+  // Step progress
+  const stepIdx = ONBOARDING_STEPS.indexOf(step);
+  const progress = stepIdx >= 0 ? stepIdx + 1 : ONBOARDING_STEPS.length;
+  const total    = ONBOARDING_STEPS.length;
+
+  // Build a dynamic summary of what's been collected so far
+  const parts: string[] = [];
+  if (data.name)           parts.push(data.name);
+  if (data.wakeLabel && step !== 'wake') parts.push(`Wake ${data.wakeLabel}`);
+  if (data.goal && !['wake','goal'].includes(step)) parts.push(data.goal.split(' ')[0] ?? data.goal);
+
+  const label = parts.length > 0
+    ? parts.join(' · ')
+    : 'Building your sleep plan';
+
+  return (
+    <View style={[ih.topRow, { top: topInset + 14 }]}>
+      <View style={ih.pill}>
+        {/* Progress dots */}
+        <View style={op.dotsRow}>
+          {Array.from({ length: total }).map((_, i) => (
+            <View
+              key={i}
+              style={[op.dot, i < progress && op.dotFilled]}
+            />
+          ))}
+        </View>
+        <View style={ih.divider} />
+        <Text style={ih.pillAction} numberOfLines={1}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+const op = StyleSheet.create({
+  dotsRow:   { flexDirection: 'row', gap: 3, alignItems: 'center' },
+  dot:       { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
+  dotFilled: { backgroundColor: '#4DA3FF' },
+});
+
 const MOCK_PILL = {
   zone:         'green' as const,
   recentCycles: [5, 4, 5],
@@ -886,19 +942,27 @@ export default function HomeScreen() {
               style={StyleSheet.absoluteFill}
             />
 
-            {/* Top info bar */}
-            <TopInfoBar
-              topInset={insets.top}
-              zone={dayPlan?.readiness?.zone ?? MOCK_PILL.zone}
-              recentCycles={dayPlan?.readiness?.recentCycles ?? MOCK_PILL.recentCycles}
-              targetCycles={profile?.idealCyclesPerNight ?? MOCK_PILL.targetCycles}
-              bedtime={bedtime ?? MOCK_PILL.bedtime}
-              wake={wakeTime ?? MOCK_PILL.wake}
-              onPress={() => goToPage(1)}
-            />
+            {/* Top info bar — different during onboarding */}
+            {isOnboarding ? (
+              <OnboardingPill
+                topInset={insets.top}
+                step={onboardingStep}
+                data={onboardingDataRef.current}
+              />
+            ) : (
+              <TopInfoBar
+                topInset={insets.top}
+                zone={dayPlan?.readiness?.zone ?? MOCK_PILL.zone}
+                recentCycles={dayPlan?.readiness?.recentCycles ?? MOCK_PILL.recentCycles}
+                targetCycles={profile?.idealCyclesPerNight ?? MOCK_PILL.targetCycles}
+                bedtime={bedtime ?? MOCK_PILL.bedtime}
+                wake={wakeTime ?? MOCK_PILL.wake}
+                onPress={() => goToPage(1)}
+              />
+            )}
 
-            {/* Calendar event banner */}
-            {bannerEvent && !bannerDismissed && (
+            {/* Calendar event banner — masqué pendant l'onboarding */}
+            {!isOnboarding && bannerEvent && !bannerDismissed && (
               <Pressable style={bn.wrap} onPress={handleBannerTap}>
                 <View style={bn.content}>
                   <Text style={bn.text}>
@@ -914,8 +978,8 @@ export default function HomeScreen() {
               </Pressable>
             )}
 
-            {/* Weekly report banner */}
-            {reportContent && !reportBannerDismissed && (
+            {/* Weekly report banner — masqué pendant l'onboarding */}
+            {!isOnboarding && reportContent && !reportBannerDismissed && (
               <Pressable style={bn.wrap} onPress={() => setShowReportModal(true)}>
                 <View style={bn.content}>
                   <Text style={bn.text}>{'📊 Your weekly sleep report is ready. Tap to read.'}</Text>
