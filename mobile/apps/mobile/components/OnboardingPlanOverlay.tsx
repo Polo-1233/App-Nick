@@ -272,11 +272,12 @@ function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => v
     if (result.ok || result.error === 'cancelled') onComplete();
   }
 
-  const monthlyPrice = monthlyPkg?.product.priceString ?? '—';
-  const yearlyPrice  = yearlyPkg?.product.priceString  ?? '—';
+  // Fallback prices shown while RC loads or if offering unavailable
+  const monthlyPrice  = monthlyPkg?.product.priceString  ?? '$9.99';
+  const yearlyPrice   = yearlyPkg?.product.priceString   ?? '$79.99';
   const yearlyMonthly = yearlyPkg
     ? `${yearlyPkg.product.currencyCode} ${(yearlyPkg.product.price / 12).toFixed(2)}/mo`
-    : null;
+    : '$6.67/mo';
 
   return (
     <SafeAreaView style={pw.safe} edges={['top', 'bottom']}>
@@ -311,7 +312,8 @@ function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => v
         </View>
 
         {/* Plan selector */}
-        {!loadingRC && (
+        {/* Plan selector — always visible (prices fallback to hardcoded while RC loads) */}
+        {(
           <View style={pw.plans}>
             <Pressable
               style={[pw.plan, selected === 'yearly' && pw.planSelected]}
