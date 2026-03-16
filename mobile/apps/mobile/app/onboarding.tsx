@@ -481,7 +481,7 @@ export default function OnboardingScreen() {
                       <Text style={s.slide2DevelopedBy}>Developed by</Text>
                       <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
                       <Text style={s.slide2Credential}>
-                        {"Sleep coach to elite athletes\nand high-performance teams."}
+                        {"The R90 method used by elite athletes\n(Cristiano Ronaldo, Manchester United, Team Sky)"}
                       </Text>
                     </View>
                   </Animated.View>
