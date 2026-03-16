@@ -123,19 +123,56 @@ const CARDS_PER_PAGE = 3;
 const CARD_GAP       = 8;
 const CAROUSEL_H_PAD = 14;
 
+const ONBOARDING_START_CARDS: SmartCard[] = [
+  { icon: 'arrow-forward-outline', color: '#33C8E8', label: "Let's start", prompt: 'start' },
+];
 const ONBOARDING_WAKE_CARDS: SmartCard[] = [
-  { icon: 'sunny-outline', color: '#FACC15', label: '6:00 AM',  prompt: '6:00' },
-  { icon: 'sunny-outline', color: '#FACC15', label: '6:30 AM',  prompt: '6:30' },
-  { icon: 'sunny-outline', color: '#4DA3FF', label: '7:00 AM',  prompt: '7:00' },
-  { icon: 'sunny-outline', color: '#4DA3FF', label: '7:30 AM',  prompt: '7:30' },
-  { icon: 'sunny-outline', color: '#3DDC97', label: '8:00 AM',  prompt: '8:00' },
-  { icon: 'create-outline', color: '#9B59B6', label: 'Other…',  prompt: 'Other' },
+  { icon: 'sunny-outline', color: '#FACC15', label: '5–6 AM', prompt: '5:30' },
+  { icon: 'sunny-outline', color: '#FACC15', label: '6–7 AM', prompt: '6:30' },
+  { icon: 'sunny-outline', color: '#4DA3FF', label: '7–8 AM', prompt: '7:30' },
+  { icon: 'sunny-outline', color: '#4DA3FF', label: '8–9 AM', prompt: '8:30' },
+  { icon: 'moon-outline',  color: '#9B59B6', label: '9+ AM',  prompt: '9:30' },
 ];
 const ONBOARDING_GOAL_CARDS: SmartCard[] = [
-  { icon: 'flash-outline',         color: '#FACC15', label: 'More energy',     prompt: 'More energy' },
-  { icon: 'heart-outline',         color: '#F87171', label: 'Better recovery', prompt: 'Better recovery' },
-  { icon: 'refresh-outline',       color: '#4DA3FF', label: 'Fix my schedule', prompt: 'Fix my schedule' },
-  { icon: 'battery-half-outline',  color: '#3DDC97', label: 'Reduce fatigue',  prompt: 'Reduce fatigue' },
+  { icon: 'flash-outline',   color: '#FACC15', label: 'Wake up with more energy',     prompt: 'Wake up with more energy' },
+  { icon: 'moon-outline',    color: '#4DA3FF', label: 'Fall asleep faster',           prompt: 'Fall asleep faster' },
+  { icon: 'refresh-outline', color: '#3DDC97', label: 'Fix my sleep schedule',        prompt: 'Fix my sleep schedule' },
+  { icon: 'barbell-outline', color: '#F87171', label: 'Recover better from training', prompt: 'Recover better from training' },
+];
+const ONBOARDING_DURATION_CARDS: SmartCard[] = [
+  { icon: 'time-outline', color: '#F87171', label: 'Less than 6h', prompt: 'Less than 6 hours' },
+  { icon: 'time-outline', color: '#FACC15', label: '6–7 hours',    prompt: '6–7 hours' },
+  { icon: 'time-outline', color: '#3DDC97', label: '7–8 hours',    prompt: '7–8 hours' },
+  { icon: 'time-outline', color: '#4DA3FF', label: '8–9 hours',    prompt: '8–9 hours' },
+  { icon: 'time-outline', color: '#9B59B6', label: 'More than 9h', prompt: 'More than 9 hours' },
+];
+const ONBOARDING_ISSUE_CARDS: SmartCard[] = [
+  { icon: 'moon-outline',         color: '#9B59B6', label: 'Fall asleep late',       prompt: 'I fall asleep late' },
+  { icon: 'alert-outline',        color: '#FACC15', label: 'Wake up at night',       prompt: 'I wake up during the night' },
+  { icon: 'battery-dead-outline', color: '#F87171', label: 'Wake up tired',          prompt: 'I wake up tired' },
+  { icon: 'shuffle-outline',      color: '#4DA3FF', label: 'Schedule changes a lot', prompt: 'My schedule changes a lot' },
+];
+const ONBOARDING_TRAINING_CARDS: SmartCard[] = [
+  { icon: 'close-circle-outline', color: '#6B7F99', label: 'No exercise',      prompt: 'No' },
+  { icon: 'walk-outline',         color: '#FACC15', label: '1–2x per week',    prompt: '1–2 times per week' },
+  { icon: 'fitness-outline',      color: '#4DA3FF', label: '3–4x per week',    prompt: '3–4 times per week' },
+  { icon: 'flame-outline',        color: '#F87171', label: 'Almost every day', prompt: 'Almost every day' },
+];
+const ONBOARDING_CHRONOTYPE_CARDS: SmartCard[] = [
+  { icon: 'sunny-outline',        color: '#FACC15', label: 'Morning',    prompt: 'Morning' },
+  { icon: 'cloudy-outline',       color: '#4DA3FF', label: 'Afternoon',  prompt: 'Afternoon' },
+  { icon: 'partly-sunny-outline', color: '#F97316', label: 'Evening',    prompt: 'Evening' },
+  { icon: 'moon-outline',         color: '#9B59B6', label: 'Late night', prompt: 'Late night' },
+];
+const ONBOARDING_DEVICE_CARDS: SmartCard[] = [
+  { icon: 'watch-outline',   color: '#E5E7EB', label: 'Apple Watch', prompt: 'Apple Watch' },
+  { icon: 'radio-outline',   color: '#3DDC97', label: 'Oura Ring',   prompt: 'Oura Ring' },
+  { icon: 'pulse-outline',   color: '#F87171', label: 'Whoop',       prompt: 'Whoop' },
+  { icon: 'fitness-outline', color: '#4DA3FF', label: 'Garmin',      prompt: 'Garmin' },
+  { icon: 'close-outline',   color: '#6B7F99', label: 'No device',   prompt: 'No device' },
+];
+const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
+  { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
 function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
@@ -148,9 +185,19 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
   const snapW  = cardW + CARD_GAP;
 
+  // onboarding step 'name' → no cards (text input only)
+  if (onboardingStep === 'name') return null;
+
   let cards: SmartCard[];
-  if      (onboardingStep === 'wake') cards = ONBOARDING_WAKE_CARDS;
-  else if (onboardingStep === 'goal') cards = ONBOARDING_GOAL_CARDS;
+  if      (onboardingStep === 'greeting')       cards = ONBOARDING_START_CARDS;
+  else if (onboardingStep === 'wake')           cards = ONBOARDING_WAKE_CARDS;
+  else if (onboardingStep === 'goal')           cards = ONBOARDING_GOAL_CARDS;
+  else if (onboardingStep === 'sleep_duration') cards = ONBOARDING_DURATION_CARDS;
+  else if (onboardingStep === 'sleep_issue')    cards = ONBOARDING_ISSUE_CARDS;
+  else if (onboardingStep === 'training')       cards = ONBOARDING_TRAINING_CARDS;
+  else if (onboardingStep === 'chronotype')     cards = ONBOARDING_CHRONOTYPE_CARDS;
+  else if (onboardingStep === 'device')         cards = ONBOARDING_DEVICE_CARDS;
+  else if (onboardingStep === 'summary')        cards = ONBOARDING_SUMMARY_CARDS;
   else {
     const hour = new Date().getHours();
     cards = getSmartCards(hour, lastCycles);
@@ -486,8 +533,20 @@ export default function HomeScreen() {
   const [input,          setInput]         = useState('');
   const [inputFocused,   setInputFocused]  = useState(false);
   const [chatExpanded,   setChatExpanded]  = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState<'name'|'wake'|'goal'|'done'>('done');
-  const onboardingWakeRef = useRef<number>(450);
+  const [onboardingStep, setOnboardingStep] = useState<
+    'greeting'|'name'|'wake'|'goal'|'sleep_duration'|'sleep_issue'|'training'|'chronotype'|'device'|'summary'|'done'
+  >('done');
+  const onboardingDataRef = useRef({
+    name:           '',
+    wakeMin:        450,
+    wakeLabel:      '7:30',
+    goal:           '',
+    sleep_duration: '',
+    sleep_issue:    '',
+    training:       '',
+    chronotype:     '',
+    device:         '',
+  });
   const [profile,        setProfile]       = useState<UserProfile | null>(null);
   const [energyScore,    setEnergyScore]   = useState(72);
   const [userName,       setUserName]      = useState<string | null>(null);
@@ -598,9 +657,10 @@ export default function HomeScreen() {
     if (phase !== 'done' && phase !== 'guided_chat') return;
     hasGreeted.current = true;
     if (phase === 'guided_chat') {
-      setOnboardingStep('name');
+      setOnboardingStep('greeting');
       const t = setTimeout(() => {
-        injectMessage("Hi, I'm R-Lo — your personal sleep coach.\n\nTo build your sleep plan, I need a few things from you.\n\nWhat's your name?");
+        injectMessage("Hi, I'm R-Lo.\n\nI help people align their sleep with their natural cycles so they wake up with real energy.");
+        setTimeout(() => injectMessage("Before we start, I need to learn a little about you.\n\nIt takes about 30 seconds."), 2200);
       }, 600);
       return () => clearTimeout(t);
     }
@@ -612,36 +672,88 @@ export default function HomeScreen() {
 
   // ── Onboarding reply handler ─────────────────────────────────────────────
   function handleOnboardingReply(txt: string) {
-    if (onboardingStep === 'name') {
-      const name = txt.trim().split(' ')[0] ?? txt.trim();
+    const step = onboardingStep;
+    const d    = onboardingDataRef.current;
+
+    if (step === 'greeting') {
+      setOnboardingStep('name');
+      setTimeout(() => injectMessage("First, what should I call you?"), 400);
+
+    } else if (step === 'name') {
+      const name = txt.trim().split(' ')[0] || txt.trim();
+      d.name = name;
       setUserName(name);
       setOnboardingStep('wake');
-      setTimeout(() => injectMessage(`Nice to meet you, ${name}! 🌙\n\nWhat time do you usually wake up? (e.g. 7:00 or 7:30)`), 400);
-    } else if (onboardingStep === 'wake') {
+      setTimeout(() => injectMessage(`Nice to meet you, ${name}.\n\nWhat time do you usually wake up?`), 400);
+
+    } else if (step === 'wake') {
       const match = txt.match(/(\d{1,2})[h:.]?(\d{0,2})/);
-      const h = parseInt(match?.[1] ?? '7', 10);
-      const m = parseInt(match?.[2] || '0', 10);
-      const wakeMin = h * 60 + (isNaN(m) ? 0 : m);
-      onboardingWakeRef.current = wakeMin;
+      const h     = parseInt(match?.[1] ?? '7', 10);
+      const m     = parseInt(match?.[2] || '0', 10);
+      d.wakeMin   = h * 60 + (isNaN(m) ? 0 : m);
+      d.wakeLabel = `${String(h).padStart(2, '0')}:${String(isNaN(m) ? 0 : m).padStart(2, '0')}`;
       setOnboardingStep('goal');
-      const formatted = `${String(h).padStart(2,'0')}:${String(isNaN(m)?0:m).padStart(2,'0')}`;
-      setTimeout(() => injectMessage(`${formatted} wake-up 🌅 — noted!\n\nLast question: what's your main goal right now?`), 400);
-    } else if (onboardingStep === 'goal') {
+      setTimeout(() => injectMessage("What would you like to improve the most?"), 400);
+
+    } else if (step === 'goal') {
       const lower = txt.toLowerCase();
-      const goal  = lower.includes('energy')                        ? 'energy'
-                  : lower.includes('recov')                         ? 'recovery'
-                  : lower.includes('schedul') || lower.includes('fix') ? 'sleep_speed'
-                  : 'consistency';
+      d.goal = lower.includes('energy')                          ? 'energy'
+             : lower.includes('fall') || lower.includes('fast') ? 'sleep_speed'
+             : lower.includes('fix')  || lower.includes('sch')  ? 'consistency'
+             : 'recovery';
+      setOnboardingStep('sleep_duration');
+      setTimeout(() => injectMessage("How many hours do you usually sleep?"), 400);
+
+    } else if (step === 'sleep_duration') {
+      d.sleep_duration = txt;
+      setOnboardingStep('sleep_issue');
+      setTimeout(() => injectMessage("What usually disrupts your sleep?"), 400);
+
+    } else if (step === 'sleep_issue') {
+      d.sleep_issue = txt;
+      setOnboardingStep('training');
+      setTimeout(() => injectMessage("Do you train or exercise regularly?"), 400);
+
+    } else if (step === 'training') {
+      d.training = txt;
+      setOnboardingStep('chronotype');
+      setTimeout(() => injectMessage("When do you feel naturally most productive?"), 400);
+
+    } else if (step === 'chronotype') {
+      d.chronotype = txt;
+      setOnboardingStep('device');
+      setTimeout(() => injectMessage("Do you track your sleep with a device?"), 400);
+
+    } else if (step === 'device') {
+      d.device = txt;
+      setOnboardingStep('summary');
+      setTimeout(() => {
+        injectMessage(`Perfect, ${d.name}.\n\nBased on what you told me, I can help you optimize your sleep cycles.`);
+        setTimeout(() => injectMessage("We'll start by aligning your nights with your natural rhythm."), 1400);
+      }, 400);
+
+    } else if (step === 'summary') {
       setOnboardingStep('done');
-      setTimeout(() => injectMessage("Perfect — I'm building your sleep plan now... 🛌\n\nYou can already start chatting with me!"), 400);
       void saveOnboardingData({
-        firstName:       userName ?? '',
-        wakeTimeMinutes: onboardingWakeRef.current,
-        priority:        goal,
+        firstName:       d.name,
+        wakeTimeMinutes: d.wakeMin,
+        priority:        d.goal,
         constraint:      'before_midnight',
-      }).then(() => setTimeout(() => advance('plan'), 1800));
+      }).then(async () => {
+        try {
+          await AsyncStorage.setItem('@r90:onboarding:extra', JSON.stringify({
+            sleep_duration:     d.sleep_duration,
+            sleep_issue:        d.sleep_issue,
+            training_frequency: d.training,
+            chronotype:         d.chronotype,
+            tracking_device:    d.device,
+          }));
+        } catch { /* non-critical */ }
+        setTimeout(() => advance('plan'), 400);
+      });
     }
   }
+
 
   // ── Banner dismiss ──────────────────────────────────────────────────────
   async function dismissBanner() {
