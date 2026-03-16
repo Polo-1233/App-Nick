@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
+import { PagerContext } from "../../lib/pager-context";
 import HomeScreen     from "../../components/screens/HomeScreen";
 import CalendarScreen from "../../components/screens/CalendarScreen";
 import InsightsScreen from "../../components/screens/InsightsScreen";
@@ -123,6 +124,7 @@ export default function PagerLayout() {
   const { tabBarBg, tabBarBorder, tabBarBubble, tabBarIcon } = theme.colors;
 
   return (
+    <PagerContext.Provider value={{ goToPage }}>
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
 
       <Animated.ScrollView
@@ -198,6 +200,7 @@ export default function PagerLayout() {
       </View>
 
     </View>
+    </PagerContext.Provider>
   );
 }
 

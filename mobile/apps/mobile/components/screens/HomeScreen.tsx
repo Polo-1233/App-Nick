@@ -37,6 +37,7 @@ import { Video, ResizeMode }        from 'expo-av';
 import { computeInsights }         from '../../lib/insights';
 import { getMockInsightsData }     from '../../lib/mock-insights-data';
 import type { UserProfile }        from '@r90/types';
+import { usePager }                from '../../lib/pager-context';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const BG      = '#0B1220';
@@ -179,90 +180,64 @@ const bbl = StyleSheet.create({
 });
 
 // ─── Top info bar (transparent, overlays the full-page video) ────────────────
-function scoreColor(s: number): string {
-  if (s >= 75) return '#4ADE80'; // green
-  if (s >= 50) return '#FACC15'; // yellow
-  return '#F87171';              // red
-}
-
 function TopInfoBar({
-  name, score, topInset, bedtime, wake,
+  topInset, bedtime, wake, cycles, onPress,
 }: {
-  name: string | null; score: number; topInset: number;
-  bedtime: number | null; wake: number | null;
+  topInset: number;
+  bedtime:  number | null;
+  wake:     number | null;
+  cycles:   number;
+  onPress:  () => void;
 }) {
-  const showPlan = bedtime !== null || wake !== null;
-  const col = scoreColor(score);
+  const hasPlan = bedtime !== null || wake !== null;
+  if (!hasPlan) return null;
 
   return (
     <View style={[ih.topRow, { top: topInset + 14 }]}>
-      {showPlan && (
-        <View style={ih.planLabel}>
-          <Text style={ih.planTitle}>Tonight</Text>
-          <Text style={ih.planTimes}>
-            {bedtime !== null ? formatMin(bedtime) : '—'}
-            {'  →  '}
-            {wake !== null ? formatMin(wake) : '—'}
-          </Text>
-        </View>
-      )}
-
-      {/* Spacer */}
-      <View style={{ flex: 1 }} />
-
-      {/* Energy score */}
-      <View style={ih.scoreLabel}>
-        <Text style={ih.planTitle}>Energy</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-          <Text style={[ih.scoreValue, { color: col }]}>{score}</Text>
-          <Text style={[ih.scoreUnit, { color: col }]}>/100</Text>
-        </View>
-      </View>
+      <Pressable style={ih.pill} onPress={onPress}>
+        {/* "Tonight" label */}
+        <Text style={ih.pillSection}>Tonight</Text>
+        <View style={ih.divider} />
+        {/* Bed */}
+        <Ionicons name="moon-outline" size={11} color="rgba(255,255,255,0.6)" />
+        <Text style={ih.pillTime}>{bedtime !== null ? formatMin(bedtime) : '—'}</Text>
+        <View style={ih.divider} />
+        {/* Wake */}
+        <Ionicons name="sunny-outline" size={12} color="rgba(255,255,255,0.6)" />
+        <Text style={ih.pillTime}>{wake !== null ? formatMin(wake) : '—'}</Text>
+        <View style={ih.divider} />
+        {/* Cycles */}
+        <Text style={ih.pillCycles}>{cycles} cycles</Text>
+        {/* Chevron */}
+        <Ionicons name="chevron-forward" size={12} color="rgba(255,255,255,0.35)" style={{ marginLeft: 2 }} />
+      </Pressable>
     </View>
   );
 }
 const ih = StyleSheet.create({
   topRow: {
-    position:        'absolute',
-    left:            16,
-    right:           16,
-    flexDirection:   'row',
+    position:       'absolute',
+    left:           16,
+    right:          16,
+    flexDirection:  'row',
+    justifyContent: 'center',
   },
-  planLabel: {
+  pill: {
+    flexDirection:     'row',
+    alignItems:        'center',
     alignSelf:         'flex-start',
-    backgroundColor:   'rgba(11,18,32,0.55)',
-    borderRadius:      10,
-    paddingHorizontal: 12,
-    paddingVertical:   7,
+    backgroundColor:   'rgba(11,18,32,0.60)',
+    borderRadius:      20,
+    paddingHorizontal: 14,
+    paddingVertical:   9,
     borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.10)',
+    borderColor:       'rgba(255,255,255,0.12)',
+    gap:               7,
   },
-  planTitle: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
-  planTimes: { fontSize: 13, fontWeight: '700', color: '#FFF' },
-  greeting: {
-    flex:              1,
-    alignItems:        'flex-end',
-    backgroundColor:   'rgba(11,18,32,0.55)',
-    borderRadius:      10,
-    paddingHorizontal: 12,
-    paddingVertical:   7,
-    borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.10)',
-  },
-  scoreLabel: {
-    alignSelf:         'flex-start',
-    backgroundColor:   'rgba(11,18,32,0.55)',
-    borderRadius:      10,
-    paddingHorizontal: 12,
-    paddingVertical:   7,
-    borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.10)',
-    alignItems:        'flex-end',
-  },
-  scoreValue: { fontSize: 18, fontWeight: '800', lineHeight: 22 },
-  scoreUnit:  { fontSize: 10, fontWeight: '600', opacity: 0.7, marginBottom: 1 },
-  line1: { fontSize: 13, fontWeight: '700', color: '#FFF', lineHeight: 18, marginBottom: 2, textAlign: 'right' },
-  line2: { fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 15, textAlign: 'right' },
+  pillSection: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.55)', letterSpacing: 0.4 },
+  pillTime:    { fontSize: 13, fontWeight: '700', color: '#FFF' },
+  pillCycles:  { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+  divider:     { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.15)' },
 });
 
 // ─── Expandable panel (Suggestions / Modes) ───────────────────────────────────
@@ -441,6 +416,7 @@ export default function HomeScreen() {
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { phase, advance }    = useOnboardingPhase();
   const router                = useRouter();
+  const { goToPage }          = usePager();
   const insets                = useSafeAreaInsets();
   const { messages, isStreaming, isThinking, sendMessage, fetchGreeting, injectMessage } = useChat();
 
@@ -703,11 +679,11 @@ export default function HomeScreen() {
 
             {/* Top info bar */}
             <TopInfoBar
-              name={userName}
-              score={energyScore}
               topInset={insets.top}
               bedtime={bedtime}
               wake={wakeTime}
+              cycles={profile?.idealCyclesPerNight ?? 5}
+              onPress={() => goToPage(2)}
             />
 
             {/* Calendar event banner */}
