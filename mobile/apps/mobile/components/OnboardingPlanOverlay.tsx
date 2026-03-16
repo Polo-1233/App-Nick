@@ -385,7 +385,7 @@ function PermissionStep({
   plan:       PlanData;
   onComplete: () => void;
 }) {
-  const [permStep, setPermStep] = useState<'calendar' | 'notifications' | 'wearables' | 'saving'>('calendar');
+  const [permStep, setPermStep] = useState<'calendar' | 'wearables' | 'notifications' | 'saving'>('calendar');
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // Save profile and complete after permissions
@@ -422,24 +422,24 @@ function PermissionStep({
 
   async function handleNativeCalendar() {
     await requestCalendar();
-    setPermStep('notifications');
+    setPermStep('wearables');
   }
 
   async function handleGoogleCalendar() {
     setGoogleLoading(true);
     try { await connectGoogleCalendar(); } catch { /* non-critical */ }
     setGoogleLoading(false);
-    setPermStep('notifications');
+    setPermStep('wearables');
   }
 
   async function handleNotifications() {
     await requestNotifications();
-    setPermStep('wearables');
+    setPermStep('saving');
   }
 
   async function handleAppleHealthOnboard() {
     try { await initAppleHealth(); } catch { /* non-critical */ }
-    setPermStep('saving');
+    setPermStep('notifications');
   }
 
   const [ouraLoading, setOuraLoading] = useState(false);
@@ -483,7 +483,7 @@ function PermissionStep({
     );
   }
 
-  if (permStep === 'notifications') {
+  if (permStep === 'wearables') {
     return (
       <View style={bs.overlay}>
         <View style={bs.sheet}>
@@ -535,7 +535,7 @@ function PermissionStep({
             <Ionicons name="radio-outline" size={16} color={ACCENT} />
             <Text style={bs.btnGoogleText}>{ouraLoading ? 'Connecting…' : 'Connect Oura Ring'}</Text>
           </Pressable>
-          <Pressable style={bs.btnSkip} onPress={() => setPermStep('saving')}>
+          <Pressable style={bs.btnSkip} onPress={() => setPermStep('notifications')}>
             <Text style={bs.btnSkipText}>Skip for now</Text>
           </Pressable>
         </View>
