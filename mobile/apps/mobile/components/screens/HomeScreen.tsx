@@ -314,38 +314,55 @@ const ZONE_LABEL: Record<string, string> = {
 function nextAction(bedtime: number | null, wake: number | null, nowMin: number): string {
   const preSleep = bedtime !== null ? ((bedtime - 90) + 1440) % 1440 : null;
 
-  // Morning: after wake, before noon
+  // Morning: up to 4h after wake → "Wake up on time ✓"
   if (wake !== null) {
-    const mornEnd = (wake + 240) % 1440; // up to 4h after wake
-    if (nowMin >= wake && nowMin < mornEnd) return 'ARP ✓ today';
+    const mornEnd = (wake + 240) % 1440;
+    if (nowMin >= wake && nowMin < mornEnd) return 'Wake up on time ✓';
   }
 
-  // Evening: wind-down approaching (within 3h before pre-sleep)
-  if (preSleep !== null) {
-    const diff = ((preSleep - nowMin) + 1440) % 1440;
-    if (diff <= 180 && diff > 0) {
-      const h = Math.floor(diff / 60);
-      const m = diff % 60;
-      const label = h > 0 ? `${h}h ${m > 0 ? m + 'm' : ''}` : `${m}m`;
-      return `Wind-down in ${label.trim()}`;
-    }
-    if (diff === 0 || (diff > 1350)) return 'Wind-down now';
-  }
-
-  // Bedtime approaching
+  // Bedtime very soon (< 30 min)
   if (bedtime !== null) {
     const diff = ((bedtime - nowMin) + 1440) % 1440;
-    if (diff <= 90 && diff > 0) {
+    if (diff <= 30 && diff > 0) return `Lights out in ${diff}m`;
+  }
+
+  // Wind-down now / soon (within 3h before pre-sleep)
+  if (preSleep !== null) {
+    const diff = ((preSleep - nowMin) + 1440) % 1440;
+    if (diff > 1350) return 'Start wind-down';
+    if (diff === 0)  return 'Start wind-down';
+    if (diff <= 180) {
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      return h > 0
+        ? `Wind-down in ${h}h${m > 0 ? ` ${m}m` : ''}`
+        : `Wind-down in ${m}m`;
+    }
+  }
+
+  // Bedtime approaching (90 min window)
+  if (bedtime !== null) {
+    const diff = ((bedtime - nowMin) + 1440) % 1440;
+    if (diff <= 90) {
       return `Bedtime in ${diff}m`;
     }
   }
 
-  // Afternoon default
+  // Afternoon
   const h = Math.floor(nowMin / 60);
-  if (h >= 13 && h < 19) return 'Afternoon recovery';
+  if (h >= 13 && h < 17) return 'Afternoon — nap window';
 
-  return bedtime !== null ? `Bed ${formatMin(bedtime)}` : 'View plan';
+  return bedtime !== null ? `Bed at ${formatMin(bedtime)}` : 'View plan';
 }
+
+// ─── Mock fallback (dev / no backend) ────────────────────────────────────────
+const MOCK_PILL = {
+  zone:         'green' as const,
+  recentCycles: [5, 4, 5],
+  targetCycles: 5,
+  bedtime:      1410, // 23:30
+  wake:         450,  // 07:30
+};
 
 function TopInfoBar({
   topInset, zone, recentCycles, targetCycles, bedtime, wake, onPress,
@@ -750,11 +767,11 @@ export default function HomeScreen() {
             {/* Top info bar */}
             <TopInfoBar
               topInset={insets.top}
-              zone={dayPlan?.readiness?.zone ?? null}
-              recentCycles={dayPlan?.readiness?.recentCycles ?? []}
-              targetCycles={profile?.idealCyclesPerNight ?? 5}
-              bedtime={bedtime}
-              wake={wakeTime}
+              zone={dayPlan?.readiness?.zone ?? MOCK_PILL.zone}
+              recentCycles={dayPlan?.readiness?.recentCycles ?? MOCK_PILL.recentCycles}
+              targetCycles={profile?.idealCyclesPerNight ?? MOCK_PILL.targetCycles}
+              bedtime={bedtime ?? MOCK_PILL.bedtime}
+              wake={wakeTime ?? MOCK_PILL.wake}
               onPress={() => goToPage(1)}
             />
 
