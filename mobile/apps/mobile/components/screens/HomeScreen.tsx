@@ -155,10 +155,10 @@ const sm = StyleSheet.create({
   scroll:   { paddingHorizontal: 14, paddingVertical: 8, gap: 8, alignItems: 'flex-start' },
   card:     {
     width:             104,
-    backgroundColor:   'rgba(255,255,255,0.06)',
+    backgroundColor:   CARD,
     borderRadius:      12,
     borderWidth:       1,
-    borderColor:       'rgba(255,255,255,0.09)',
+    borderColor:       'rgba(255,255,255,0.08)',
     paddingVertical:   8,
     paddingHorizontal: 9,
     gap:               5,
