@@ -187,9 +187,9 @@ export default function PagerLayout() {
           disabled={isOnboarding}
         >
           <TabIcon anim={anim1} bubbleColor={tabBarBubble}
-            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon}
             label="Insights"
-            icon={<Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon} />}
           />
         </Pressable>
 
@@ -200,9 +200,9 @@ export default function PagerLayout() {
           disabled={isOnboarding}
         >
           <TabIcon anim={anim2} bubbleColor={tabBarBubble}
-            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon}
             label="Planning"
-            icon={<Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon} />}
           />
         </Pressable>
 
@@ -213,9 +213,9 @@ export default function PagerLayout() {
           disabled={isOnboarding}
         >
           <TabIcon anim={anim3} bubbleColor={tabBarBubble}
-            iconColor={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon}
             label="Profile"
-            icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.22)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.50)' : tabBarIcon} />}
           />
         </Pressable>
       </View>
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop:     6,
   },
-  tabLocked: { opacity: 0.28 },
+  tabLocked: { opacity: 0.45 },
   tabItem: {
     flex:           1,
     alignItems:     "center",
