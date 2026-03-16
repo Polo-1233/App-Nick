@@ -152,7 +152,7 @@ function SmartCarousel({ onPress, disabled, lastCycles }: {
 }
 
 const sm = StyleSheet.create({
-  scroll:   { paddingHorizontal: 14, paddingVertical: 8, gap: 8, alignItems: 'flex-start' },
+  scroll:   { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 0, gap: 8, alignItems: 'flex-start' },
   card:     {
     width:             104,
     backgroundColor:   CARD,
@@ -758,15 +758,16 @@ export default function HomeScreen() {
               </Pressable>
             )}
 
-            {/* Smart cards carousel — always visible above input */}
-            <SmartCarousel
-              onPress={send}
-              disabled={isStreaming}
-              lastCycles={dayPlan?.readiness?.recentCycles?.[0] ?? null}
-            />
+            {/* Bottom zone: carousel + input, glued together */}
+            <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }}>
+              <SmartCarousel
+                onPress={send}
+                disabled={isStreaming}
+                lastCycles={dayPlan?.readiness?.recentCycles?.[0] ?? null}
+              />
 
             {/* 3. Input bar */}
-            <View style={[sc.composer, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: BORDER }]}>
+            <View style={sc.composer}>
               <View style={sc.inputRow}>
                 <View style={[sc.inputWrap, inputFocused && { borderColor: `${ACCENT}55`, borderWidth: 1 }]}>
                   <TextInput
@@ -794,6 +795,7 @@ export default function HomeScreen() {
               </View>
               <View style={{ height: insets.bottom || 8 }} />
             </View>
+            </View>{/* end bottom zone */}
 
           </View>
         )}
