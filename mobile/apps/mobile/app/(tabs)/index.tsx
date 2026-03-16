@@ -146,10 +146,10 @@ export default function PagerLayout() {
           <HomeScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
-          <CalendarScreen />
+          <InsightsScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
-          <InsightsScreen />
+          <CalendarScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
@@ -175,17 +175,17 @@ export default function PagerLayout() {
           } />
         </Pressable>
 
-        {/* Calendar */}
+        {/* Insights */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(1)}>
-          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Planning" icon={
-            <Ionicons name={activeIndex === 1 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Insights" icon={
+            <Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
 
-        {/* Insights */}
+        {/* Calendar */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(2)}>
-          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Insights" icon={
-            <Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={tabBarIcon} />
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Planning" icon={
+            <Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={tabBarIcon} />
           } />
         </Pressable>
 
