@@ -466,25 +466,24 @@ export default function OnboardingScreen() {
                       },
                     ]}
                   />
-                  {/* Ring */}
+                  {/* Ring — animation only on border/glow, text outside */}
                   <Animated.View
                     style={[
                       s.circleRingSilver,
                       {
-                        opacity:   circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.35, 0.58] }),
+                        opacity:   circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.55, 0.80] }),
                         transform: [{ scale: circlePulse2 }],
                       },
                     ]}
-                  >
-                    {/* Text — 3-tier hierarchy, all centered */}
-                    <View style={s.slide2Inner}>
-                      <Text style={s.slide2DevelopedBy}>Developed by</Text>
-                      <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
-                      <Text style={s.slide2Credential}>
-                        {"The R90 method used by elite athletes\n(Cristiano Ronaldo, Manchester United, Team Sky)"}
-                      </Text>
-                    </View>
-                  </Animated.View>
+                  />
+                  {/* Text — absolute over ring, full opacity always */}
+                  <View style={[StyleSheet.absoluteFill, s.slide2Inner]}>
+                    <Text style={s.slide2DevelopedBy}>Developed by</Text>
+                    <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
+                    <Text style={s.slide2Credential}>
+                      {"The R90 method used by elite athletes\n(Cristiano Ronaldo, Manchester United, Team Sky)"}
+                    </Text>
+                  </View>
                 </View>
 
               </Animated.View>
@@ -837,27 +836,27 @@ const s = StyleSheet.create({
   slide2DevelopedBy: {
     fontSize:      12,
     fontFamily:    'Inter-Regular',
-    fontWeight:    '400',
-    color:         TEXT_MUTED,
+    fontWeight:    '600',
+    color:         TEXT_SUB,
     textAlign:     'center',
     letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
   },
   slide2AuthorName: {
-    fontSize:      22,          // prominent — focal point
+    fontSize:      24,
     fontFamily:    'Inter-Bold',
-    fontWeight:    '700',
-    color:         TEXT,
+    fontWeight:    '800',
+    color:         '#FFFFFF',
     textAlign:     'center',
     letterSpacing: -0.3,
   },
   slide2Credential: {
-    fontSize:      13,
+    fontSize:      14,
     fontFamily:    'Inter-Regular',
-    fontWeight:    '400',
-    color:         TEXT_SUB,
+    fontWeight:    '500',
+    color:         TEXT,
     textAlign:     'center',
-    lineHeight:    22,          // slightly increased
+    lineHeight:    22,
     paddingHorizontal: 8,
   },
 
