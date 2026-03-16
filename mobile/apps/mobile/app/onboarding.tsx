@@ -384,58 +384,28 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>}
 
-            {/* ── Slide 1: Cognitive intro ──────────────────────────────── */}
-            {page === 2 && <View style={s.slideV}>
+            {/* ── Slide 3: Schéma R90 ──────────────────────────────────── */}
+            {page === 2 && <View style={s.slide3Schema}>
+              <Animated.View style={[s.slide3SchemaContent, { opacity: fadeAnim1 }]}>
 
-              <View style={s.titleArea}>
-                <Animated.View style={[s.titleBlock, { opacity: fadeAnim1 }]}>
-                  <Text style={s.slideTitle}>
-                    {"Sleep is decided\nlong before bedtime"}
-                  </Text>
-                </Animated.View>
-              </View>
+                {/* Image centrée */}
+                <Image
+                  source={require('../assets/shemav1.png')}
+                  style={s.schemaImage}
+                  resizeMode="contain"
+                />
 
-              {/* Circle + R-Lo observer — circle stays primary, R-Lo sits bottom-right */}
-              <View style={s.slide1Anchor}>
-                <View style={s.circleCenter}>
-                  <Animated.View
-                    style={[
-                      s.circleGlow,
-                      {
-                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.0, 0.08, 0.0] }),
-                        transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] }) }],
-                      },
-                    ]}
-                  />
-                  <Animated.View
-                    style={[
-                      s.circleRing,
-                      {
-                        opacity:   breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.48, 0.78, 0.48] }),
-                        transform: [{ scale: circlePulse1 }],
-                      },
-                    ]}
-                  >
-                    {/* Rhythm lines — faint horizontal markers behind text */}
-                    <View style={[StyleSheet.absoluteFill, s.circleRhythmWrap]} pointerEvents="none">
-                      <View style={s.rhythmLines}>
-                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
-                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] }) }]} />
-                        <Animated.View style={[s.rhythmLine, { opacity: breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.04, 0.12, 0.04] }) }]} />
-                      </View>
-                    </View>
+                {/* Titre */}
+                <Text style={s.schemaTitle}>
+                  {"Your sleep strategy is\ncalculated automatically"}
+                </Text>
 
-                    {/* Text stanzas */}
-                    <Animated.View style={[s.circleInnerGroup, { opacity: fadeAnim1 }]}>
-                      <Text style={s.circleInnerText}>{"Your energy follows\n90-minute cycles."}</Text>
-                      <Text style={s.circleInnerText}>{"Most people\nfight against them."}</Text>
-                    </Animated.View>
-                  </Animated.View>
-                </View>
+                {/* Texte */}
+                <Text style={s.schemaText}>
+                  {"R90 Navigator combines your sleep data, your schedule, and the R90 method to build your optimal sleep plan."}
+                </Text>
 
-
-              </View>
-
+              </Animated.View>
             </View>}
 
             {/* ── Slide 2: Authority — The R90 Method ──────────────────── */}
@@ -946,7 +916,37 @@ const s = StyleSheet.create({
     borderRadius:    1,
   },
 
-  // ── Slide 3 — Meet R-Lo (Duolingo style) ─────────────────────────────────
+  // ── Slide 3 — Schéma R90 ──────────────────────────────────────────────────
+  slide3Schema: {
+    flex:              1,
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 28,
+  },
+  slide3SchemaContent: {
+    alignItems: 'center',
+    gap:        20,
+  },
+  schemaImage: {
+    width:  '100%',
+    height: 260,
+  },
+  schemaTitle: {
+    fontSize:      22,
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    lineHeight:    32,
+    letterSpacing: -0.4,
+  },
+  schemaText: {
+    fontSize:   14,
+    color:      TEXT_SUB,
+    textAlign:  'center',
+    lineHeight: 22,
+  },
+
+  // ── Slide 4 — Meet R-Lo (Duolingo style) ─────────────────────────────────
   slide3: {
     flex:              1,
     paddingHorizontal: 32,
