@@ -152,9 +152,11 @@ function SmartCarousel({ onPress, disabled, lastCycles }: {
 }
 
 const sm = StyleSheet.create({
-  scroll:   { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 0, gap: 8, alignItems: 'flex-start' },
+  scroll:   { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 0, gap: 8 },
   card:     {
     width:             104,
+    width:             104,
+    height:            70,
     backgroundColor:   CARD,
     borderRadius:      12,
     borderWidth:       1,
@@ -163,7 +165,7 @@ const sm = StyleSheet.create({
     paddingHorizontal: 9,
     gap:               5,
     alignItems:        'flex-start',
-    alignSelf:         'flex-start',
+    justifyContent:    'space-between',
   },
   iconWrap: { width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   label:    { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', lineHeight: 14 },
