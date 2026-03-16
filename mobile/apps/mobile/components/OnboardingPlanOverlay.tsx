@@ -33,6 +33,8 @@ import {
 } from '../lib/storage';
 import { requestCalendar, requestNotifications } from '../lib/permissions';
 import { connectGoogleCalendar } from '../lib/google-calendar';
+import { initAppleHealth } from '../lib/apple-health';
+import { connectOura } from '../lib/oura';
 import { Ionicons } from '@expo/vector-icons';
 import { updateProfile } from '../lib/api';
 import { signIn, signUp } from '../lib/supabase';
@@ -383,7 +385,7 @@ function PermissionStep({
   plan:       PlanData;
   onComplete: () => void;
 }) {
-  const [permStep, setPermStep] = useState<'calendar' | 'notifications' | 'saving'>('calendar');
+  const [permStep, setPermStep] = useState<'calendar' | 'notifications' | 'wearables' | 'saving'>('calendar');
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // Save profile and complete after permissions
@@ -432,6 +434,19 @@ function PermissionStep({
 
   async function handleNotifications() {
     await requestNotifications();
+    setPermStep('wearables');
+  }
+
+  async function handleAppleHealthOnboard() {
+    try { await initAppleHealth(); } catch { /* non-critical */ }
+    setPermStep('saving');
+  }
+
+  const [ouraLoading, setOuraLoading] = useState(false);
+  async function handleOuraOnboard() {
+    setOuraLoading(true);
+    try { await connectOura(); } catch { /* non-critical */ }
+    setOuraLoading(false);
     setPermStep('saving');
   }
 
@@ -446,9 +461,10 @@ function PermissionStep({
             </View>
           </View>
           <Text style={bs.title}>Sync your calendar</Text>
-          <Text style={bs.body}>
-            R-Lo can read your upcoming schedule to protect your sleep window.
-          </Text>
+          <Text style={bs.body}>R-Lo can read your upcoming schedule to protect your sleep window.</Text>
+          <View style={bs.dots}>
+            <View style={bs.dotActive} /><View style={bs.dotInactive} /><View style={bs.dotInactive} />
+          </View>
           <View style={bs.actions}>
             <Pressable style={bs.btnApple} onPress={handleNativeCalendar}>
               <Ionicons name="calendar" size={18} color="#0B1220" />
@@ -467,16 +483,17 @@ function PermissionStep({
     );
   }
 
-  return (
-    <View style={bs.overlay}>
-      <View style={bs.sheet}>
-        <View style={bs.handle} />
-        <View style={bs.iconRow}>
-          <View style={bs.iconWrap}>
-            <Ionicons name="notifications-outline" size={28} color={ACCENT} />
+  if (permStep === 'notifications') {
+    return (
+      <View style={bs.overlay}>
+        <View style={bs.sheet}>
+          <View style={bs.handle} />
+          <View style={bs.iconRow}>
+            <View style={bs.iconWrap}>
+              <Ionicons name="notifications-outline" size={28} color={ACCENT} />
+            </View>
           </View>
-        </View>
-        <Text style={bs.title}>Stay on track</Text>
+          <Text style={bs.title}>Stay on track</Text>
         <Text style={bs.body}>
           Get a gentle nudge before your wind-down and when it's time to sleep.
         </Text>
@@ -484,6 +501,39 @@ function PermissionStep({
           <Pressable style={bs.btnApple} onPress={handleNotifications}>
             <Ionicons name="notifications" size={18} color="#0B1220" />
             <Text style={bs.btnAppleText}>Allow Notifications</Text>
+          </Pressable>
+          <Pressable style={bs.btnSkip} onPress={() => setPermStep('wearables')}>
+            <Text style={bs.btnSkipText}>Skip for now</Text>
+          </Pressable>
+        </View>
+      </View>
+    </View>
+    );
+  }
+
+  // Step 3 — Wearables
+  return (
+    <View style={bs.overlay}>
+      <View style={bs.sheet}>
+        <View style={bs.handle} />
+        <View style={bs.iconRow}>
+          <View style={bs.iconWrap}>
+            <Ionicons name="watch-outline" size={28} color={ACCENT} />
+          </View>
+        </View>
+        <Text style={bs.title}>Connect your health data</Text>
+        <Text style={bs.body}>R-Lo uses your sleep and recovery data to give you personalised coaching.</Text>
+        <View style={bs.dots}>
+          <View style={bs.dotDone} /><View style={bs.dotDone} /><View style={bs.dotActive} />
+        </View>
+        <View style={bs.actions}>
+          <Pressable style={bs.btnApple} onPress={handleAppleHealthOnboard}>
+            <Ionicons name="heart" size={18} color="#0B1220" />
+            <Text style={bs.btnAppleText}>Connect Apple Health</Text>
+          </Pressable>
+          <Pressable style={[bs.btnGoogle, ouraLoading && { opacity: 0.6 }]} onPress={handleOuraOnboard} disabled={ouraLoading}>
+            <Ionicons name="radio-outline" size={16} color={ACCENT} />
+            <Text style={bs.btnGoogleText}>{ouraLoading ? 'Connecting…' : 'Connect Oura Ring'}</Text>
           </Pressable>
           <Pressable style={bs.btnSkip} onPress={() => setPermStep('saving')}>
             <Text style={bs.btnSkipText}>Skip for now</Text>
@@ -540,6 +590,10 @@ const bs = StyleSheet.create({
   btnGoogleText: { fontSize: 15, fontWeight: '500', color: ACCENT },
   btnSkip: { alignItems: 'center', paddingVertical: 10 },
   btnSkipText: { fontSize: 14, color: TEXT_MUTED },
+  dots:        { flexDirection: 'row', gap: 6, justifyContent: 'center', marginTop: 4 },
+  dotActive:   { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT },
+  dotInactive: { width: 8, height: 8, borderRadius: 4, backgroundColor: BORDER },
+  dotDone:     { width: 8, height: 8, borderRadius: 4, backgroundColor: `${ACCENT}55` },
 });
 
 

@@ -2573,6 +2573,8 @@ PODS:
   - RevenueCat (5.61.0)
   - RevenueCatUI (5.61.0):
     - RevenueCat (= 5.61.0)
+  - RNAppleHealthKit (1.7.0):
+    - React
   - RNCAsyncStorage (2.2.0):
     - React-Core
   - RNDateTimePicker (8.4.4):
@@ -2743,6 +2745,7 @@ DEPENDENCIES:
   - ReactAppDependencyProvider (from `build/generated/ios`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
+  - RNAppleHealthKit (from `../../../node_modules/react-native-health`)
   - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNGestureHandler (from `../../../node_modules/react-native-gesture-handler`)
@@ -2958,6 +2961,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../../../node_modules/react-native/ReactCommon"
+  RNAppleHealthKit:
+    :path: "../../../node_modules/react-native-health"
   RNCAsyncStorage:
     :path: "../../../node_modules/@react-native-async-storage/async-storage"
   RNDateTimePicker:
@@ -3076,6 +3081,7 @@ SPEC CHECKSUMS:
   ReactCommon: 5f0e5c09a64a2717215dd84380e1a747810406f2
   RevenueCat: 9acbd29a62000b57d59efa16166290c4a119847b
   RevenueCatUI: 67229fd8c301e0f3df3e0d6c86bd9112311ef1a5
+  RNAppleHealthKit: 86ef7ab70f762b802f5c5289372de360cca701f9
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
   RNDateTimePicker: 7d93eacf4bdf56350e4b7efd5cfc47639185e10c
   RNGestureHandler: 12a436b5074378be95468a57b62c165a1e24cfc9
@@ -3085,6 +3091,6 @@ SPEC CHECKSUMS:
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: 728df40394d49f3f471688747cf558158b3a3bd1
 
-PODFILE CHECKSUM: 5d7a4320235b7aa18999a1631f5f6b34b3ff199b
+PODFILE CHECKSUM: b696398c4da020ad2b47819adbc15727ea8a5246
 
 COCOAPODS: 1.16.2
