@@ -435,6 +435,12 @@ export default function ProfileScreen() {
       onPress: () => router.push('/sleep-history'),
     },
     {
+      icon:    'watch-outline',
+      label:   'Wearables & Health',
+      sub:     'Apple Health, Oura Ring and more',
+      onPress: () => router.push('/wearables'),
+    },
+    {
       icon:    'fitness-outline',
       label:   'Lifestyle profile',
       sub:     'Stress, environment, exercise, alcohol',

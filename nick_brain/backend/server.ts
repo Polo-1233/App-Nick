@@ -61,6 +61,12 @@ import {
   wearableLatestHandler,
 } from "./handlers/wearable-handlers.js";
 import {
+  ouraConnectHandler,
+  ouraCallbackHandler,
+  ouraSyncHandler,
+  ouraDisconnectHandler,
+} from "./handlers/oura-handlers.js";
+import {
   calculateSummaryHandler,
   recentSummariesHandler,
 } from "./handlers/summary-handler.js";
@@ -136,10 +142,15 @@ const routes: AnyRoute[] = [
   { method: "GET",    path: "/reports/weekly/latest", handler: latestReportHandler },
   { method: "GET",    path: "/notifications/proactive", handler: proactiveNotificationHandler },
   { method: "POST",   path: "/notifications/dismiss",  handler: dismissNotificationHandler },
-  // Wearables
+  // Wearables — Apple Health
   { method: "POST",   path: "/wearables/sync",    handler: wearableSyncHandler },
   { method: "GET",    path: "/wearables/status",  handler: wearableStatusHandler },
   { method: "GET",    path: "/wearables/latest",  handler: wearableLatestHandler },
+  // Wearables — Oura Ring
+  { method: "GET",    path: "/wearables/oura/connect",    handler: ouraConnectHandler },
+  // oura/callback is handled above (no auth)
+  { method: "POST",   path: "/wearables/oura/sync",       handler: ouraSyncHandler },
+  { method: "DELETE", path: "/wearables/oura/disconnect", handler: ouraDisconnectHandler },
 ];
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
@@ -205,6 +216,14 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
       "Access-Control-Allow-Headers": "Authorization, Content-Type",
     });
     res.end();
+    return;
+  }
+
+  // Oura OAuth callback — no JWT (userId comes from state param)
+  if (method === "GET" && path === "/wearables/oura/callback") {
+    const queryObj: Record<string, string> = {};
+    query.forEach((v, k) => { queryObj[k] = v; });
+    await ouraCallbackHandler(req, res, {} as any, queryObj);
     return;
   }
 
