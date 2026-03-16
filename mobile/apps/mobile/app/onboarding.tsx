@@ -65,6 +65,7 @@ const TEXT_SUB  = '#9FB0C5';
 const TEXT_MUTED = '#6B7F99';
 
 const CIRCLE_SIZE = 230;
+const CIRCLE_NICK = 290;
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -820,9 +821,9 @@ const s = StyleSheet.create({
   },
   slide2Halo: {
     position:        'absolute',
-    width:           CIRCLE_SIZE * 1.8,
-    height:          CIRCLE_SIZE * 1.8,
-    borderRadius:    (CIRCLE_SIZE * 1.8) / 2,
+    width:           CIRCLE_NICK * 1.8,
+    height:          CIRCLE_NICK * 1.8,
+    borderRadius:    (CIRCLE_NICK * 1.8) / 2,
     backgroundColor: TEXT,
   },
   slide2Inner: {
@@ -851,27 +852,26 @@ const s = StyleSheet.create({
     letterSpacing: -0.3,
   },
   slide2Credential: {
-    fontSize:      14,
+    fontSize:      12,
     fontFamily:    'Inter-Regular',
     fontWeight:    '500',
     color:         TEXT,
     textAlign:     'center',
-    lineHeight:    22,
-    paddingHorizontal: 8,
+    lineHeight:    19,
+    paddingHorizontal: 16,
   },
 
-  // Silver ring — CIRCLE_SIZE * 1.1 (+10%)
   circleGlowSilver: {
     position:        'absolute',
-    width:           CIRCLE_SIZE * 1.1 * 1.35,
-    height:          CIRCLE_SIZE * 1.1 * 1.35,
-    borderRadius:    (CIRCLE_SIZE * 1.1 * 1.35) / 2,
+    width:           CIRCLE_NICK * 1.35,
+    height:          CIRCLE_NICK * 1.35,
+    borderRadius:    (CIRCLE_NICK * 1.35) / 2,
     backgroundColor: TEXT,
   },
   circleRingSilver: {
-    width:          CIRCLE_SIZE * 1.1,
-    height:         CIRCLE_SIZE * 1.1,
-    borderRadius:   (CIRCLE_SIZE * 1.1) / 2,
+    width:          CIRCLE_NICK,
+    height:         CIRCLE_NICK,
+    borderRadius:   CIRCLE_NICK / 2,
     borderWidth:    1,
     borderColor:    TEXT,
     justifyContent: 'center',
