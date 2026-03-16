@@ -125,17 +125,38 @@ interface StructuredContext {
   four_week_avg:       number | null;
   on_track_rate:       string;
   long_term_patterns:  string[];
+  // Phase C — wearable data
+  wearable:            WearableSnapshot | null;
+}
+
+interface WearableSnapshot {
+  source:             string;
+  collected_at:       string;
+  sleep_duration_min: number | null;
+  sleep_efficiency:   number | null;
+  hrv_ms:             number | null;
+  resting_hr:         number | null;
+  readiness_score:    number | null;
+  strain_score:       number | null;
+  rem_min:            number | null;
+  deep_min:           number | null;
 }
 
 async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
-  const [ctx, lifeEvents, calendarEvents, weeklySummaries] = await Promise.all([
+  const [ctx, lifeEvents, calendarEvents, weeklySummaries, wearableData] = await Promise.all([
     assembleEngineContext(client, userId),
     fetchRecentLifeEvents(client, userId),
     fetchUpcomingCalendarEvents(client, userId, 48),
     fetchWeeklySummaries(client, userId, 4),
+    client.from('wearable_data')
+      .select('source, collected_at, sleep_duration_min, sleep_efficiency, hrv_ms, resting_hr, readiness_score, strain_score, rem_min, deep_min')
+      .eq('user_id', userId)
+      .order('collected_at', { ascending: false })
+      .limit(3)
+      .then(r => r.data ?? []),
   ]);
   const output = runEngineSafe(ctx);
   const home   = buildHomeScreenPayload(output, ctx);
@@ -193,6 +214,19 @@ async function buildStructuredContext(
       ? `${weeklySummaries.filter(s => s.on_track).length}/${weeklySummaries.length} weeks`
       : "unknown",
     long_term_patterns: detectPatterns(weeklySummaries),
+    // Phase C — wearable data (most recent across all sources)
+    wearable: (() => {
+      if (!wearableData.length) return null;
+      // Prefer Oura readiness > Apple Health > others
+      const priority = ['oura', 'whoop', 'apple_health'];
+      const sorted = [...wearableData].sort((a, b) => {
+        const pa = priority.indexOf((a as any).source);
+        const pb = priority.indexOf((b as any).source);
+        if (pa !== pb) return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
+        return new Date((b as any).collected_at).getTime() - new Date((a as any).collected_at).getTime();
+      });
+      return sorted[0] as WearableSnapshot;
+    })(),
     // Phase 2 — calendar events
     calendar_events: calendarEvents.map(e => {
       const eventDate = new Date(e.start_time).toISOString().slice(0, 10);
@@ -297,6 +331,24 @@ function formatContextSections(ctx: StructuredContext): string {
     lines.push("");
   }
 
+  // Phase C — Wearable data
+  if (ctx.wearable) {
+    const w = ctx.wearable;
+    const age = Math.round((Date.now() - new Date(w.collected_at).getTime()) / 3600000);
+    const ageLabel = age < 24 ? `${age}h ago` : `${Math.floor(age / 24)}d ago`;
+    lines.push("[WEARABLE_DATA]");
+    lines.push(`source: ${w.source} (${ageLabel})`);
+    if (w.readiness_score !== null)    lines.push(`readiness_score: ${w.readiness_score}/100`);
+    if (w.hrv_ms !== null)             lines.push(`hrv: ${Math.round(w.hrv_ms)}ms`);
+    if (w.resting_hr !== null)         lines.push(`resting_hr: ${w.resting_hr}bpm`);
+    if (w.sleep_duration_min !== null) lines.push(`sleep_duration: ${Math.floor(w.sleep_duration_min / 60)}h${w.sleep_duration_min % 60 > 0 ? `${w.sleep_duration_min % 60}m` : ''}`);
+    if (w.sleep_efficiency !== null)   lines.push(`sleep_efficiency: ${Math.round(w.sleep_efficiency * 100)}%`);
+    if (w.rem_min !== null)            lines.push(`rem: ${w.rem_min}min`);
+    if (w.deep_min !== null)           lines.push(`deep: ${w.deep_min}min`);
+    if (w.strain_score !== null)       lines.push(`strain: ${w.strain_score}`);
+    lines.push("");
+  }
+
   // Phase 2 — Calendar events
   if (ctx.calendar_events.length > 0) {
     lines.push("[CALENDAR_EVENTS]");
@@ -349,11 +401,20 @@ Do not say "I can't help with that" or "As an AI...". Use only the exact refusal
 ## Current user context (from the R90 engine — treat as ground truth)
 ${contextSections}
 
+## How to use [WEARABLE_DATA] when present
+- **readiness_score** (Oura): < 60 = low recovery day → recommend light activity, protect sleep window; 60–79 = moderate; ≥ 80 = well recovered
+- **hrv**: low HRV vs user's baseline → nervous system stressed → suggest wind-down adjustments; high HRV → good readiness
+- **resting_hr**: elevated resting HR (+5-10bpm above normal) → signs of fatigue or illness → reduce training advice
+- **sleep_efficiency**: < 85% → fragmented sleep, suggest wind-down routine improvements
+- **rem_min / deep_min**: low REM (<90min) → cognitive recovery lacking; low deep (<60min) → physical recovery lacking
+- Cross-reference wearable data with R90 cycle count to give a complete picture
+- Never invent wearable data if the section is absent
+
 ## Response style
 - Concise: 2–4 sentences for simple questions, up to 8 for complex ones
 - Direct: lead with the answer, explain after
 - Warm but precise: like a coach, not a therapist
-- Use the user's actual data when relevant (e.g. "your 4.2 average this week")
+- Use the user's actual data when relevant (e.g. "your HRV is 52ms — that's a sign your body needs an easier day")
 - Never start with "Great question!" or similar filler
 - Reply in the same language the user writes in (French or English)`;
 }

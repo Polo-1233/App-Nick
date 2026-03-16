@@ -57,6 +57,10 @@
 	<string>R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>R-Lo · Sleep Coach reads your sleep, heart rate and HRV data from Apple Health to personalise your recovery coaching.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>R-Lo · Sleep Coach may write sleep session data to Apple Health.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your microphone</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
@@ -90,9 +94,5 @@
 	<string>Dark</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>NSHealthShareUsageDescription</key>
-	<string>R-Lo · Sleep Coach reads your sleep, heart rate and HRV data from Apple Health to personalise your recovery coaching.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>R-Lo · Sleep Coach may write sleep session data to Apple Health.</string>
 </dict>
 </plist>

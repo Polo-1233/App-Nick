@@ -29,7 +29,7 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = R90Navigator/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* R90Navigator-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "R90Navigator-Bridging-Header.h"; path = "R90Navigator/R90Navigator-Bridging-Header.h"; sourceTree = "<group>"; };
-		FC0C5F901823C9079193E4ED /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = R90Navigator/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FC0C5F901823C9079193E4ED /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = R90Navigator/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,7 +128,6 @@
 				4B0B02B79A2420F154DACC85 /* Pods-R90Navigator.debug.xcconfig */,
 				EC6DB20381149369C8B8396A /* Pods-R90Navigator.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
