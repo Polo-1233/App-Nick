@@ -46,6 +46,7 @@ import { signIn, signUp } from '../lib/supabase';
 
 const BG        = '#0B1220';
 const SURFACE   = '#1A2436';
+const SURFACE_2 = '#243046';
 const BORDER    = '#243046';
 const TEXT      = '#E6EDF7';
 const TEXT_SUB  = '#9FB0C5';
@@ -397,154 +398,266 @@ const pw = StyleSheet.create({
 
 // ─── Plan reveal ──────────────────────────────────────────────────────────────
 
+// ─── Plan reveal helpers ──────────────────────────────────────────────────────
+
+function cyclesToDuration(cycles: number): string {
+  const h = Math.floor((cycles * 90) / 60);
+  const m = (cycles * 90) % 60;
+  return m === 0 ? `${h}h` : `${h}h${m}`;
+}
+
+interface CycleOption {
+  cycles:   number;
+  bedtime:  string;
+  label:    string;
+  tag:      string;
+  tagColor: string;
+  isMain:   boolean;
+}
+
+function buildCycleOptions(wakeMin: number, targetCycles: number): CycleOption[] {
+  const options = [
+    { cycles: 6, tag: 'Optimal recovery', tagColor: '#A78BFA', isMain: false },
+    { cycles: 5, tag: 'Recommended',       tagColor: ACCENT,    isMain: true  },
+    { cycles: 4, tag: 'Alternative',        tagColor: '#FACC15', isMain: false },
+  ].map(o => ({
+    ...o,
+    label:   `${cyclesToDuration(o.cycles)} · ${o.cycles} cycles`,
+    bedtime: formatTime(((wakeMin - o.cycles * 90) + 1440) % 1440),
+  }));
+  return options;
+}
+
+// ─── Teaser block ─────────────────────────────────────────────────────────────
+
+function TeaserBlock({ icon, title, subtitle }: {
+  icon:     string;
+  title:    string;
+  subtitle: string;
+}) {
+  return (
+    <View style={tb.wrap}>
+      <View style={tb.lockRow}>
+        <View style={tb.iconWrap}>
+          <Ionicons name={icon as any} size={16} color={TEXT_MUTED} />
+        </View>
+        <View style={tb.textWrap}>
+          <Text style={tb.title}>{title}</Text>
+          <Text style={tb.sub}>{subtitle}</Text>
+        </View>
+        <View style={tb.lockBadge}>
+          <Ionicons name="lock-closed" size={11} color={TEXT_MUTED} />
+        </View>
+      </View>
+      {/* Blurred placeholder rows */}
+      <View style={tb.mockRows}>
+        {[0.7, 0.45, 0.3].map((op, i) => (
+          <View key={i} style={[tb.mockRow, { opacity: op, width: `${85 - i * 15}%` as any }]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const tb = StyleSheet.create({
+  wrap:     { backgroundColor: SURFACE, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER, gap: 12, opacity: 0.65 },
+  lockRow:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },
+  textWrap: { flex: 1 },
+  title:    { fontSize: 14, fontWeight: '700', color: TEXT_SUB },
+  sub:      { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  lockBadge:{ width: 24, height: 24, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },
+  mockRows: { gap: 6 },
+  mockRow:  { height: 8, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 4 },
+});
+
+// ─── PlanRevealStep ───────────────────────────────────────────────────────────
+
 function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
-  const cardAnim = useRef(new Animated.Value(0)).current;
-  const rloAnim  = useRef(new Animated.Value(0)).current;
+  const fadeAnim   = useRef(new Animated.Value(0)).current;
+  const weekAnim   = useRef(new Animated.Value(0)).current;
+  const teaserAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(cardAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(rloAnim,  { toValue: 1, duration: 400, delay: 200, useNativeDriver: true }),
+      Animated.timing(fadeAnim,   { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(weekAnim,   { toValue: 1, duration: 400, delay: 100, useNativeDriver: true }),
+      Animated.timing(teaserAnim, { toValue: 1, duration: 350, delay: 100, useNativeDriver: true }),
     ]).start();
-  }, [cardAnim, rloAnim]);
+  }, [fadeAnim, weekAnim, teaserAnim]);
 
-  const cardScale = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1.0] });
+  const wakeMin      = parseHHMM(plan.wakeDisplay, 390);
+  const cycleOptions = buildCycleOptions(wakeMin, plan.cycles);
 
-  const rloMessage = `This is your first recovery rhythm.\n\nIf you go to sleep at ${plan.onsetDisplay}, you'll complete ${plan.cycles} full sleep cycles and wake up at ${plan.wakeDisplay} with better recovery.\n\nLet's try this tonight.`;
+  // Build 7-day week (same bedtime every day — R90 principle: consistent wake time)
+  const today     = new Date();
+  const mainOption = cycleOptions.find(o => o.isMain)!;
+  const weekDays  = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - today.getDay() + 1 + i);
+    return {
+      dayShort: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      isToday:  d.toDateString() === today.toDateString(),
+    };
+  });
 
   return (
-    <View style={r.root}>
-      {/* Plan card */}
-      <Animated.View style={[r.card, { opacity: cardAnim, transform: [{ scale: cardScale }] }]}>
-        {/* Label */}
-        <Text style={r.cardTitle}>Your sleep rhythm is ready</Text>
-
-        {/* Time display */}
-        <View style={r.timeRow}>
-          <View style={r.timeBlock}>
-            <Text style={r.timeLabel}>Bedtime</Text>
-            <Text style={r.timeValue}>{plan.onsetDisplay}</Text>
-          </View>
-          <View style={r.timeArrow}>
-            <Text style={r.arrowText}>→</Text>
-          </View>
-          <View style={r.timeBlock}>
-            <Text style={r.timeLabel}>Wake up</Text>
-            <Text style={r.timeValue}>{plan.wakeDisplay}</Text>
+    <View style={{ flex: 1 }}>
+      <Animated.ScrollView
+        style={{ opacity: fadeAnim }}
+        contentContainerStyle={r.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Header badge ── */}
+        <View style={r.badgeRow}>
+          <View style={r.badge}>
+            <Text style={r.badgeText}>Your plan is ready</Text>
           </View>
         </View>
 
-        {/* Cycle dots */}
-        <View style={r.cyclesWrap}>
-          <Text style={r.cyclesLabel}>{plan.cycles} sleep cycles</Text>
-          <CycleDots count={plan.cycles} />
-        </View>
-      </Animated.View>
+        {/* ── Tonight — 3 cycle options ── */}
+        <View style={r.section}>
+          <Text style={r.sectionTitle}>TONIGHT</Text>
+          {cycleOptions.map(opt => (
+            <View key={opt.cycles} style={[r.cycleRow, opt.isMain && r.cycleRowMain]}>
+              {/* Bedtime hero */}
+              <View style={r.cycleLeft}>
+                <Text style={[r.cycleTime, opt.isMain && { color: ACCENT }]}>{opt.bedtime}</Text>
+                <Text style={r.cycleLabel}>{opt.label}</Text>
+              </View>
 
-      {/* R-Lo message */}
-      <Animated.View style={[r.rloRow, { opacity: rloAnim }]}>
-        <MascotImage emotion="Fiere" size="sm" />
-        <View style={r.rloBubble}>
-          <Text style={r.rloText}>{rloMessage}</Text>
-        </View>
-      </Animated.View>
+              {/* Dots */}
+              <View style={r.cycleDots}>
+                {Array.from({ length: opt.cycles }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[r.cycleDot, { backgroundColor: opt.tagColor, opacity: opt.isMain ? 1 : 0.5 }]}
+                  />
+                ))}
+              </View>
 
-      {/* CTA */}
-      <Animated.View style={[r.ctaWrap, { opacity: rloAnim }]}>
-        <Button
-          label="Start my rhythm"
-          variant="primary"
-          size="lg"
-          fullWidth
-          onPress={onContinue}
-        />
-      </Animated.View>
+              {/* Tag */}
+              <View style={[r.cycleTag, { borderColor: `${opt.tagColor}50` }]}>
+                <Text style={[r.cycleTagText, { color: opt.tagColor }]}>{opt.tag}</Text>
+              </View>
+            </View>
+          ))}
+
+          {/* Wake time row */}
+          <View style={r.wakeRow}>
+            <Ionicons name="sunny-outline" size={14} color="#4ADE80" />
+            <Text style={r.wakeText}>Wake up every day at <Text style={r.wakeBold}>{plan.wakeDisplay}</Text></Text>
+            <View style={r.wakeConsistencyBadge}>
+              <Text style={r.wakeConsistencyText}>R90</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── This Week ── */}
+        <Animated.View style={[r.section, { opacity: weekAnim }]}>
+          <Text style={r.sectionTitle}>THIS WEEK</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={r.weekScroll}>
+            {weekDays.map((day) => (
+              <View key={day.dayShort} style={[r.weekDay, day.isToday && r.weekDayToday]}>
+                <Text style={[r.weekDayLabel, day.isToday && r.weekDayLabelToday]}>{day.dayShort}</Text>
+                <View style={r.weekDots}>
+                  {Array.from({ length: plan.cycles }).map((_, i) => (
+                    <View key={i} style={[r.weekDot, day.isToday && { backgroundColor: ACCENT }]} />
+                  ))}
+                </View>
+                <Text style={[r.weekBedtime, day.isToday && { color: ACCENT }]}>{mainOption.bedtime}</Text>
+                <Text style={r.weekWake}>{plan.wakeDisplay}</Text>
+              </View>
+            ))}
+          </ScrollView>
+          <Text style={r.weekNote}>
+            Consistent wake time is the foundation of the R90 method. Your body clock aligns to it within 7 days.
+          </Text>
+        </Animated.View>
+
+        {/* ── R-Lo message ── */}
+        <View style={r.rloRow}>
+          <MascotImage emotion="Fiere" size="sm" />
+          <View style={r.rloBubble}>
+            <Text style={r.rloText}>
+              {"This is your starter plan — built from your wake time alone.\n\nOnce I'm connected to your calendar and wearables, I'll fine-tune it every day automatically."}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Teasers ── */}
+        <Animated.View style={[r.section, { opacity: teaserAnim }]}>
+          <Text style={r.sectionTitle}>COMING SOON</Text>
+          <TeaserBlock
+            icon="pulse-outline"
+            title="HRV & recovery insights"
+            subtitle="R-Lo adjusts your plan based on HRV, readiness and sleep debt"
+          />
+          <TeaserBlock
+            icon="calendar-outline"
+            title="Calendar-aware planning"
+            subtitle="Early meeting Tuesday? R-Lo moves your bedtime automatically"
+          />
+        </Animated.View>
+
+        {/* ── CTA ── */}
+        <View style={r.ctaWrap}>
+          <Button
+            label="Unlock full coaching"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onPress={onContinue}
+          />
+          <Text style={r.ctaNote}>7-day free trial · Cancel anytime</Text>
+        </View>
+
+      </Animated.ScrollView>
     </View>
   );
 }
 
 const r = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 24,
-  },
-  card: {
-    backgroundColor:  SURFACE,
-    borderRadius:     24,
-    borderWidth:      1,
-    borderColor:      BORDER,
-    padding:          28,
-    gap:              20,
-    shadowColor:  '#000',
-    shadowOpacity: 0.35,
-    shadowRadius:  24,
-    shadowOffset:  { width: 0, height: 8 },
-    elevation:     10,
-  },
-  cardTitle: {
-    fontSize:      18,
-    fontFamily:    'Inter-Bold',
-    fontWeight:    '700',
-    color:         TEXT,
-    textAlign:     'center',
-    lineHeight:    26,
-  },
-  timeRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            8,
-  },
-  timeBlock: { alignItems: 'center', gap: 4 },
-  timeArrow: { paddingHorizontal: 8, paddingTop: 10 },
-  arrowText: { fontSize: 22, color: TEXT_MUTED, fontWeight: '300' },
-  timeLabel: {
-    fontSize:      11,
-    fontFamily:    'Inter-Regular',
-    color:         TEXT_MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  timeValue: {
-    fontSize:      38,
-    fontFamily:    'Inter-Bold',
-    fontWeight:    '700',
-    color:         ACCENT,
-    letterSpacing: -1,
-  },
-  cyclesWrap: { alignItems: 'center', gap: 8 },
-  cyclesLabel: {
-    fontSize:   13,
-    fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
-    color:      TEXT_MUTED,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  rloRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-end',
-    gap:           12,
-  },
-  rloBubble: {
-    flex:                1,
-    backgroundColor:     SURFACE,
-    borderRadius:        16,
-    borderTopLeftRadius: 4,
-    borderWidth:         1,
-    borderColor:         BORDER,
-    paddingHorizontal:   16,
-    paddingVertical:     14,
-  },
-  rloText: {
-    fontSize:   15,
-    fontFamily: 'Inter-Regular',
-    color:      TEXT,
-    lineHeight: 24,
-  },
-  ctaWrap: {},
+  scroll:              { padding: 24, paddingBottom: 60, gap: 24 },
+  badgeRow:            { alignItems: 'center' },
+  badge:               { backgroundColor: `${ACCENT}22`, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, borderWidth: 1, borderColor: `${ACCENT}40` },
+  badgeText:           { fontSize: 12, fontWeight: '600', color: ACCENT },
+  section:             { gap: 10 },
+  sectionTitle:        { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2 },
+  // Cycle options
+  cycleRow:            { backgroundColor: SURFACE, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: BORDER },
+  cycleRowMain:        { backgroundColor: `${ACCENT}0D`, borderColor: `${ACCENT}40` },
+  cycleLeft:           { flex: 1, gap: 2 },
+  cycleTime:           { fontSize: 22, fontWeight: '800', color: TEXT, letterSpacing: -0.5 },
+  cycleLabel:          { fontSize: 11, color: TEXT_MUTED },
+  cycleDots:           { flexDirection: 'row', gap: 3 },
+  cycleDot:            { width: 7, height: 7, borderRadius: 4 },
+  cycleTag:            { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  cycleTagText:        { fontSize: 10, fontWeight: '700' },
+  // Wake row
+  wakeRow:             { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  wakeText:            { flex: 1, fontSize: 13, color: TEXT_MUTED },
+  wakeBold:            { fontWeight: '700', color: '#4ADE80' },
+  wakeConsistencyBadge:{ backgroundColor: 'rgba(74,222,128,0.15)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  wakeConsistencyText: { fontSize: 9, fontWeight: '800', color: '#4ADE80', letterSpacing: 0.5 },
+  // Week
+  weekScroll:          { gap: 8, paddingRight: 4 },
+  weekDay:             { width: 68, backgroundColor: SURFACE, borderRadius: 14, padding: 10, alignItems: 'center', gap: 5, borderWidth: 1, borderColor: BORDER },
+  weekDayToday:        { borderColor: `${ACCENT}60`, backgroundColor: `${ACCENT}0D` },
+  weekDayLabel:        { fontSize: 11, fontWeight: '700', color: TEXT_MUTED },
+  weekDayLabelToday:   { color: ACCENT },
+  weekDots:            { flexDirection: 'row', gap: 2 },
+  weekDot:             { width: 5, height: 5, borderRadius: 3, backgroundColor: SURFACE_2 },
+  weekBedtime:         { fontSize: 12, fontWeight: '700', color: TEXT_SUB },
+  weekWake:            { fontSize: 10, color: TEXT_MUTED },
+  weekNote:            { fontSize: 11, color: TEXT_MUTED, lineHeight: 16 },
+  // R-Lo message
+  rloRow:              { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  rloBubble:           { flex: 1, backgroundColor: SURFACE, borderRadius: 16, borderTopLeftRadius: 4, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 16, paddingVertical: 14 },
+  rloText:             { fontSize: 14, color: TEXT, lineHeight: 22 },
+  // CTA
+  ctaWrap:             { gap: 10 },
+  ctaNote:             { fontSize: 12, color: TEXT_MUTED, textAlign: 'center' },
 });
 
 // ─── Step 12 — Calendar connection ───────────────────────────────────────────
