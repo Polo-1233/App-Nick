@@ -10,6 +10,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
 import { hasCompletedIntro } from '../lib/storage';
 import { ThemeProvider, useTheme } from '../lib/theme-context';
+import { TourProvider } from '../lib/tour-context';
 import { configurePurchases } from '../lib/purchases';
 import { AppSplash } from '../components/AppSplash';
 import { AuthProvider, useAuth } from '../lib/auth-context';
@@ -229,11 +230,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={ghrv.root}>
       <ThemeProvider>
-        <AuthProvider>
-          <RootErrorBoundary>
-            <RootLayoutInner />
-          </RootErrorBoundary>
-        </AuthProvider>
+        <TourProvider>
+          <AuthProvider>
+            <RootErrorBoundary>
+              <RootLayoutInner />
+            </RootErrorBoundary>
+          </AuthProvider>
+        </TourProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

@@ -38,6 +38,7 @@ import { computeInsights }         from '../../lib/insights';
 import { getMockInsightsData }     from '../../lib/mock-insights-data';
 import type { UserProfile }        from '@r90/types';
 import { usePager }                from '../../lib/pager-context';
+import { useTour }                 from '../../lib/tour-context';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const BG      = '#0B1220';
@@ -175,11 +176,12 @@ const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
   { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
-function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
-  onPress:       (prompt: string) => void;
-  disabled?:     boolean;
-  lastCycles:    number | null;
+function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep, isTour }: {
+  onPress:        (prompt: string) => void;
+  disabled?:      boolean;
+  lastCycles:     number | null;
   onboardingStep: string;
+  isTour?:        boolean;
 }) {
   const { width: screenW } = useWindowDimensions();
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
@@ -204,6 +206,10 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
   else if (onboardingStep === 'chronotype')     cards = ONBOARDING_CHRONOTYPE_CARDS;
   else if (onboardingStep === 'device')         cards = ONBOARDING_DEVICE_CARDS;
   else if (onboardingStep === 'summary')        cards = ONBOARDING_SUMMARY_CARDS;
+  else if (isTour) {
+    // Tour mode: single "Got it" card to skip the tour
+    cards = [{ icon: 'checkmark-circle-outline', color: '#4DA3FF', label: 'Got it!', prompt: '__TOUR_SKIP__' }];
+  }
   else {
     const hour = new Date().getHours();
     cards = getSmartCards(hour, lastCycles);
@@ -531,6 +537,7 @@ export default function HomeScreen() {
   const router                = useRouter();
   const { goToPage }          = usePager();
   const insets                = useSafeAreaInsets();
+  const { tourStep, startTour, advanceTour, skipTour } = useTour();
   const { messages, isStreaming, isThinking, sendMessage, fetchGreeting, injectMessage } = useChat();
 
   const [input,          setInput]         = useState('');
@@ -577,6 +584,46 @@ export default function HomeScreen() {
       else { const { history: mh, profile: mp } = getMockInsightsData(); setProfile(mp); setEnergyScore(computeInsights(mh, mp).energyScore); }
     })();
   }, []);
+
+  // ── Product tour messages ────────────────────────────────────────────────
+  const hasTourInjected = useRef<number | null>(null);
+  useEffect(() => {
+    if (tourStep === null || hasTourInjected.current === tourStep) return;
+    hasTourInjected.current = tourStep;
+
+    const messages: Record<number, string> = {
+      0: "Welcome to your sleep HQ. 🌙\n\nThis is where we talk — ask me anything about your sleep, your plan, or how you're feeling. I'll check in with you here every day.",
+      1: "Tap **Planning** to see tonight's sleep timeline — wind-down, ideal bedtime, latest bedtime and wake time.\n\nEverything is calculated around your anchor wake time.",
+      2: "**Insights** tracks your weekly cycles and recovery trends.\n\nThe more data I have, the sharper the coaching gets.",
+      3: "**Profile** stores your sleep plan, connected wearables and preferences.\n\nYou can update your anchor time or goals anytime.",
+      4: "That's everything — you're all set. 🎯\n\nI'll be here whenever you need me. Tonight's wind-down starts at ${windDownTime}. Ready when you are.",
+    };
+
+    const windDownTime = profile
+      ? (() => {
+          const wake = profile.anchorTime;
+          const cycles = profile.idealCyclesPerNight;
+          const bedtime = ((wake - cycles * 90) + 1440) % 1440;
+          const wd = ((bedtime - 90) + 1440) % 1440;
+          const h = Math.floor(wd / 60);
+          const m = wd % 60;
+          return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+        })()
+      : 'your usual time';
+
+    const text = (messages[tourStep] ?? '').replace('${windDownTime}', windDownTime);
+    if (text) injectMessage(text);
+
+    // Auto-advance (steps 1-3 highlight tabs for 4s; step 4 ends tour)
+    if (tourStep >= 1 && tourStep <= 3) {
+      const t = setTimeout(() => advanceTour(), 4000);
+      return () => clearTimeout(t);
+    }
+    if (tourStep === 4) {
+      const t = setTimeout(() => advanceTour(), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [tourStep, injectMessage, advanceTour, profile]);
 
   // Fetch upcoming calendar events for contextual banner
   useEffect(() => {
@@ -674,9 +721,14 @@ export default function HomeScreen() {
       }, 600);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => { void fetchGreeting(); }, 600);
+    // Greeting then tour
+    const t = setTimeout(async () => {
+      await fetchGreeting();
+      // Start tour after greeting loads (2.5s delay to let greeting finish streaming)
+      setTimeout(() => { void startTour(); }, 2500);
+    }, 600);
     return () => clearTimeout(t);
-  }, [phase, fetchGreeting, injectMessage]);
+  }, [phase, fetchGreeting, injectMessage, startTour]);
 
 
 
@@ -788,6 +840,11 @@ export default function HomeScreen() {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
+    // Tour skip card
+    if (txt === '__TOUR_SKIP__') {
+      skipTour();
+      return;
+    }
     if (isOnboarding) {
       injectMessage(txt, 'user'); // affiche le message de l'user dans le chat
       handleOnboardingReply(txt);
@@ -959,6 +1016,7 @@ export default function HomeScreen() {
                 disabled={isStreaming}
                 lastCycles={dayPlan?.readiness?.recentCycles?.[0] ?? null}
                 onboardingStep={onboardingStep}
+                isTour={tourStep !== null}
               />
 
             {/* 3. Input bar */}

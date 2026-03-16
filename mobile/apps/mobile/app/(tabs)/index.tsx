@@ -12,7 +12,7 @@
  * All screens stay mounted (no remount flicker when switching pages).
  */
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
 import { PagerContext } from "../../lib/pager-context";
 import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
+import { useTour } from "../../lib/tour-context";
 import HomeScreen     from "../../components/screens/HomeScreen";
 import CalendarScreen from "../../components/screens/CalendarScreen";
 import InsightsScreen from "../../components/screens/InsightsScreen";
@@ -42,18 +43,48 @@ const PAGE_COUNT       = 4;
 
 type AnimNode = Animated.AnimatedInterpolation<string | number>;
 
+// Pulsing ring shown on a tab during the product tour
+function TourRing() {
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  const scale   = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] });
+  const opacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 0] });
+
+  return (
+    <Animated.View
+      style={[
+        ti.tourRing,
+        { transform: [{ scale }], opacity },
+      ]}
+    />
+  );
+}
+
 function TabIcon({
   icon,
   label,
   anim,
   bubbleColor,
   iconColor,
+  showTourRing,
 }: {
-  icon:        React.ReactNode;
-  label:       string;
-  anim:        AnimNode;
-  bubbleColor: string;
-  iconColor:   string;
+  icon:         React.ReactNode;
+  label:        string;
+  anim:         AnimNode;
+  bubbleColor:  string;
+  iconColor:    string;
+  showTourRing?: boolean;
 }) {
   const iconOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
   const labelOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] });
@@ -62,6 +93,7 @@ function TabIcon({
     <View style={ti.wrap}>
       <View style={ti.iconRow}>
         <Animated.View style={[ti.bubble, { opacity: anim, backgroundColor: bubbleColor }]} />
+        {showTourRing && <TourRing />}
         <Animated.View style={{ opacity: iconOpacity }}>
           {icon}
         </Animated.View>
@@ -94,6 +126,12 @@ const ti = StyleSheet.create({
     fontWeight:    "500",
     letterSpacing: 0.1,
   },
+  tourRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius:   BUBBLE_SIZE / 2,
+    borderWidth:    2,
+    borderColor:    '#4DA3FF',
+  },
 });
 
 // ─── Pager ────────────────────────────────────────────────────────────────────
@@ -101,6 +139,7 @@ const ti = StyleSheet.create({
 export default function PagerLayout() {
   const { theme }          = useTheme();
   const { phase }          = useOnboardingPhase();
+  const { tourStep }       = useTour();
   const isOnboarding       = phase === 'guided_chat';
   const { width: screenW } = useWindowDimensions();
   const insets             = useSafeAreaInsets();
@@ -175,9 +214,10 @@ export default function PagerLayout() {
       >
         {/* Home */}
         <Pressable style={styles.tabItem} onPress={() => goToPage(0)}>
-          <TabIcon anim={anim0} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Coach" icon={
-            <Ionicons name={activeIndex === 0 ? "home" : "home-outline"} size={ICON_SIZE} color={tabBarIcon} />
-          } />
+          <TabIcon anim={anim0} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Coach"
+            showTourRing={tourStep === 0}
+            icon={<Ionicons name={activeIndex === 0 ? "home" : "home-outline"} size={ICON_SIZE} color={tabBarIcon} />}
+          />
         </Pressable>
 
         {/* Planning */}
@@ -189,6 +229,7 @@ export default function PagerLayout() {
           <TabIcon anim={anim1} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon}
             label="Planning"
+            showTourRing={tourStep === 1}
             icon={<Ionicons name={activeIndex === 1 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
           />
         </Pressable>
@@ -202,6 +243,7 @@ export default function PagerLayout() {
           <TabIcon anim={anim2} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon}
             label="Insights"
+            showTourRing={tourStep === 2}
             icon={<Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
           />
         </Pressable>
@@ -215,6 +257,7 @@ export default function PagerLayout() {
           <TabIcon anim={anim3} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon}
             label="Profile"
+            showTourRing={tourStep === 3}
             icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.65)' : tabBarIcon} />}
           />
         </Pressable>
