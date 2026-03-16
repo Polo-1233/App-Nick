@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
 import { PagerContext } from "../../lib/pager-context";
+import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
 import HomeScreen     from "../../components/screens/HomeScreen";
 import CalendarScreen from "../../components/screens/CalendarScreen";
 import InsightsScreen from "../../components/screens/InsightsScreen";
@@ -99,6 +100,8 @@ const ti = StyleSheet.create({
 
 export default function PagerLayout() {
   const { theme }          = useTheme();
+  const { phase }          = useOnboardingPhase();
+  const isOnboarding       = phase === 'guided_chat';
   const { width: screenW } = useWindowDimensions();
   const insets             = useSafeAreaInsets();
   // Height = bubble (36) + label (12) + gap (3) + paddingTop (6) + paddingBottom (4) + safe area
@@ -178,23 +181,23 @@ export default function PagerLayout() {
         </Pressable>
 
         {/* Insights */}
-        <Pressable style={styles.tabItem} onPress={() => goToPage(1)}>
-          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Insights" icon={
-            <Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={tabBarIcon} />
+        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(1)}>
+          <TabIcon anim={anim1} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Insights" icon={
+            <Ionicons name={activeIndex === 1 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
           } />
         </Pressable>
 
         {/* Calendar */}
-        <Pressable style={styles.tabItem} onPress={() => goToPage(2)}>
-          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Planning" icon={
-            <Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={tabBarIcon} />
+        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(2)}>
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Planning" icon={
+            <Ionicons name={activeIndex === 2 ? "calendar" : "calendar-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
           } />
         </Pressable>
 
         {/* Profile */}
-        <Pressable style={styles.tabItem} onPress={() => goToPage(3)}>
-          <TabIcon anim={anim3} bubbleColor={tabBarBubble} iconColor={tabBarIcon} label="Profile" icon={
-            <Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={tabBarIcon} />
+        <Pressable style={[styles.tabItem, isOnboarding && styles.tabLocked]} onPress={() => !isOnboarding && goToPage(3)}>
+          <TabIcon anim={anim3} bubbleColor={tabBarBubble} iconColor={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} label="Profile" icon={
+            <Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.2)' : tabBarIcon} />
           } />
         </Pressable>
       </View>
@@ -215,6 +218,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop:     6,
   },
+  tabLocked: { opacity: 0.3, pointerEvents: 'none' },
   tabItem: {
     flex:           1,
     alignItems:     "center",

@@ -123,17 +123,38 @@ const CARDS_PER_PAGE = 3;
 const CARD_GAP       = 8;
 const CAROUSEL_H_PAD = 14;
 
-function SmartCarousel({ onPress, disabled, lastCycles }: {
-  onPress:    (prompt: string) => void;
-  disabled?:  boolean;
-  lastCycles: number | null;
+const ONBOARDING_WAKE_CARDS: SmartCard[] = [
+  { icon: 'sunny-outline', color: '#FACC15', label: '6:00 AM',  prompt: '6:00' },
+  { icon: 'sunny-outline', color: '#FACC15', label: '6:30 AM',  prompt: '6:30' },
+  { icon: 'sunny-outline', color: '#4DA3FF', label: '7:00 AM',  prompt: '7:00' },
+  { icon: 'sunny-outline', color: '#4DA3FF', label: '7:30 AM',  prompt: '7:30' },
+  { icon: 'sunny-outline', color: '#3DDC97', label: '8:00 AM',  prompt: '8:00' },
+  { icon: 'create-outline', color: '#9B59B6', label: 'Other…',  prompt: 'Other' },
+];
+const ONBOARDING_GOAL_CARDS: SmartCard[] = [
+  { icon: 'flash-outline',         color: '#FACC15', label: 'More energy',     prompt: 'More energy' },
+  { icon: 'heart-outline',         color: '#F87171', label: 'Better recovery', prompt: 'Better recovery' },
+  { icon: 'refresh-outline',       color: '#4DA3FF', label: 'Fix my schedule', prompt: 'Fix my schedule' },
+  { icon: 'battery-half-outline',  color: '#3DDC97', label: 'Reduce fatigue',  prompt: 'Reduce fatigue' },
+];
+
+function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep }: {
+  onPress:       (prompt: string) => void;
+  disabled?:     boolean;
+  lastCycles:    number | null;
+  onboardingStep: string;
 }) {
   const { width: screenW } = useWindowDimensions();
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
   const snapW  = cardW + CARD_GAP;
 
-  const hour   = new Date().getHours();
-  const cards  = getSmartCards(hour, lastCycles);
+  let cards: SmartCard[];
+  if      (onboardingStep === 'wake') cards = ONBOARDING_WAKE_CARDS;
+  else if (onboardingStep === 'goal') cards = ONBOARDING_GOAL_CARDS;
+  else {
+    const hour = new Date().getHours();
+    cards = getSmartCards(hour, lastCycles);
+  }
   const total  = cards.length;
   const pages  = Math.ceil(total / CARDS_PER_PAGE);
 
@@ -452,57 +473,6 @@ const ih = StyleSheet.create({
 
 
 // ─── Guided sub-components ────────────────────────────────────────────────────
-function OptionCard({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      style={({ pressed }) => [oc.card, selected && oc.selected, pressed && !selected && { opacity: 0.75 }]}
-      onPress={onPress}
-    >
-      <Text style={[oc.label, selected && oc.labelSel]}>{label}</Text>
-      {selected && <Ionicons name="checkmark-circle" size={18} color="#000" />}
-    </Pressable>
-  );
-}
-const oc = StyleSheet.create({
-  card:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: CARD, borderRadius: 16, paddingVertical: 15, paddingHorizontal: 18, borderWidth: 1.5, borderColor: 'transparent' },
-  selected: { backgroundColor: ACCENT, borderColor: ACCENT },
-  label:    { flex: 1, fontSize: 15, fontWeight: '600', color: TEXT },
-  labelSel: { color: '#000' },
-});
-
-function SetupQuestion({ question, options, onSelect, selectedValue, customChild }: {
-  question:      string;
-  options:       { label: string; value: string | number }[];
-  onSelect:      (l: string, v: string | number) => void;
-  selectedValue?: string | number;
-  customChild?:  React.ReactNode;
-}) {
-  return (
-    <View style={sq.wrap}>
-      <View style={sq.bubbleRow}>
-        <View style={{ width: 32, height: 32, flexShrink: 0 }}>
-          <MascotImage emotion="encourageant" style={{ width: 32, height: 32 }} />
-        </View>
-        <View style={sq.bubble}><Text style={sq.text}>{question}</Text></View>
-      </View>
-      <View style={sq.options}>
-        {options.map(opt => (
-          <OptionCard key={opt.label} label={opt.label}
-            selected={selectedValue === opt.value || (opt.value === -1 && selectedValue === 'custom')}
-            onPress={() => onSelect(opt.label, opt.value)} />
-        ))}
-        {customChild}
-      </View>
-    </View>
-  );
-}
-const sq = StyleSheet.create({
-  wrap:      { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20, gap: 16 },
-  bubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
-  bubble:    { flex: 1, backgroundColor: CARD, borderRadius: 18, borderBottomLeftRadius: 4, paddingVertical: 14, paddingHorizontal: 16 },
-  text:      { fontSize: 16, color: TEXT, lineHeight: 24, fontWeight: '500' },
-  options:   { gap: 10 },
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
@@ -516,6 +486,8 @@ export default function HomeScreen() {
   const [input,          setInput]         = useState('');
   const [inputFocused,   setInputFocused]  = useState(false);
   const [chatExpanded,   setChatExpanded]  = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState<'name'|'wake'|'goal'|'done'>('done');
+  const onboardingWakeRef = useRef<number>(450);
   const [profile,        setProfile]       = useState<UserProfile | null>(null);
   const [energyScore,    setEnergyScore]   = useState(72);
   const [userName,       setUserName]      = useState<string | null>(null);
@@ -529,14 +501,6 @@ export default function HomeScreen() {
   const [reportBannerDismissed, setReportBannerDismissed] = useState(false);
 
   // Guided
-  const [guidedStep,      setGuidedStep]      = useState<GuidedStep>('wake');
-  const [selectedWake,    setSelectedWake]    = useState<number | null>(null);
-  const [selectedGoal,    setSelectedGoal]    = useState<string | null>(null);
-  const [selectedBedtime, setSelectedBedtime] = useState<string | null>(null);
-  const [customWake,      setCustomWake]      = useState('');
-  const [showCustomWake,  setShowCustomWake]  = useState(false);
-  const [isFinishing,     setIsFinishing]     = useState(false);
-
   const scrollRef       = useRef<ScrollView>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
@@ -628,37 +592,55 @@ export default function HomeScreen() {
     })();
   }, [phase]);
 
-  // Personalized greeting — R-Lo takes initiative
+  // Greeting — onboarding or personalized
   useEffect(() => {
-    if (phase !== 'done' || hasGreeted.current) return;
+    if (hasGreeted.current) return;
+    if (phase !== 'done' && phase !== 'guided_chat') return;
     hasGreeted.current = true;
+    if (phase === 'guided_chat') {
+      setOnboardingStep('name');
+      const t = setTimeout(() => {
+        injectMessage("Hey! 👋 I'm R-Lo, your personal sleep coach.\n\nTo build your sleep rhythm, I need a couple of things. Let's start — what's your name?");
+      }, 600);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => { void fetchGreeting(); }, 600);
     return () => clearTimeout(t);
-  }, [phase, fetchGreeting]);
+  }, [phase, fetchGreeting, injectMessage]);
 
 
 
-  // ── Guided handlers ───────────────────────────────────────────────────────
-  function handleWakePick(_l: string, value: number | string) {
-    if (value === -1) { setShowCustomWake(true); setSelectedWake(-1); return; }
-    setShowCustomWake(false); setSelectedWake(value as number);
-    setTimeout(() => setGuidedStep('goal'), 420);
-  }
-  function confirmCustomWake() {
-    const [hStr, mStr] = customWake.split(':');
-    const h = parseInt(hStr ?? '7', 10); const m = parseInt(mStr ?? '0', 10);
-    if (isNaN(h) || isNaN(m)) return;
-    setSelectedWake(h * 60 + m); setShowCustomWake(false);
-    setTimeout(() => setGuidedStep('goal'), 420);
-  }
-  function handleGoalPick(_l: string, value: number | string) {
-    setSelectedGoal(value as string);
-    setTimeout(() => setGuidedStep('bedtime'), 420);
-  }
-  async function handleBedtimePick(_l: string, value: number | string) {
-    setSelectedBedtime(value as string); setIsFinishing(true);
-    await saveOnboardingData({ firstName: userName ?? '', wakeTimeMinutes: selectedWake ?? 450, priority: selectedGoal ?? 'recovery', constraint: value as string });
-    setTimeout(() => advance('plan'), 1000);
+  // ── Onboarding reply handler ─────────────────────────────────────────────
+  function handleOnboardingReply(txt: string) {
+    if (onboardingStep === 'name') {
+      const name = txt.trim().split(' ')[0] ?? txt.trim();
+      setUserName(name);
+      setOnboardingStep('wake');
+      setTimeout(() => injectMessage(`Nice to meet you, ${name}! 🌙\n\nWhat time do you usually wake up? (e.g. 7:00 or 7:30)`), 400);
+    } else if (onboardingStep === 'wake') {
+      const match = txt.match(/(\d{1,2})[h:.]?(\d{0,2})/);
+      const h = parseInt(match?.[1] ?? '7', 10);
+      const m = parseInt(match?.[2] || '0', 10);
+      const wakeMin = h * 60 + (isNaN(m) ? 0 : m);
+      onboardingWakeRef.current = wakeMin;
+      setOnboardingStep('goal');
+      const formatted = `${String(h).padStart(2,'0')}:${String(isNaN(m)?0:m).padStart(2,'0')}`;
+      setTimeout(() => injectMessage(`${formatted} wake-up 🌅 — noted!\n\nLast question: what's your main goal right now?`), 400);
+    } else if (onboardingStep === 'goal') {
+      const lower = txt.toLowerCase();
+      const goal  = lower.includes('energy')                        ? 'energy'
+                  : lower.includes('recov')                         ? 'recovery'
+                  : lower.includes('schedul') || lower.includes('fix') ? 'sleep_speed'
+                  : 'consistency';
+      setOnboardingStep('done');
+      setTimeout(() => injectMessage("Perfect — I'm building your sleep plan now... 🛌\n\nYou can already start chatting with me!"), 400);
+      void saveOnboardingData({
+        firstName:       userName ?? '',
+        wakeTimeMinutes: onboardingWakeRef.current,
+        priority:        goal,
+        constraint:      'before_midnight',
+      }).then(() => setTimeout(() => advance('plan'), 1800));
+    }
   }
 
   // ── Banner dismiss ──────────────────────────────────────────────────────
@@ -688,11 +670,12 @@ export default function HomeScreen() {
     const txt = (text ?? input).trim();
     if (!txt || isStreaming) return;
     setInput('');
+    if (isOnboarding) { handleOnboardingReply(txt); return; }
     void sendMessage(txt);
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const isGuidedMode = phase === 'guided_chat';
+  const isOnboarding = phase === 'guided_chat';
   const canSend      = input.trim().length > 0 && !isStreaming;
   const bedtime      = dayPlan?.cycleWindow?.bedtime  ?? null;
   const wakeTime     = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
@@ -706,46 +689,7 @@ export default function HomeScreen() {
         keyboardVerticalOffset={0}
       >
 
-        {/* ══ GUIDED MODE ══════════════════════════════════════════════════ */}
-        {isGuidedMode ? (
-          <SafeAreaView style={sc.flex} edges={['top', 'bottom']}>
-            <ScrollView
-              ref={scrollRef}
-              style={sc.flex}
-              contentContainerStyle={{ paddingBottom: 24 }}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={sc.introSection}>
-                <MascotImage emotion="encourageant" style={{ width: 68, height: 68, marginBottom: 16 }} />
-                <Text style={sc.introTitle}>Hi! I'm R-Lo.</Text>
-                <Text style={sc.introSub}>{"I'm your personal recovery coach.\nBefore we start, I need a few things\nto build your sleep rhythm."}</Text>
-              </View>
-              <SetupQuestion question="What time do you usually wake up?" options={WAKE_OPTS} onSelect={handleWakePick} selectedValue={selectedWake ?? undefined}
-                customChild={showCustomWake ? (
-                  <View style={sc.customRow}>
-                    <TextInput style={sc.customInput} placeholder="HH:MM (e.g. 06:45)" placeholderTextColor={MUTED} value={customWake} onChangeText={setCustomWake} keyboardType="numbers-and-punctuation" autoFocus returnKeyType="done" onSubmitEditing={confirmCustomWake} />
-                    <Pressable style={sc.customConfirm} onPress={confirmCustomWake}><Ionicons name="checkmark" size={18} color="#000" /></Pressable>
-                  </View>
-                ) : undefined} />
-              {(guidedStep === 'goal' || guidedStep === 'bedtime' || guidedStep === 'done') && (
-                <SetupQuestion question="What is your main goal?" options={GOAL_OPTS} onSelect={handleGoalPick} selectedValue={selectedGoal ?? undefined} />
-              )}
-              {(guidedStep === 'bedtime' || guidedStep === 'done') && (
-                <SetupQuestion question="Do you usually go to sleep before midnight?" options={BEDTIME_OPTS} onSelect={handleBedtimePick} selectedValue={selectedBedtime ?? undefined} />
-              )}
-              {isFinishing && (
-                <View style={sc.finishingWrap}>
-                  <MascotImage emotion="celebration" style={{ width: 56, height: 56 }} />
-                  <Text style={sc.finishingText}>Building your sleep rhythm…</Text>
-                </View>
-              )}
-            </ScrollView>
-          </SafeAreaView>
-
-        ) : (
-        /* ══ COACH MODE ══════════════════════════════════════════════════════ */
-          <View style={sc.flex}>
+<View style={sc.flex}>
 
             {/* Full-page background video */}
             <Video
@@ -893,6 +837,7 @@ export default function HomeScreen() {
                 onPress={send}
                 disabled={isStreaming}
                 lastCycles={dayPlan?.readiness?.recentCycles?.[0] ?? null}
+                onboardingStep={onboardingStep}
               />
 
             {/* 3. Input bar */}
@@ -926,9 +871,7 @@ export default function HomeScreen() {
             </View>
             </View>{/* end bottom zone */}
 
-          </View>
-        )}
-      </KeyboardAvoidingView>
+          </View>      </KeyboardAvoidingView>
     </View>
   );
 }
