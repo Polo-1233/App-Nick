@@ -14,7 +14,7 @@ export default function AuthCallback() {
   return (
     <View style={s.root}>
       <Image
-        source={require('../../assets/images/ecran4.png')}
+        source={require('../../assets/images/icon.png')}
         style={s.bg}
         resizeMode="cover"
       />
