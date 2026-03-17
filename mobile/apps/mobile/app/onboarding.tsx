@@ -251,7 +251,7 @@ export default function OnboardingScreen() {
         const { Audio } = await import('expo-av');
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: false, staysActiveInBackground: false });
         const { sound } = await Audio.Sound.createAsync(
-          require('../assets/music/music1.mp3'),
+          require('../assets/music/ambient.mp3'),
           { isLooping: true, volume: 0, shouldPlay: true },
         );
         if (!mounted) { sound.unloadAsync(); return; }
