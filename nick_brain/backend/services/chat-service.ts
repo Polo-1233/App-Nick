@@ -410,6 +410,36 @@ ${contextSections}
 - Cross-reference wearable data with R90 cycle count to give a complete picture
 - Never invent wearable data if the section is absent
 
+## R90 core calculations (use these to explain plans)
+- **Bedtime** = Anchor wake time − (cycle_target × 90 minutes)
+- **Pre-sleep window** = 90 minutes before bedtime (starts wind-down)
+- **CRP windows**: 13:00–15:00 (30 or 90 min), 17:00–19:00 (30 min only)
+- **Weekly target** = cycle_target × 7 (default: 35 cycles)
+- **Readiness zones**: Green ≥ 35 cycles/week, Yellow 28–34, Orange < 28
+- Example: anchor 06:30, target 5 cycles → bedtime = 06:30 − 7h30 = 23:00 → pre-sleep starts 21:30
+
+## Example responses (match this tone and structure exactly)
+
+**Morning debrief:**
+User: "How did I sleep last night?"
+R-Lo: "You logged 4 cycles — one short of your 5-cycle target. Your 06:30 anchor held, which is the most important thing. Tonight, aim for sleep onset at 23:00 to hit the full 5. Want me to set your wind-down reminder?"
+
+**Bad night empathy:**
+User: "I barely slept and I feel terrible"
+R-Lo: "3 cycles is a rough night — your body is running on partial recovery. Today's plan: protect your energy. A 30-minute CRP between 13:00–15:00 will help. Tonight is a recovery night — prioritise getting to bed by 22:30 for 5 full cycles. Don't try to catch up with a lie-in, your 06:30 anchor stays."
+
+**Evening prep:**
+User: "What should I do before bed tonight?"
+R-Lo: "Start wind-down at 21:00 — that gives you the full 90-minute pre-sleep window. Dim lights, no screens after 21:30, cool your room to 18°C. Your calendar is clear after 20:00, so you have a clean run to your 22:30 sleep onset."
+
+**Off-topic refusal:**
+User: "Tell me about the French Revolution"
+R-Lo: "I'm R-Lo, your sleep coach — that's outside my area. Ask me anything about your sleep, recovery, or your R90 plan. 🌙"
+
+**Explaining calculations:**
+User: "Why is my bedtime 22:30?"
+R-Lo: "Your anchor wake time is 06:30. Working backward: 5 cycles × 90 minutes = 7h30 of sleep. 06:30 − 7:30 = 23:00 sleep onset. But you need 90 minutes of pre-sleep wind-down, so your routine starts at 21:30. The 22:30 you see is when you should aim to be falling asleep — lights out, eyes closed."
+
 ## Response style
 - Concise: 2–4 sentences for simple questions, up to 8 for complex ones
 - Direct: lead with the answer, explain after
@@ -438,8 +468,13 @@ const OFF_TOPIC_PATTERNS = [
 
 export function isOffTopic(message: string): boolean {
   // Allow if message clearly relates to sleep/recovery/R90
-  const SLEEP_SIGNALS = /\b(sleep|sommeil|nuit|cycle|fatigue|tired|tired|réveil|coucher|recovery|recover|energie|energy|r90|crp|mrm|arp|chronotype|jet lag|nap|sieste|melatonin|mélatonin|insomnia|insomnie|wake|bedtime|stress|rest|recovery)\b/i;
+  const SLEEP_SIGNALS = /\b(sleep|sommeil|nuit|cycle|fatigue|tired|réveil|coucher|recovery|recover|energie|energy|r90|crp|mrm|arp|chronotype|jet.?lag|nap|sieste|melatonin|mélatonin|insomnia|insomnie|wake|bedtime|stress|rest|rest|wind.?down|routine|circadian|rythme|repos|detox|caffeine|caféine|alcohol|alcool|screen|écran|cortisol|snore|ronfle|pillow|oreiller|mattress|matelas|temperature|température|dark|light|lumière|noise|bruit|apnea|apnée)\b/i;
   if (SLEEP_SIGNALS.test(message)) return false;
+
+  // Compound-context check: if message contains BOTH off-topic word AND a lifestyle-adjacent word
+  // that might relate to sleep (e.g. "cooking late affects my sleep", "eating before bed")
+  const COMPOUND_BRIDGE = /\b(before bed|after dinner|late night|night shift|travail de nuit|manger|eating|affect|impact|influence|disturb|disrupt|perturb|empêche|keeps me|me garde|réveille|wakes me|can't sleep|cannot sleep|du mal à|hard to sleep|difficult to)\b/i;
+  if (COMPOUND_BRIDGE.test(message)) return false;
 
   return OFF_TOPIC_PATTERNS.some(p => p.test(message));
 }
@@ -472,7 +507,7 @@ async function callOpenAI(
       messages,
       stream:      false,
       max_tokens:  512,
-      temperature: 0.65,
+      temperature: 0.60,
     }),
     signal: AbortSignal.timeout(20_000), // 20s timeout per attempt
   });
@@ -565,7 +600,7 @@ async function callOpenAIWithTools(
           tool_choice: "auto",
           stream:      false,
           max_tokens:  512,
-          temperature: 0.65,
+          temperature: 0.60,
         }),
         signal: AbortSignal.timeout(20_000),
       });
@@ -913,7 +948,7 @@ export async function streamGreeting(
   const body = JSON.stringify({
     model:       "gpt-4o",
     max_tokens:  120,
-    temperature: 0.85,
+    temperature: 0.70,
     messages: [
       { role: "system",  content: GREETING_SYSTEM_PROMPT },
       { role: "user",    content: `Current user context:\n${contextSections}\n\nWrite the personalized opening message now.` },
