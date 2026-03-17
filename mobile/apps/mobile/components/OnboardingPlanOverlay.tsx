@@ -737,7 +737,7 @@ function PermissionStep({
               <Ionicons name="calendar-outline" size={28} color={ACCENT} />
             </View>
           </View>
-          <Text style={bs.title}>Sync your calendar</Text>
+          <Text style={bs.title}>Let R-Lo see your day</Text>
           <Text style={bs.body}>R-Lo can read your upcoming schedule to protect your sleep window.</Text>
           <View style={bs.dots}>
             <View style={bs.dotActive} /><View style={bs.dotInactive} /><View style={bs.dotInactive} />
