@@ -146,10 +146,15 @@ function RootLayoutInner() {
 
   useEffect(() => {
     if (!dataReady || !splashDone || authLoading) return;
+    // Only redirect on initial load — don't interrupt an OAuth flow in progress
     if (!hasIntro) {
       router.replace('/onboarding');
     } else if (!isAuthenticated) {
-      router.replace('/login');
+      // Small guard: give auth state 300ms to settle after OAuth callback
+      const t = setTimeout(() => {
+        if (!isAuthenticated) router.replace('/login');
+      }, 300);
+      return () => clearTimeout(t);
     }
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
 
