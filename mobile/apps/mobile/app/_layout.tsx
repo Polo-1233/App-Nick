@@ -217,6 +217,7 @@ function RootLayoutInner() {
         <Stack.Screen name="premium"          options={{ headerShown: false }} />
         <Stack.Screen name="lifestyle"        options={{ headerShown: false }} />
         <Stack.Screen name="life-events"      options={{ headerShown: false }} />
+        <Stack.Screen name="auth/callback"    options={{ headerShown: false, animation: 'none' }} />
 
 
       </Stack>
