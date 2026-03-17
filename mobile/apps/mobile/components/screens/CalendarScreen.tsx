@@ -447,19 +447,17 @@ export default function CalendarScreen() {
     loadProfile().then(p => { if (p) setProfile(p); });
   }, []);
 
-  if (!profile) {
-    return (
-      <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={s.empty}>
-          <Ionicons name="moon-outline" size={36} color={TEXT_MUTED} />
-          <Text style={s.emptyText}>Complete your profile to see your plan</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Fallback mock profile when no real data yet
+  const MOCK_PROFILE: UserProfile = {
+    anchorTime:          420,   // 07:00
+    chronotype:          'Neither',
+    idealCyclesPerNight: 5,
+    weeklyTarget:        35,
+  };
+  const activeProfile: UserProfile = profile ?? MOCK_PROFILE;
 
-  const recentCycles  = dayPlan?.readiness?.recentCycles ?? [];
-  const target        = profile.idealCyclesPerNight;
+  const recentCycles  = dayPlan?.readiness?.recentCycles ?? [5, 4, 5];
+  const target        = activeProfile.idealCyclesPerNight;
   const wearableNote  = dayPlan?.rloMessage?.text ?? null;
 
   // Wearable-adjusted cycles: if readiness zone is orange, recommend +1
@@ -468,11 +466,11 @@ export default function CalendarScreen() {
   const wearableActive  = !!dayPlan?.readiness;
 
   // Week
-  const week       = buildWeek(profile);
+  const week       = buildWeek(activeProfile);
   const todayIdx   = week.findIndex(d => d.isToday);
 
   // Insights
-  const insights = buildInsights(profile, recentCycles, wearableNote);
+  const insights = buildInsights(activeProfile, recentCycles, wearableNote);
 
   // R90 Score
   const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
@@ -493,7 +491,7 @@ export default function CalendarScreen() {
 
         {/* ── Tonight ── */}
         <TonightCard
-          profile={profile}
+          profile={activeProfile}
           adjustedCycles={adjustedCycles}
           wearableActive={wearableActive}
         />
