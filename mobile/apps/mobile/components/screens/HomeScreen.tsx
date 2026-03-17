@@ -767,13 +767,11 @@ export default function HomeScreen() {
       const t = setTimeout(() => {
         injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.");
         setTimeout(() => {
-          injectMessage("Before we start, I need to learn a little about you.\n\nIt takes about 30 seconds.");
-          // Auto-advance après 2s — pas besoin d'appuyer sur quoi que ce soit
           setTimeout(() => {
             setOnboardingStep('name');
-            injectMessage("First, what should I call you?");
-          }, 2000);
-        }, 2200);
+            injectMessage("What's your name?");
+          }, 1200);
+        }, 1000);
       }, 600);
       return () => clearTimeout(t);
     }
