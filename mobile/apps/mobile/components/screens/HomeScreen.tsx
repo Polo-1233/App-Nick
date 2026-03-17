@@ -920,16 +920,23 @@ export default function HomeScreen() {
       >
         <View style={sc.flex}>
 
-            {/* Full-page background video */}
+            {/* Full-page background video — seamless loop via manual seek */}
             <Video
               ref={videoRef}
               source={require('../../assets/Animation_V3.mp4')}
               style={StyleSheet.absoluteFill}
               resizeMode={ResizeMode.COVER}
               shouldPlay
-              isLooping
+              isLooping={false}
               isMuted
               useNativeControls={false}
+              onPlaybackStatusUpdate={(status) => {
+                if (!status.isLoaded) return;
+                // Seek to 0 before the natural end to avoid black frame
+                if (status.durationMillis && status.positionMillis >= status.durationMillis - 180) {
+                  videoRef.current?.setPositionAsync(0).catch(() => null);
+                }
+              }}
             />
             {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
