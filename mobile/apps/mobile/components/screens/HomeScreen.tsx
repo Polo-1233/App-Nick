@@ -987,7 +987,7 @@ export default function HomeScreen() {
             <Image
               source={require('../../assets/rlo-lac.png')}
               style={StyleSheet.absoluteFill}
-              resizeMode="contain"
+              resizeMode="center"
             />
             {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
