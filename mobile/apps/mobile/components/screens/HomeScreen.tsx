@@ -435,7 +435,7 @@ function nextAction(bedtime: number | null, wake: number | null, nowMin: number)
 // ─── Mock fallback (dev / no backend) ────────────────────────────────────────
 // ─── Onboarding header pill ───────────────────────────────────────────────────
 
-const ONBOARDING_STEPS = ['name', 'wake', 'goal', 'summary'];
+const ONBOARDING_STEPS = ['name', 'wake', 'goal'];
 
 function OnboardingPill({
   topInset,
@@ -816,21 +816,14 @@ export default function HomeScreen() {
              : lower.includes('fall') || lower.includes('fast') ? 'sleep_speed'
              : lower.includes('fix')  || lower.includes('sch')  ? 'consistency'
              : 'recovery';
-      // Go directly to summary — no more questions
-      setOnboardingStep('summary');
-      setTimeout(() => {
-        injectMessage(`Perfect, ${d.name}. I have everything I need.`);
-      }, 400);
-
-    } else if (step === 'summary') {
       setOnboardingStep('done');
       void saveOnboardingData({
         firstName:       d.name,
         wakeTimeMinutes: d.wakeMin,
         priority:        d.goal,
         constraint:      'before_midnight',
-      }).then(async () => {
-        setTimeout(() => advance('plan'), 400);
+      }).then(() => {
+        setTimeout(() => advance('plan'), 2000);
       });
     }
   }
