@@ -1029,7 +1029,7 @@ const s = StyleSheet.create({
   planCardWrap: {
     flex:           1,
     justifyContent: 'center',
-    paddingBottom:  18,
+    paddingBottom:  28,
   },
   planMockCard: {
     width:           '100%',
