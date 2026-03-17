@@ -27,7 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { loadWindDownMusicEnabled } from '../lib/wind-down';
-import { playAmbientLoop, stopAmbient } from '../lib/ambient-audio';
+
 import { HapticsLight } from '../utils/haptics';
 import { useTheme } from '../lib/theme-context';
 import { MascotImage } from '../components/ui/MascotImage';
@@ -71,22 +71,7 @@ export default function WindDownScreen() {
     Object.fromEntries(CHECKLIST.map(item => [item.id, new Animated.Value(0)]))
   ).current;
 
-  // ── Ambient music ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    let started = false;
-    loadWindDownMusicEnabled().then(enabled => {
-      if (!enabled) return;
-      started = true;
-      void playAmbientLoop(
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../assets/music/ambient.mp3'),
-        { volume: 0.35, fadeInMs: 3000 },
-      );
-    });
-    return () => {
-      if (started) void stopAmbient({ fadeOutMs: 1500 });
-    };
-  }, []);
+  // Ambient music disabled — audio file removed
 
   // ── Timer cleanup ──────────────────────────────────────────────────────────
   useEffect(() => {
