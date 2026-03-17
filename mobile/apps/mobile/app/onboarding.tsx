@@ -42,12 +42,7 @@ import { Button } from '../components/ui/Button';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface AVSound {
-  playAsync(): Promise<void>;
-  stopAsync(): Promise<void>;
-  unloadAsync(): Promise<void>;
-  setVolumeAsync(volume: number): Promise<void>;
-}
+
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -97,8 +92,7 @@ export default function OnboardingScreen() {
   const fadeAnim4    = useRef(new Animated.Value(0)).current;
   const dotsAnim     = useRef(new Animated.Value(0)).current;
   const messageAnim  = useRef(new Animated.Value(0)).current;
-  const soundRef     = useRef<AVSound | null>(null);
-  const fadeRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+
 
   // ── Breathing circle — starts on mount, runs forever ─────────────────────
   useEffect(() => {
@@ -242,45 +236,7 @@ export default function OnboardingScreen() {
     }
   }, [page, pulseAnim]);
 
-  // ── Background music ──────────────────────────────────────────────────────
-  useEffect(() => {
-    let mounted = true;
 
-    async function startMusic() {
-      try {
-        const { Audio } = await import('expo-av');
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: false, staysActiveInBackground: false });
-        const { sound } = await Audio.Sound.createAsync(
-          require('../assets/music/ambient.mp3'),
-          { isLooping: true, volume: 0, shouldPlay: true },
-        );
-        if (!mounted) { sound.unloadAsync(); return; }
-        soundRef.current = sound as unknown as AVSound;
-        const TARGET = 0.35;
-        const STEPS  = 30;
-        const INT    = 1500 / STEPS;
-        let   step   = 0;
-        fadeRef.current = setInterval(() => {
-          step++;
-          sound.setVolumeAsync(Math.min((step / STEPS) * TARGET, TARGET));
-          if (step >= STEPS) { clearInterval(fadeRef.current!); fadeRef.current = null; }
-        }, INT);
-      } catch { /* Audio failure must not break onboarding */ }
-    }
-
-    startMusic();
-
-    return () => {
-      mounted = false;
-      if (fadeRef.current) { clearInterval(fadeRef.current); fadeRef.current = null; }
-      const s = soundRef.current;
-      soundRef.current = null;
-      (async () => {
-        try { await s?.stopAsync();   } catch { /* ignore */ }
-        try { await s?.unloadAsync(); } catch { /* ignore */ }
-      })();
-    };
-  }, []);
 
   const goToPage = useCallback((index: number) => {
     if (isNavigating.current) return;
