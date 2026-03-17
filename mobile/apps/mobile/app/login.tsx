@@ -103,6 +103,16 @@ export default function LoginScreen() {
         return;
       }
 
+      // If signup returned ok but no session (email confirmation required)
+      if (mode === 'signup' && !result.session) {
+        Alert.alert(
+          'Check your email',
+          'We sent you a confirmation link. Click it then come back to sign in.',
+          [{ text: 'OK', onPress: () => setMode('signin') }]
+        );
+        return;
+      }
+
       // Permissions are handled by the OnboardingPlanOverlay (phase 'calendar')
       // Always go to /(tabs) — the overlay shows if phase === 'calendar'
       router.replace('/(tabs)');
