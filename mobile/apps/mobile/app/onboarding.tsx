@@ -400,39 +400,12 @@ export default function OnboardingScreen() {
                   {"Your sleep strategy is\ncalculated automatically"}
                 </Text>
 
-                {/* ── Schéma RN ── */}
-                <View style={s.schemaWrap}>
-                  {/* Inputs */}
-                  <View style={s.schemaInputs}>
-                    {[
-                      { icon: 'pulse-outline',    label: 'Wearables',  color: '#A78BFA' },
-                      { icon: 'calendar-outline', label: 'Schedule',   color: ACCENT    },
-                      { icon: 'moon-outline',     label: 'R90 Method', color: '#4ADE80' },
-                    ].map((item, i) => (
-                      <View key={i} style={s.schemaInput}>
-                        <View style={[s.schemaInputIcon, { borderColor: `${item.color}50`, backgroundColor: `${item.color}15` }]}>
-                          <Ionicons name={item.icon as any} size={18} color={item.color} />
-                        </View>
-                        <Text style={s.schemaInputLabel}>{item.label}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Arrow */}
-                  <View style={s.schemaArrowWrap}>
-                    <View style={s.schemaArrowLine} />
-                    <View style={s.schemaArrowHead} />
-                  </View>
-
-                  {/* Output */}
-                  <View style={s.schemaOutput}>
-                    <View style={s.schemaOutputIcon}>
-                      <Ionicons name="sparkles" size={22} color={ACCENT} />
-                    </View>
-                    <Text style={s.schemaOutputTitle}>Your optimal plan</Text>
-                    <Text style={s.schemaOutputSub}>Personalised every day</Text>
-                  </View>
-                </View>
+                {/* ── Image schéma ── */}
+                <Image
+                  source={require('../assets/images/shemav1.png')}
+                  style={s.schemaImage}
+                  resizeMode="contain"
+                />
 
                 {/* Texte */}
                 <Text style={s.schemaText}>
@@ -1083,95 +1056,15 @@ const s = StyleSheet.create({
     lineHeight:    32,
     letterSpacing: -0.4,
   },
+  schemaImage: {
+    width:       '100%',
+    aspectRatio: 1536 / 2752,  // ratio exact de shemav1.png
+  },
   schemaText: {
     fontSize:   13,
     color:      TEXT_SUB,
     textAlign:  'center',
     lineHeight: 21,
-  },
-  schemaWrap: {
-    width:      '100%',
-    alignItems: 'center',
-    gap:        0,
-  },
-  schemaInputs: {
-    flexDirection:  'row',
-    justifyContent: 'center',
-    gap:            12,
-    width:          '100%',
-  },
-  schemaInput: {
-    flex:           1,
-    alignItems:     'center',
-    gap:            8,
-    backgroundColor: SURFACE,
-    borderRadius:   14,
-    padding:        14,
-    borderWidth:    1,
-    borderColor:    BORDER,
-  },
-  schemaInputIcon: {
-    width:         40,
-    height:        40,
-    borderRadius:  12,
-    alignItems:    'center',
-    justifyContent:'center',
-    borderWidth:   1,
-  },
-  schemaInputLabel: {
-    fontSize:   11,
-    fontWeight: '600',
-    color:      TEXT_SUB,
-    textAlign:  'center',
-  },
-  schemaArrowWrap: {
-    alignItems:  'center',
-    height:      32,
-    justifyContent: 'center',
-  },
-  schemaArrowLine: {
-    width:           2,
-    height:          20,
-    backgroundColor: BORDER,
-  },
-  schemaArrowHead: {
-    width:       0,
-    height:      0,
-    borderLeftWidth:  6,
-    borderRightWidth: 6,
-    borderTopWidth:   8,
-    borderLeftColor:  'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor:   BORDER,
-  },
-  schemaOutput: {
-    alignItems:      'center',
-    gap:             6,
-    backgroundColor: `${ACCENT}10`,
-    borderRadius:    16,
-    padding:         18,
-    borderWidth:     1,
-    borderColor:     `${ACCENT}40`,
-    width:           '80%',
-  },
-  schemaOutputIcon: {
-    width:          44,
-    height:         44,
-    borderRadius:   14,
-    backgroundColor:`${ACCENT}20`,
-    alignItems:     'center',
-    justifyContent: 'center',
-    borderWidth:    1,
-    borderColor:    `${ACCENT}40`,
-  },
-  schemaOutputTitle: {
-    fontSize:   15,
-    fontWeight: '700',
-    color:      TEXT,
-  },
-  schemaOutputSub: {
-    fontSize:  11,
-    color:     TEXT_SUB,
   },
 
   // ── Slide 4 — Meet R-Lo (Duolingo style) ─────────────────────────────────
