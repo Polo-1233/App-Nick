@@ -996,22 +996,21 @@ export default function HomeScreen() {
               contentContainerStyle={sc.chatContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={chatExpanded}
-              onScrollEndDrag={e => {
-                // auto-collapse when scrolled back to bottom
+              scrollEnabled={true}
+              onScroll={e => {
                 const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-                if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 20) {
+                const fromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+                // Expand when user scrolls up
+                if (fromBottom > 30 && !chatExpanded) {
+                  setChatExpanded(true);
+                }
+                // Collapse when scrolled back to bottom
+                if (fromBottom <= 10 && chatExpanded) {
                   setChatExpanded(false);
                 }
               }}
+              scrollEventThrottle={16}
             >
-              {/* Fade overlay tap zone (collapsed mode) */}
-              {!chatExpanded && messages.length > 2 && (
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={() => setChatExpanded(true)}
-                />
-              )}
 
               {messages.map((m, i) => {
                 const fromEnd = messages.length - 1 - i;
