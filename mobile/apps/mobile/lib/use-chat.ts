@@ -68,6 +68,17 @@ function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[];
   return { deltas, done, error, thinking, consumed: alreadyParsed + lastIndex };
 }
 
+/** Strip common markdown artifacts the LLM might still emit */
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+    .replace(/\*(.+?)\*/g,     '$1')   // *italic*
+    .replace(/^#{1,6}\s+/gm,   '')     // # headers
+    .replace(/^[-*]\s+/gm,     '• ')   // bullet lists → •
+    .replace(/^\d+\.\s+/gm,    '')     // numbered lists
+    .trim();
+}
+
 export function useChat(): UseChatResult {
   const [messages,    setMessages]    = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -120,7 +131,7 @@ export function useChat(): UseChatResult {
           if (result.deltas.length > 0) {
             setIsThinking(false);
             accumulated += result.deltas.join("");
-            const snapshot = accumulated;
+            const snapshot = stripMarkdown(accumulated);
             setMessages(prev => prev.map(m =>
               m.id === assistantId ? { ...m, content: snapshot } : m
             ));

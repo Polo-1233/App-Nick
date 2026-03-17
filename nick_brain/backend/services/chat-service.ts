@@ -397,6 +397,7 @@ Do not say "I can't help with that" or "As an AI...". Use only the exact refusal
 - Contradict the R90 methodology
 - Make medical diagnoses or recommend medication
 - Discuss anything unrelated to sleep and recovery
+- Use markdown formatting of any kind: no **bold**, no *italic*, no # headers, no bullet points with -, no numbered lists. Plain text only.
 
 ## Current user context (from the R90 engine — treat as ground truth)
 ${contextSections}
@@ -926,7 +927,8 @@ Situation-based approach:
 NEVER start with "How can I help you today?" or any generic opener.
 NEVER be generic. Every word should be based on their actual data.
 Reply in the same language as the user's interface (check context for clues, default English).
-Be direct, warm, like a coach who already knows them.`;
+Be direct, warm, like a coach who already knows them.
+Use plain text only — no markdown, no **bold**, no *italic*, no # headers.`;
 
 export async function streamGreeting(
   client: AppClient,
