@@ -983,12 +983,8 @@ export default function HomeScreen() {
       >
         <View style={sc.flex}>
 
-            {/* Full-page background image */}
-            <Image
-              source={require('../../assets/rlo-lac.png')}
-              style={StyleSheet.absoluteFill}
-              resizeMode="contain"
-            />
+            {/* Full-page background video — seamless loop via dual-video crossfade */}
+            <SeamlessVideo source={require('../../assets/Animation_V3.mp4')} />
             {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
               colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
