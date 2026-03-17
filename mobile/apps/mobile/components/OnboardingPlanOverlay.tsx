@@ -41,6 +41,7 @@ import { connectOura } from '../lib/oura';
 import { Ionicons } from '@expo/vector-icons';
 import { updateProfile } from '../lib/api';
 import { signIn, signUp } from '../lib/supabase';
+import { Analytics } from '../lib/analytics';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -247,6 +248,7 @@ function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => v
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Analytics.paywallViewed('onboarding');
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     getCurrentOffering().then(res => {
       if (res.ok && res.offering?.availablePackages) {
@@ -267,9 +269,12 @@ function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => v
 
   async function handleSubscribe() {
     if (!selectedPkg) { onComplete(); return; }
+    Analytics.purchaseStarted(selected);
     setLoading(true);
     const result = await purchasePackage(selectedPkg);
     setLoading(false);
+    if (result.ok) Analytics.purchaseCompleted(selected);
+    if (result.error === 'cancelled') Analytics.purchaseCancelled();
     if (result.ok || result.error === 'cancelled') onComplete();
   }
 

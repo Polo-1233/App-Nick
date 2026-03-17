@@ -35,6 +35,7 @@ import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }             from '../ui/MascotImage';
 import { Video, ResizeMode }        from 'expo-av';
 import { computeInsights }         from '../../lib/insights';
+import { Analytics }               from '../../lib/analytics';
 import { getMockInsightsData }     from '../../lib/mock-insights-data';
 import type { UserProfile }        from '@r90/types';
 import { usePager }                from '../../lib/pager-context';
@@ -770,6 +771,7 @@ export default function HomeScreen() {
     if (phase !== 'done' && phase !== 'guided_chat') return;
     hasGreeted.current = true;
     if (phase === 'guided_chat') {
+      Analytics.onboardingStarted();
       setOnboardingStep('greeting');
       const t = setTimeout(() => {
         injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.");
@@ -809,6 +811,7 @@ export default function HomeScreen() {
       const name = txt.trim().split(' ')[0] || txt.trim();
       d.name = name;
       setUserName(name);
+      Analytics.onboardingStepCompleted('name');
       setOnboardingStep('wake');
       setTimeout(() => {
         injectMessage(`Nice to meet you, ${name}.`);
@@ -821,6 +824,7 @@ export default function HomeScreen() {
       const m     = parseInt(match?.[2] || '0', 10);
       d.wakeMin   = h * 60 + (isNaN(m) ? 0 : m);
       d.wakeLabel = `${String(h).padStart(2, '0')}:${String(isNaN(m) ? 0 : m).padStart(2, '0')}`;
+      Analytics.onboardingStepCompleted('wake', { wakeMin: d.wakeMin });
       setOnboardingStep('goal');
       setTimeout(() => injectMessage("What would you like to improve the most?"), 400);
 
@@ -830,6 +834,7 @@ export default function HomeScreen() {
              : lower.includes('fall') || lower.includes('fast') ? 'sleep_speed'
              : lower.includes('fix')  || lower.includes('sch')  ? 'consistency'
              : 'recovery';
+      Analytics.onboardingStepCompleted('goal', { goal: d.goal });
       setOnboardingStep('done');
       void saveOnboardingData({
         firstName:       d.name,
@@ -837,6 +842,7 @@ export default function HomeScreen() {
         priority:        d.goal,
         constraint:      'before_midnight',
       }).then(() => {
+        Analytics.onboardingCompleted();
         setTimeout(() => advance('plan'), 2000);
       });
     }
@@ -880,6 +886,7 @@ export default function HomeScreen() {
       handleOnboardingReply(txt);
       return;
     }
+    Analytics.chatMessageSent();
     void sendMessage(txt);
   }
 

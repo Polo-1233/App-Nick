@@ -18,6 +18,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDayPlanContext } from '../../lib/day-plan-context';
 import { loadProfile } from '../../lib/storage';
 import type { UserProfile } from '@r90/types';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
+import { Analytics } from '../../lib/analytics';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -462,6 +465,8 @@ const sh = StyleSheet.create({
 export default function CalendarScreen() {
   const { dayPlan } = useDayPlanContext();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useFocusEffect(useCallback(() => { Analytics.screenViewed('planning'); }, []));
 
   useEffect(() => {
     loadProfile().then(p => { if (p) setProfile(p); });

@@ -16,6 +16,7 @@ import { AppSplash } from '../components/AppSplash';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { syncCalendarToBackend } from '../lib/calendar-sync';
 import { initProactiveNotifications } from '../lib/proactive-notifications';
+import { initAnalytics } from '../lib/analytics';
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -81,6 +82,10 @@ function useAndroidNavBar(immersiveMode: boolean, bg: string, isDark: boolean) {
   }, [immersiveMode, bg, isDark]);
 
   // Apply on mount and whenever immersive/theme settings change
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
   useEffect(() => {
     void applyNavBar();
   }, [applyNavBar]);
