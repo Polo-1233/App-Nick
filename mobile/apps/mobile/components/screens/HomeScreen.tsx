@@ -33,7 +33,7 @@ import {
 } from '../../lib/storage';
 import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }             from '../ui/MascotImage';
-import { CircadianBackground }      from '../CircadianBackground';
+import { Video, ResizeMode }        from 'expo-av';
 import { computeInsights }         from '../../lib/insights';
 import { Analytics }               from '../../lib/analytics';
 import { getMockInsightsData }     from '../../lib/mock-insights-data';
@@ -641,7 +641,7 @@ export default function HomeScreen() {
   const [reportBannerDismissed, setReportBannerDismissed] = useState(false);
 
   // Guided
-
+  const videoRef        = useRef<Video>(null);
   const scrollRef       = useRef<ScrollView>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
@@ -746,8 +746,12 @@ export default function HomeScreen() {
   }, [needsOnboarding, router]);
 
   useFocusEffect(useCallback(() => {
+    videoRef.current?.playAsync().catch(() => null);
     if (!hasMountedFocus.current) { hasMountedFocus.current = true; return; }
     refreshPlan();
+    return () => {
+      videoRef.current?.pauseAsync().catch(() => null);
+    };
   }, [refreshPlan]));
 
   useEffect(() => {
@@ -916,12 +920,20 @@ export default function HomeScreen() {
       >
         <View style={sc.flex}>
 
-            {/* Circadian gradient background — changes with time of day */}
-            <CircadianBackground />
-
-            {/* Subtle overlay to keep text readable */}
+            {/* Full-page background video */}
+            <Video
+              ref={videoRef}
+              source={require('../../assets/Animation_V3.mp4')}
+              style={StyleSheet.absoluteFill}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay
+              isLooping
+              isMuted
+              useNativeControls={false}
+            />
+            {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
-              colors={['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.20)', 'rgba(0,0,0,0.50)']}
+              colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
               locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
