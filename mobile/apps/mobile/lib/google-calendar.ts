@@ -26,7 +26,27 @@ WebBrowser.maybeCompleteAuthSession();
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
-const CLIENT_ID = '736295281381-cf14o7djr9cge1lsbcpllrim19qvtotu.apps.googleusercontent.com';
+// ⚠️  Google requires platform-specific OAuth client IDs for native apps.
+//     Web client ID is blocked for mobile OAuth flows since 2023.
+//     iOS  → create "iOS application" client in Google Cloud Console → Credentials
+//            Bundle ID: com.metalab.r90navigator
+//     Android → create "Android application" client → SHA-1 from `eas credentials`
+//
+// Set these in .env:
+//   EXPO_PUBLIC_GOOGLE_CALENDAR_IOS_CLIENT_ID=xxx.apps.googleusercontent.com
+//   EXPO_PUBLIC_GOOGLE_CALENDAR_ANDROID_CLIENT_ID=xxx.apps.googleusercontent.com
+//   EXPO_PUBLIC_GOOGLE_CALENDAR_WEB_CLIENT_ID=736295281381-cf14o7djr9cge1lsbcpllrim19qvtotu.apps.googleusercontent.com
+//
+import { Platform } from 'react-native';
+
+const IOS_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_CALENDAR_IOS_CLIENT_ID     ?? '';
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CALENDAR_ANDROID_CLIENT_ID ?? '';
+const WEB_CLIENT_ID     = process.env.EXPO_PUBLIC_GOOGLE_CALENDAR_WEB_CLIENT_ID
+  ?? '736295281381-cf14o7djr9cge1lsbcpllrim19qvtotu.apps.googleusercontent.com';
+
+const CLIENT_ID = Platform.OS === 'ios'
+  ? (IOS_CLIENT_ID     || WEB_CLIENT_ID)
+  : (ANDROID_CLIENT_ID || WEB_CLIENT_ID);
 
 const DISCOVERY_DOCUMENT: AuthSession.DiscoveryDocument = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -166,7 +186,16 @@ export async function getGoogleConnectionState(): Promise<GoogleConnectionState>
  */
 export async function connectGoogleCalendar(): Promise<GoogleAuthResult> {
   try {
-    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'r90' });
+    // iOS: use reverse client ID scheme (com.googleusercontent.apps.xxx)
+    // Android: use package name scheme (com.metalab.r90navigator)
+    const redirectUri = AuthSession.makeRedirectUri({
+      scheme: Platform.OS === 'ios' && IOS_CLIENT_ID
+        ? IOS_CLIENT_ID.split('.').reverse().join('.')  // reverse client ID
+        : 'r90',
+      native: Platform.OS === 'android'
+        ? 'com.metalab.r90navigator:/'
+        : undefined,
+    });
 
     const request = new AuthSession.AuthRequest({
       clientId:    CLIENT_ID,
