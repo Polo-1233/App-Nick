@@ -590,21 +590,6 @@ function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
           </View>
         </View>
 
-        {/* ── Teasers ── */}
-        <Animated.View style={[r.section, { opacity: teaserAnim }]}>
-          <Text style={r.sectionTitle}>COMING SOON</Text>
-          <TeaserBlock
-            icon="pulse-outline"
-            title="HRV & recovery insights"
-            subtitle="R-Lo adjusts your plan based on HRV, readiness and sleep debt"
-          />
-          <TeaserBlock
-            icon="calendar-outline"
-            title="Calendar-aware planning"
-            subtitle="Early meeting Tuesday? R-Lo moves your bedtime automatically"
-          />
-        </Animated.View>
-
         {/* ── CTA ── */}
         <View style={r.ctaWrap}>
           <Button
