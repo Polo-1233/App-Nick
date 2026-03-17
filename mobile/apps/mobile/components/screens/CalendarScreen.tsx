@@ -312,23 +312,43 @@ const wd = StyleSheet.create({
 
 // ─── Insight item ─────────────────────────────────────────────────────────────
 
-function InsightItem({ text, index }: { text: string; index: number }) {
-  const icons: Array<keyof typeof Ionicons.glyphMap> = ['trending-down-outline', 'calendar-outline', 'time-outline'];
-  const icon = icons[index % icons.length]!;
+// Insight 0 — actionable, mis en évidence
+function InsightPrimary({ text }: { text: string }) {
   return (
-    <View style={ii.row}>
-      <View style={ii.iconWrap}>
-        <Ionicons name={icon} size={16} color={ACCENT} />
+    <View style={ii.primaryCard}>
+      <View style={ii.primaryIconWrap}>
+        <Ionicons name="flash" size={16} color={YELLOW} />
       </View>
-      <Text style={ii.text}>{text}</Text>
+      <View style={ii.primaryBody}>
+        <Text style={ii.primaryLabel}>TONIGHT'S ACTION</Text>
+        <Text style={ii.primaryText}>{text}</Text>
+      </View>
+    </View>
+  );
+}
+
+// Insights 1+ — éducatifs, discrets
+function InsightSecondary({ text, index }: { text: string; index: number }) {
+  const icons: Array<keyof typeof Ionicons.glyphMap> = ['time-outline', 'information-circle-outline', 'stats-chart-outline'];
+  const icon = icons[(index - 1) % icons.length]!;
+  return (
+    <View style={ii.secRow}>
+      <Ionicons name={icon} size={13} color={TEXT_MUTED} style={{ marginTop: 2 }} />
+      <Text style={ii.secText}>{text}</Text>
     </View>
   );
 }
 
 const ii = StyleSheet.create({
-  row:     { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  iconWrap:{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${ACCENT}15`, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  text:    { flex: 1, fontSize: 13, color: TEXT_SUB, lineHeight: 19 },
+  // Primary
+  primaryCard:    { flexDirection: 'row', gap: 12, alignItems: 'flex-start', backgroundColor: `${YELLOW}10`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${YELLOW}30` },
+  primaryIconWrap:{ width: 30, height: 30, borderRadius: 9, backgroundColor: `${YELLOW}20`, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  primaryBody:    { flex: 1, gap: 4 },
+  primaryLabel:   { fontSize: 10, fontWeight: '700', color: YELLOW, letterSpacing: 1.1 },
+  primaryText:    { fontSize: 14, fontWeight: '500', color: TEXT, lineHeight: 20 },
+  // Secondary
+  secRow:  { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingHorizontal: 2 },
+  secText: { flex: 1, fontSize: 12, color: TEXT_MUTED, lineHeight: 18 },
 });
 
 // ─── R90 Score card ───────────────────────────────────────────────────────────
@@ -519,17 +539,23 @@ export default function CalendarScreen() {
         </View>
 
         {/* ── Insights ── */}
-        <View style={s.section}>
-          <SectionHeader title="R-Lo Insights" />
-          <View style={s.insightsCard}>
-            {insights.map((txt, i) => (
-              <View key={i}>
-                <InsightItem text={txt} index={i} />
-                {i < insights.length - 1 && <View style={s.insightDivider} />}
-              </View>
-            ))}
+        {insights.length > 0 && (
+          <View style={s.section}>
+            <SectionHeader title="R-Lo Insights" />
+            <View style={s.insightsWrap}>
+              {/* Insight 0 — actionable, mis en évidence */}
+              <InsightPrimary text={insights[0]!} />
+              {/* Insights 1+ — éducatifs, discrets */}
+              {insights.slice(1).length > 0 && (
+                <View style={s.insightsSecondary}>
+                  {insights.slice(1).map((txt, i) => (
+                    <InsightSecondary key={i} text={txt} index={i + 1} />
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── R90 Score ── */}
         {recentCycles.length > 0 ? (
@@ -567,8 +593,8 @@ const s = StyleSheet.create({
   weekScroll:     { gap: 8, paddingRight: 4 },
   r90Note:        { flexDirection: 'row', gap: 6, alignItems: 'flex-start', marginTop: 4 },
   r90NoteText:    { flex: 1, fontSize: 11, color: TEXT_MUTED, lineHeight: 16 },
-  insightsCard:   { backgroundColor: CARD, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: BORDER, gap: 14 },
-  insightDivider: { height: 1, backgroundColor: BORDER, marginVertical: 2 },
+  insightsWrap:      { gap: 10 },
+  insightsSecondary: { gap: 8, paddingTop: 4 },
   scoreEmpty:     { backgroundColor: CARD, borderRadius: 20, padding: 24, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: BORDER },
   scoreEmptyText: { fontSize: 13, color: TEXT_MUTED, textAlign: 'center' },
   empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
