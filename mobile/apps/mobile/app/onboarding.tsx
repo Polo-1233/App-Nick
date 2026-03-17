@@ -478,6 +478,11 @@ export default function OnboardingScreen() {
             {page === 3 && <View style={s.slidePlan}>
               <Animated.View style={[s.slidePlanContent, { opacity: fadeAnim3 }]}>
 
+                {/* Titre */}
+                <Text style={s.planSlideTitle}>
+                  {"Every day you receive\na personalized plan"}
+                </Text>
+
                 {/* ── Plan mockup card ── */}
                 <View style={s.planMockCard}>
                   {/* Header */}
@@ -518,11 +523,6 @@ export default function OnboardingScreen() {
                     <Text style={s.planMockBubbleText}>Go to sleep at 23:00 for optimal recovery tonight.</Text>
                   </View>
                 </View>
-
-                {/* Titre */}
-                <Text style={s.planSlideTitle}>
-                  {"Every day you receive\na personalized plan"}
-                </Text>
 
                 {/* Features */}
                 <View style={s.planFeatures}>
