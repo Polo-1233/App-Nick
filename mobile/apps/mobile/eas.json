@@ -12,7 +12,8 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_NICK_BRAIN_API_URL": "https://app-nick-production.up.railway.app",
-        "EXPO_PUBLIC_POSTHOG_KEY": "phc_587fcyNBQciyffm0J0VPDIsdwgBXdh8vWqPm51M7Rv8"
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_587fcyNBQciyffm0J0VPDIsdwgBXdh8vWqPm51M7Rv8",
+        "EXPO_PUBLIC_GOOGLE_CALENDAR_ANDROID_CLIENT_ID": "736295281381-8pln69g3rrac4gqo3oqgocvff8p3vhks.apps.googleusercontent.com"
       }
     },
     "android-test": {
@@ -22,7 +23,9 @@
         "gradleCommand": ":app:assembleRelease"
       },
       "env": {
-        "EXPO_PUBLIC_NICK_BRAIN_API_URL": "https://app-nick-production.up.railway.app"
+        "EXPO_PUBLIC_NICK_BRAIN_API_URL": "https://app-nick-production.up.railway.app",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_587fcyNBQciyffm0J0VPDIsdwgBXdh8vWqPm51M7Rv8",
+        "EXPO_PUBLIC_GOOGLE_CALENDAR_ANDROID_CLIENT_ID": "736295281381-8pln69g3rrac4gqo3oqgocvff8p3vhks.apps.googleusercontent.com"
       }
     },
     "production": {
