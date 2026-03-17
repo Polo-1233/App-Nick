@@ -40,31 +40,32 @@ function uid(): string {
 
 function parseSSEChunks(raw: string, alreadyParsed: number): { deltas: string[]; done: boolean; error?: string; thinking?: string; consumed: number } {
   const slice   = raw.slice(alreadyParsed);
-  const lines   = slice.split("\n");
   const deltas: string[] = [];
   let done      = false;
   let error: string | undefined;
   let thinking: string | undefined;
-  let consumed  = alreadyParsed;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) { consumed += line.length + 1; continue; }
-    if (!trimmed.startsWith("data:")) { consumed += line.length + 1; continue; }
+  // Split on SSE event boundaries (\n\n or \r\n\r\n)
+  // We only process complete events (those followed by a blank line)
+  const eventRegex = /data:([^\n]*)\n\n/g;
+  let match: RegExpExecArray | null;
+  let lastIndex = 0;
 
-    const data = trimmed.slice(5).trim();
-    if (data === "[DONE]") { done = true; consumed += line.length + 1; break; }
+  while ((match = eventRegex.exec(slice)) !== null) {
+    const data = match[1].trim();
+    lastIndex = match.index + match[0].length;
+
+    if (data === "[DONE]") { done = true; break; }
 
     try {
       const parsed = JSON.parse(data) as { delta?: string; error?: string; status?: string; tool?: string };
-      if (parsed.error) { error = parsed.error; consumed += line.length + 1; break; }
+      if (parsed.error) { error = parsed.error; break; }
       if (parsed.status === "thinking") { thinking = parsed.tool ?? "data"; }
       if (parsed.delta) { deltas.push(parsed.delta); }
-    } catch { /* skip */ }
-    consumed += line.length + 1;
+    } catch { /* skip malformed */ }
   }
 
-  return { deltas, done, error, thinking, consumed };
+  return { deltas, done, error, thinking, consumed: alreadyParsed + lastIndex };
 }
 
 export function useChat(): UseChatResult {
