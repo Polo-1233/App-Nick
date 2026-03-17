@@ -1063,7 +1063,7 @@ const s = StyleSheet.create({
   planMockAvatarText:{ fontSize: 12, fontWeight: '800', color: ACCENT },
   planMockBubbleText:{ flex: 1, fontSize: 12, color: TEXT_SUB, lineHeight: 18 },
   // Features
-  planFeatures:   { gap: 12, marginBottom: 24, alignItems: 'center', marginTop: -8 },
+  planFeatures:   { gap: 12, marginBottom: 24, marginTop: -8, width: '100%', paddingHorizontal: 20 },
   planFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   planChevron:    { fontSize: 20, fontWeight: '700', color: '#00D4FF', lineHeight: 24 },
   planFeatureText:{ fontSize: 14, color: '#A0AEC0' },
