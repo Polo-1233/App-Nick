@@ -901,7 +901,7 @@ export default function HomeScreen() {
 
             {/* Full-page background video */}
             <Video
-              source={require('../../assets/header-animation.mp4')}
+              source={require('../../assets/animation V2.mp4')}
               style={StyleSheet.absoluteFill}
               resizeMode={ResizeMode.COVER}
               shouldPlay
