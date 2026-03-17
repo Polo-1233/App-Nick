@@ -26,8 +26,8 @@ const CARD      = '#1A2436';
 const SURFACE   = '#243046';
 const ACCENT    = '#4DA3FF';
 const TEXT      = '#F0F4FF';
-const TEXT_SUB  = '#8899BB';
-const TEXT_MUTED= '#5A6A88';
+const TEXT_SUB  = '#A0B0CC';
+const TEXT_MUTED= '#7A8FAA';
 const BORDER    = 'rgba(255,255,255,0.06)';
 const GREEN     = '#4ADE80';
 const YELLOW    = '#FACC15';
@@ -301,11 +301,11 @@ const wd = StyleSheet.create({
   cardSelected:    { borderColor: `${ACCENT}60`, backgroundColor: `${ACCENT}10` },
   dayLabel:        { fontSize: 12, fontWeight: '700', color: TEXT_SUB },
   dayLabelSelected:{ color: ACCENT },
-  dateLabel:       { fontSize: 10, color: TEXT_MUTED },
+  dateLabel:       { fontSize: 10, color: '#8899BB' },
   dots:            { flexDirection: 'row', gap: 2, marginVertical: 4 },
   dot:             { width: 7, height: 7, borderRadius: 4, backgroundColor: SURFACE },
   time:            { fontSize: 13, fontWeight: '700' },
-  timeSub:         { fontSize: 10, color: TEXT_MUTED },
+  timeSub:         { fontSize: 10, color: '#8899BB' },
   recoveryBadge:   { backgroundColor: `${YELLOW}20`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
   recoveryText:    { fontSize: 9, fontWeight: '800', color: YELLOW, letterSpacing: 0.5 },
 });
