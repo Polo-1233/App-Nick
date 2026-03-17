@@ -478,55 +478,65 @@ export default function OnboardingScreen() {
             {page === 3 && <View style={s.slidePlan}>
               <Animated.View style={[s.slidePlanContent, { opacity: fadeAnim3 }]}>
 
-                {/* Titre — centré dans l'espace disponible au-dessus du plan */}
-                <View style={s.planTitleWrap}>
-                  <Text style={s.planSlideTitle}>
-                    {"Every day you receive\na personalized plan"}
-                  </Text>
+                {/* ── TOP: Titre ── */}
+                <Text style={s.planSlideTitle}>
+                  {"Every day you receive\na personalized plan"}
+                </Text>
+
+                {/* ── MIDDLE: Plan card centré ── */}
+                <View style={s.planCardWrap}>
+                  <View style={s.planMockCard}>
+                    {/* Header */}
+                    <View style={s.planMockHeader}>
+                      <Text style={s.planMockTitle}>Tonight's plan</Text>
+                      <View style={s.planMockBadge}><Text style={s.planMockBadgeText}>5 cycles</Text></View>
+                    </View>
+
+                    {/* Timeline */}
+                    <View style={s.planTimeline}>
+                      {/* Wind-down */}
+                      <View style={s.planTimelineRow}>
+                        <View style={s.planTrack}>
+                          <View style={[s.planDot, { backgroundColor: '#A78BFA' }]} />
+                          <View style={s.planConnector} />
+                        </View>
+                        <View style={s.planInfo}>
+                          <Text style={s.planTime}>22:30</Text>
+                          <Text style={s.planLabel}>Wind-down</Text>
+                        </View>
+                      </View>
+                      {/* Bedtime */}
+                      <View style={s.planTimelineRow}>
+                        <View style={s.planTrack}>
+                          <View style={[s.planDot, { backgroundColor: ACCENT }]} />
+                          <View style={s.planConnector} />
+                        </View>
+                        <View style={s.planInfo}>
+                          <Text style={[s.planTime, { color: ACCENT }]}>23:00</Text>
+                          <Text style={s.planLabel}>Ideal bedtime · 5 cycles</Text>
+                        </View>
+                      </View>
+                      {/* Wake */}
+                      <View style={s.planTimelineRow}>
+                        <View style={s.planTrack}>
+                          <View style={[s.planDot, { backgroundColor: '#4ADE80' }]} />
+                        </View>
+                        <View style={s.planInfo}>
+                          <Text style={[s.planTime, { color: '#4ADE80' }]}>06:30</Text>
+                          <Text style={s.planLabel}>Wake up · ARP anchor</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* R-Lo bubble */}
+                    <View style={s.planMockBubble}>
+                      <View style={s.planMockAvatar}><Text style={s.planMockAvatarText}>R</Text></View>
+                      <Text style={s.planMockBubbleText}>Go to sleep at 23:00 for optimal recovery tonight.</Text>
+                    </View>
+                  </View>
                 </View>
 
-                {/* ── Plan mockup card ── */}
-                <View style={s.planMockCard}>
-                  {/* Header */}
-                  <View style={s.planMockHeader}>
-                    <Text style={s.planMockTitle}>Tonight's plan</Text>
-                    <View style={s.planMockBadge}><Text style={s.planMockBadgeText}>5 cycles</Text></View>
-                  </View>
-
-                  {/* Bedtime row */}
-                  <View style={s.planMockRow}>
-                    <View style={[s.planMockDot, { backgroundColor: '#A78BFA' }]} />
-                    <View style={s.planMockLine} />
-                    <View style={s.planMockInfo}>
-                      <Text style={s.planMockTime}>22:30</Text>
-                      <Text style={s.planMockLabel}>Wind-down</Text>
-                    </View>
-                  </View>
-                  <View style={s.planMockRow}>
-                    <View style={[s.planMockDot, { backgroundColor: ACCENT }]} />
-                    <View style={s.planMockLine} />
-                    <View style={s.planMockInfo}>
-                      <Text style={[s.planMockTime, { color: ACCENT }]}>23:00</Text>
-                      <Text style={s.planMockLabel}>Ideal bedtime · 5 cycles</Text>
-                    </View>
-                  </View>
-                  <View style={s.planMockRow}>
-                    <View style={[s.planMockDot, { backgroundColor: '#4ADE80' }]} />
-                    <View style={[s.planMockLine, { backgroundColor: 'transparent' }]} />
-                    <View style={s.planMockInfo}>
-                      <Text style={[s.planMockTime, { color: '#4ADE80' }]}>06:30</Text>
-                      <Text style={s.planMockLabel}>Wake up · ARP anchor</Text>
-                    </View>
-                  </View>
-
-                  {/* R-Lo bubble */}
-                  <View style={s.planMockBubble}>
-                    <View style={s.planMockAvatar}><Text style={s.planMockAvatarText}>R</Text></View>
-                    <Text style={s.planMockBubbleText}>Go to sleep at 23:00 for optimal recovery tonight.</Text>
-                  </View>
-                </View>
-
-                {/* Features */}
+                {/* ── BOTTOM: Features ── */}
                 <View style={s.planFeatures}>
                   {[
                     'Your optimal bedtime',
@@ -534,12 +544,11 @@ export default function OnboardingScreen() {
                     'Your recovery strategy',
                   ].map((f, i) => (
                     <View key={i} style={s.planFeatureRow}>
-                      <View style={s.planFeatureDot} />
+                      <Text style={s.planChevron}>›</Text>
                       <Text style={s.planFeatureText}>{f}</Text>
                     </View>
                   ))}
                 </View>
-                <View style={{ height: 16 }} />
 
               </Animated.View>
             </View>}
@@ -1000,14 +1009,24 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
   },
   slidePlanContent: {
-    flex:           1,
-    width:          '100%',
-    alignItems:     'center',
-    flexDirection:  'column',
+    flex:            1,
+    width:           '100%',
+    flexDirection:   'column',
+    justifyContent:  'space-between',
+    paddingTop:      4,
+    paddingBottom:   8,
   },
-  planTitleWrap: {
+  planSlideTitle: {
+    fontSize:      24,
+    fontWeight:    '700',
+    color:         TEXT,
+    textAlign:     'center',
+    lineHeight:    33,
+    letterSpacing: -0.4,
+    marginBottom:  8,
+  },
+  planCardWrap: {
     flex:           1,
-    alignItems:     'center',
     justifyContent: 'center',
   },
   planMockCard: {
@@ -1017,7 +1036,7 @@ const s = StyleSheet.create({
     padding:         18,
     borderWidth:     1,
     borderColor:     BORDER,
-    gap:             12,
+    gap:             14,
   },
   planMockHeader: {
     flexDirection:  'row',
@@ -1025,23 +1044,27 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
   },
   planMockTitle:     { fontSize: 14, fontWeight: '700', color: TEXT },
-  planMockBadge:     { backgroundColor: `${ACCENT}22`, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: `${ACCENT}40` },
+  planMockBadge:     { backgroundColor: `${ACCENT}18`, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: `${ACCENT}50` },
   planMockBadgeText: { fontSize: 11, fontWeight: '600', color: ACCENT },
-  planMockRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  planMockDot:       { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
-  planMockLine:      { width: 1, position: 'absolute', left: 4, top: 14, bottom: -12, backgroundColor: BORDER },
-  planMockInfo:      { flex: 1, gap: 1 },
-  planMockTime:      { fontSize: 17, fontWeight: '800', color: TEXT, letterSpacing: -0.3 },
-  planMockLabel:     { fontSize: 11, color: TEXT_MUTED },
-  planMockBubble:    { flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: BG, borderRadius: 12, padding: 12, marginTop: 4 },
+  // Timeline
+  planTimeline:      { gap: 0 },
+  planTimelineRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 14, minHeight: 44 },
+  planTrack:         { alignItems: 'center', width: 12 },
+  planDot:           { width: 12, height: 12, borderRadius: 6, marginTop: 4 },
+  planConnector:     { flex: 1, width: 2, backgroundColor: BORDER, marginVertical: 3 },
+  planInfo:          { flex: 1, paddingBottom: 10 },
+  planTime:          { fontSize: 18, fontWeight: '800', color: TEXT, letterSpacing: -0.3 },
+  planLabel:         { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  // R-Lo bubble
+  planMockBubble:    { flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: BG, borderRadius: 12, padding: 12 },
   planMockAvatar:    { width: 26, height: 26, borderRadius: 13, backgroundColor: `${ACCENT}25`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${ACCENT}40` },
   planMockAvatarText:{ fontSize: 12, fontWeight: '800', color: ACCENT },
   planMockBubbleText:{ flex: 1, fontSize: 12, color: TEXT_SUB, lineHeight: 18 },
-  planSlideTitle:    { fontSize: 22, fontWeight: '700', color: TEXT, textAlign: 'center', lineHeight: 32, letterSpacing: -0.3 },
-  planFeatures:      { gap: 10, alignSelf: 'flex-start' },
-  planFeatureRow:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  planFeatureDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: ACCENT },
-  planFeatureText:   { fontSize: 15, color: TEXT_SUB },
+  // Features
+  planFeatures:   { gap: 12 },
+  planFeatureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  planChevron:    { fontSize: 20, fontWeight: '700', color: '#00D4FF', lineHeight: 24 },
+  planFeatureText:{ fontSize: 14, color: '#A0AEC0' },
 
   // ── Slide 3 — Schéma R90 ──────────────────────────────────────────────────
   slide3Schema: {
