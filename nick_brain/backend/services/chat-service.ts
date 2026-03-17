@@ -543,7 +543,7 @@ async function callOpenAI(
       model:       "gpt-4o",
       messages,
       stream:      false,
-      max_tokens:  150,
+      max_tokens:  80,
       temperature: 0.60,
     }),
     signal: AbortSignal.timeout(20_000), // 20s timeout per attempt
@@ -636,7 +636,7 @@ async function callOpenAIWithTools(
           tools:       SLEEP_COACH_TOOLS,
           tool_choice: "auto",
           stream:      false,
-          max_tokens:  150,
+          max_tokens:  80,
           temperature: 0.60,
         }),
         signal: AbortSignal.timeout(20_000),
