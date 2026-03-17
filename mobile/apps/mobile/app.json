@@ -55,7 +55,14 @@
         {
           "backgroundColor": "#0A0A0A",
           "image": "./assets/images/ecran4.png",
-          "resizeMode": "cover"
+          "resizeMode": "cover",
+          "imageWidth": 1284,
+          "android": {
+            "backgroundColor": "#0A0A0A",
+            "image": "./assets/images/ecran4.png",
+            "resizeMode": "cover",
+            "imageWidth": 1284
+          }
         }
       ],
       [
