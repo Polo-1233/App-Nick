@@ -53,7 +53,8 @@ export interface ChatInput {
 // ─── 5. Input moderation / validation ────────────────────────────────────────
 
 const MAX_INPUT_LENGTH   = 1000;
-const MAX_HISTORY_TURNS  = 12;
+const MAX_HISTORY_TURNS  = 6;  // Fewer turns = less old-style bleed-through
+const MAX_MSG_CHARS      = 300; // Truncate long historical messages
 
 /**
  * Validate and sanitize a user message before sending to the LLM.
@@ -827,7 +828,7 @@ export async function streamChatResponse(
   // Build messages for tool-calling flow
   const toolMessages: Array<{ role: string; content: string | null; tool_call_id?: string; name?: string }> = [
     { role: "system", content: toolSystemPrompt },
-    ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content })),
+    ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content.length > MAX_MSG_CHARS ? m.content.slice(0, MAX_MSG_CHARS) + "…" : m.content })),
     { role: "user",   content: cleanMessage },
   ];
 
@@ -852,7 +853,7 @@ export async function streamChatResponse(
 
     const fallbackMessages = [
       { role: "system",  content: buildSystemPrompt(contextSections) },
-      ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content })),
+      ...historyMessages.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role, content: m.content.length > MAX_MSG_CHARS ? m.content.slice(0, MAX_MSG_CHARS) + "…" : m.content })),
       { role: "user",    content: cleanMessage },
     ];
 
