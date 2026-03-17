@@ -446,12 +446,10 @@ function OnboardingPill({
   step:     string;
   data:     { name: string; wakeLabel: string; goal: string; sleep_duration: string };
 }) {
-  // greeting / name → nothing (clean slate, R-Lo intro)
-  if (step === 'greeting' || step === 'name') return null;
-
-  // Step progress
+    // Step progress — greeting/name = 0 dots filled, rest = incremental
   const stepIdx = ONBOARDING_STEPS.indexOf(step);
-  const progress = stepIdx >= 0 ? stepIdx + 1 : ONBOARDING_STEPS.length;
+  const progress = (step === 'greeting' || step === 'name') ? 0
+                 : stepIdx >= 0 ? stepIdx + 1 : ONBOARDING_STEPS.length;
   const total    = ONBOARDING_STEPS.length;
 
   // Build a dynamic summary of what's been collected so far
@@ -468,9 +466,11 @@ function OnboardingPill({
     parts.push(goalLabel[data.goal] ?? data.goal);
   }
 
-  const label = parts.length > 0
-    ? parts.join(' · ')
-    : 'Building your sleep plan';
+  const label = (step === 'greeting' || step === 'name')
+    ? 'Let\'s get started'
+    : parts.length > 0
+      ? parts.join(' · ')
+      : 'Building your sleep plan';
 
   return (
     <View style={[ih.topRow, { top: topInset + 14 }]}>
