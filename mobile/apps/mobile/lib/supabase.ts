@@ -82,10 +82,12 @@ export interface AuthResult {
  */
 export async function signUp(email: string, password: string): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error || !data.session) {
-    return { ok: false, error: error?.message ?? 'Sign up failed' };
+  if (error) {
+    return { ok: false, error: error.message };
   }
-  return { ok: true, user: data.user ?? undefined, session: data.session };
+  // Supabase may require email confirmation — session can be null until confirmed.
+  // We treat a created user as success regardless of immediate session.
+  return { ok: true, user: data.user ?? undefined, session: data.session ?? undefined };
 }
 
 /**
@@ -148,7 +150,12 @@ export async function getAccessToken(): Promise<string | null> {
  *   5. Session is active → onAuthStateChange fires automatically
  */
 export async function signInWithGoogle(): Promise<AuthResult> {
-  const redirectTo = makeRedirectUri({ scheme: 'r90', path: 'auth/callback' });
+  const redirectTo = makeRedirectUri({
+    scheme: 'r90',
+    path:   'auth/callback',
+    // On Android, Expo needs the native scheme explicitly
+    native: 'r90://auth/callback',
+  });
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
