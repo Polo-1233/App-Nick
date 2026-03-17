@@ -639,6 +639,7 @@ export default function HomeScreen() {
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
   const hasGreeted      = useRef(false);
+  const hasGreetedPhase = useRef<string | null>(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -767,9 +768,11 @@ export default function HomeScreen() {
 
   // Greeting — onboarding or personalized
   useEffect(() => {
-    if (hasGreeted.current) return;
     if (phase !== 'done' && phase !== 'guided_chat') return;
+    // Allow re-greeting when phase changes (guided_chat → done after login)
+    if (hasGreeted.current && hasGreetedPhase.current === phase) return;
     hasGreeted.current = true;
+    hasGreetedPhase.current = phase;
     if (phase === 'guided_chat') {
       Analytics.onboardingStarted();
       setOnboardingStep('greeting');
