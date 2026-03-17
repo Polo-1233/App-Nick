@@ -17,6 +17,8 @@ import { AuthProvider, useAuth } from '../lib/auth-context';
 import { syncCalendarToBackend } from '../lib/calendar-sync';
 import { initProactiveNotifications } from '../lib/proactive-notifications';
 import { initAnalytics } from '../lib/analytics';
+import { scheduleDailyNotifications } from '../lib/daily-notifications';
+import { loadProfile } from '../lib/storage';
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -156,15 +158,28 @@ function RootLayoutInner() {
     if (!isAuthenticated || authLoading) return;
     void syncCalendarToBackend();
     initProactiveNotifications();
+    // Schedule daily morning + evening notifications
+    void loadProfile().then(profile => {
+      if (!profile) return;
+      const wake        = profile.anchorTime;                      // e.g. 420 = 07:00
+      const bedtime     = ((wake - profile.idealCyclesPerNight * 90) + 1440) % 1440;
+      const preSleep    = ((bedtime - 90) + 1440) % 1440;
+      void scheduleDailyNotifications(wake, preSleep);
+    });
   }, [isAuthenticated, authLoading]);
 
   // Deep-link into the app when the user taps a local notification.
-  // Currently used by wind-down reminders (data.route = '/wind-down').
+  // Handle notification taps — morning/evening go to Coach tab, wind-down to /wind-down
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as Record<string, unknown>;
+      const data  = response.notification.request.content.data as Record<string, unknown>;
+      const type  = typeof data?.type  === 'string' ? data.type  : null;
       const route = typeof data?.route === 'string' ? data.route : null;
-      if (route) router.push(route as `/${string}`);
+      if (type === 'morning' || type === 'evening') {
+        router.push('/(tabs)');
+      } else if (route) {
+        router.push(route as `/${string}`);
+      }
     });
     return () => sub.remove();
   }, [router]);
