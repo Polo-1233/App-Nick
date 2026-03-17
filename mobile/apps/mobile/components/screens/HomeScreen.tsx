@@ -796,7 +796,10 @@ export default function HomeScreen() {
       d.name = name;
       setUserName(name);
       setOnboardingStep('wake');
-      setTimeout(() => injectMessage(`Nice to meet you, ${name}.\n\nWhat time do you usually wake up?`), 400);
+      setTimeout(() => {
+        injectMessage(`Nice to meet you, ${name}.`);
+        setTimeout(() => injectMessage("What time do you usually wake up?"), 1200);
+      }, 400);
 
     } else if (step === 'wake') {
       const match = txt.match(/(\d{1,2})[h:.]?(\d{0,2})/);
