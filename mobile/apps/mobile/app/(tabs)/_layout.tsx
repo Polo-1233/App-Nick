@@ -126,8 +126,8 @@ const st = StyleSheet.create({
     bottom:          0,
     left:            0,
     right:           0,
-    height:          120, // covers tab bar + safe area + swipe zone
-    backgroundColor: 'rgba(11,18,32,0.92)',
+    height:          70, // couvre uniquement la tab bar, pas l'input chat
+    backgroundColor: 'transparent', // invisible mais bloque les touches
     zIndex:          9999,
   },
 });
