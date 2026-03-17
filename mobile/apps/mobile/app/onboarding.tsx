@@ -1023,6 +1023,7 @@ const s = StyleSheet.create({
     textAlign:     'center',
     lineHeight:    33,
     letterSpacing: -0.4,
+    marginTop:     24,
     marginBottom:  8,
   },
   planCardWrap: {
