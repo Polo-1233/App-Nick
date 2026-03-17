@@ -33,6 +33,7 @@ import {
   fetchUserProfile,
 } from "../db/queries.js";
 import { detectPatterns } from "./pattern-detector.js";
+import { fetchUserMemory, formatMemorySection, extractAndSaveMemory } from "./memory-service.js";
 import { SLEEP_COACH_TOOLS } from "./tool-definitions.js";
 import { executeTool } from "./tool-executor.js";
 
@@ -100,6 +101,7 @@ interface StructuredContext {
   arp_time:       string | null;
   chronotype:     string;
   cycle_target:   number;
+  memory_section: string;   // pre-formatted [MEMORY] block, empty string if none
   onboarding_ok:  boolean;
   weekly_cycles:  string;
   on_track:       boolean;
@@ -147,7 +149,7 @@ export async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
-  const [ctx, profileRow, lifeEvents, calendarEvents, weeklySummaries, wearableData] = await Promise.all([
+  const [ctx, profileRow, lifeEvents, calendarEvents, weeklySummaries, wearableData, memoryItems] = await Promise.all([
     assembleEngineContext(client, userId),
     fetchUserProfile(client, userId),
     fetchRecentLifeEvents(client, userId),
@@ -159,6 +161,7 @@ export async function buildStructuredContext(
       .order('collected_at', { ascending: false })
       .limit(3)
       .then(r => r.data ?? []),
+    fetchUserMemory(client, userId),
   ]);
   const cycleTarget = profileRow?.cycle_target ?? 5;
   const output = runEngineSafe(ctx);
@@ -178,11 +181,12 @@ export async function buildStructuredContext(
   };
 
   return {
-    today:         ctx.today,
-    arp_time:      ctx.profile.arp_time ?? null,
-    chronotype:    ctx.profile.chronotype,
-    cycle_target:  cycleTarget,
-    onboarding_ok: ctx.profile.onboarding_completed,
+    today:          ctx.today,
+    arp_time:       ctx.profile.arp_time ?? null,
+    chronotype:     ctx.profile.chronotype,
+    cycle_target:   cycleTarget,
+    memory_section: formatMemorySection(memoryItems),
+    onboarding_ok:  ctx.profile.onboarding_completed,
     weekly_cycles: wb ? `${wb.total}/${wb.target}` : "unknown",
     on_track:      wb?.on_track ?? false,
     deficit:       wb?.deficit ?? 0,
@@ -252,6 +256,11 @@ export async function buildStructuredContext(
  */
 export function formatContextSections(ctx: StructuredContext): string {
   const lines: string[] = [];
+
+  // Memory first — helps R-Lo reference it naturally throughout
+  if (ctx.memory_section) {
+    lines.push(ctx.memory_section);
+  }
 
   lines.push("[USER_PROFILE]");
   lines.push(`today: ${ctx.today}`);
@@ -851,6 +860,8 @@ export async function streamChatResponse(
     saveExchange(client, userId, sessionId, cleanMessage, assistantReply).catch(err => {
       console.warn("[chat-service] persist failed:", err instanceof Error ? err.message : err);
     });
+    // Extract and save long-term coaching facts from this exchange (non-blocking)
+    extractAndSaveMemory(client, userId, cleanMessage, assistantReply).catch(() => {});
   }
 
   // ── Stream the response as SSE ───────────────────────────────────────
