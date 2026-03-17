@@ -784,6 +784,13 @@ export default function HomeScreen() {
     }
     // Greeting then tour
     const t = setTimeout(async () => {
+      // First-time welcome message (once only, after onboarding complete)
+      const welcomed = await AsyncStorage.getItem('@r90:welcomed');
+      if (!welcomed) {
+        await AsyncStorage.setItem('@r90:welcomed', '1');
+        injectMessage("Welcome to your sleep HQ. 🌙\n\nThis is where we talk — ask me anything about your sleep, your plan, or how you're feeling. I'll check in with you here every day.");
+        await new Promise(r => setTimeout(r, 2000));
+      }
       await fetchGreeting();
       // Start tour after greeting loads (2.5s delay to let greeting finish streaming)
       setTimeout(() => { void startTour(); }, 2500);
