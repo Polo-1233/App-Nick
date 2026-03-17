@@ -77,6 +77,8 @@ import {
 import {
   proactiveNotificationHandler,
   dismissNotificationHandler,
+  morningBriefingHandler,
+  eveningPrepHandler,
 } from "./handlers/notification-handler.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -140,8 +142,10 @@ const routes: AnyRoute[] = [
   { method: "GET",    path: "/summaries/recent",    handler: recentSummariesHandler },
   { method: "POST",   path: "/reports/generate",    handler: generateReportHandler },
   { method: "GET",    path: "/reports/weekly/latest", handler: latestReportHandler },
-  { method: "GET",    path: "/notifications/proactive", handler: proactiveNotificationHandler },
-  { method: "POST",   path: "/notifications/dismiss",  handler: dismissNotificationHandler },
+  { method: "GET",    path: "/notifications/proactive",        handler: proactiveNotificationHandler },
+  { method: "POST",   path: "/notifications/dismiss",         handler: dismissNotificationHandler },
+  { method: "GET",    path: "/notifications/morning-briefing", handler: morningBriefingHandler },
+  { method: "GET",    path: "/notifications/evening-prep",     handler: eveningPrepHandler },
   // Wearables — Apple Health
   { method: "POST",   path: "/wearables/sync",    handler: wearableSyncHandler },
   { method: "GET",    path: "/wearables/status",  handler: wearableStatusHandler },

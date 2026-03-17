@@ -142,7 +142,7 @@ interface WearableSnapshot {
   deep_min:           number | null;
 }
 
-async function buildStructuredContext(
+export async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
@@ -247,7 +247,7 @@ async function buildStructuredContext(
  * Format structured context into clearly delimited prompt sections.
  * Sections make the context easier for GPT-4o to parse consistently.
  */
-function formatContextSections(ctx: StructuredContext): string {
+export function formatContextSections(ctx: StructuredContext): string {
   const lines: string[] = [];
 
   lines.push("[USER_PROFILE]");
