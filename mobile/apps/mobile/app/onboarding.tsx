@@ -27,6 +27,7 @@ import {
   Alert,
   Keyboard,
   useWindowDimensions,
+  Dimensions,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -402,7 +403,7 @@ export default function OnboardingScreen() {
 
                 {/* ── Image schéma ── */}
                 <Image
-                  source={require('../assets/images/shemav1.png')}
+                  source={require('../assets/shemav2.png')}
                   style={s.schemaImage}
                   resizeMode="contain"
                 />
@@ -1057,8 +1058,8 @@ const s = StyleSheet.create({
     letterSpacing: -0.4,
   },
   schemaImage: {
-    width:       '100%',
-    aspectRatio: 1536 / 2752,  // ratio exact de shemav1.png
+    width:  '100%',
+    height: Dimensions.get('window').height * 0.5,
   },
   schemaText: {
     fontSize:   13,
