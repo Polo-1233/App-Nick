@@ -924,9 +924,10 @@ function sanitizeReply(text: string): string {
       console.warn(`[chat-service] sanitizeReply: replaced pattern ${pattern}`);
     }
   }
-  // Clean up double spaces from replacements
-  result = result.replace(/  +/g, " ").trim();
-  return result;
+  // Clean up double spaces and excessive newlines
+  result = result.replace(/  +/g, " ");
+  result = result.replace(/\n{2,}/g, "\n"); // max 1 newline between paragraphs
+  return result.trim();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
