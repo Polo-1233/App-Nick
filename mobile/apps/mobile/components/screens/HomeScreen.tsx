@@ -765,7 +765,7 @@ export default function HomeScreen() {
     if (phase === 'guided_chat') {
       setOnboardingStep('greeting');
       const t = setTimeout(() => {
-        injectMessage("Hi, I'm R-Lo.\n\nI help people align their sleep with their natural cycles so they wake up with real energy.");
+        injectMessage("Hi, I'm R-Lo.\nYour personal sleep coach.");
         setTimeout(() => {
           injectMessage("Before we start, I need to learn a little about you.\n\nIt takes about 30 seconds.");
           // Auto-advance après 2s — pas besoin d'appuyer sur quoi que ce soit
