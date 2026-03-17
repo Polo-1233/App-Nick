@@ -942,7 +942,7 @@ export default function HomeScreen() {
                 targetCycles={profile?.idealCyclesPerNight ?? MOCK_PILL.targetCycles}
                 bedtime={bedtime ?? MOCK_PILL.bedtime}
                 wake={wakeTime ?? MOCK_PILL.wake}
-                onPress={() => goToPage(1)}
+                onPress={() => goToPage(2)}
               />
             )}
 
