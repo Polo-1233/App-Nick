@@ -656,7 +656,6 @@ export default function HomeScreen() {
     hasTourInjected.current = tourStep;
 
     const messages: Record<number, string> = {
-      0: "Welcome to your sleep HQ. 🌙\n\nThis is where we talk — ask me anything about your sleep, your plan, or how you're feeling. I'll check in with you here every day.",
       1: "Tap **Planning** to see tonight's sleep timeline — wind-down, ideal bedtime, latest bedtime and wake time.\n\nEverything is calculated around your anchor wake time.",
       2: "**Insights** tracks your weekly cycles and recovery trends.\n\nThe more data I have, the sharper the coaching gets.",
       3: "**Profile** stores your sleep plan, connected wearables and preferences.\n\nYou can update your anchor time or goals anytime.",
