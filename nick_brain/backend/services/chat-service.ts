@@ -337,18 +337,29 @@ export function formatContextSections(ctx: StructuredContext): string {
   // Phase C — Wearable data
   if (ctx.wearable) {
     const w = ctx.wearable;
-    const age = Math.round((Date.now() - new Date(w.collected_at).getTime()) / 3600000);
-    const ageLabel = age < 24 ? `${age}h ago` : `${Math.floor(age / 24)}d ago`;
-    lines.push("[WEARABLE_DATA]");
-    lines.push(`source: ${w.source} (${ageLabel})`);
-    if (w.readiness_score !== null)    lines.push(`readiness_score: ${w.readiness_score}/100`);
-    if (w.hrv_ms !== null)             lines.push(`hrv: ${Math.round(w.hrv_ms)}ms`);
-    if (w.resting_hr !== null)         lines.push(`resting_hr: ${w.resting_hr}bpm`);
-    if (w.sleep_duration_min !== null) lines.push(`sleep_duration: ${Math.floor(w.sleep_duration_min / 60)}h${w.sleep_duration_min % 60 > 0 ? `${w.sleep_duration_min % 60}m` : ''}`);
-    if (w.sleep_efficiency !== null)   lines.push(`sleep_efficiency: ${Math.round(w.sleep_efficiency * 100)}%`);
-    if (w.rem_min !== null)            lines.push(`rem: ${w.rem_min}min`);
-    if (w.deep_min !== null)           lines.push(`deep: ${w.deep_min}min`);
-    if (w.strain_score !== null)       lines.push(`strain: ${w.strain_score}`);
+    const ageHours = (Date.now() - new Date(w.collected_at).getTime()) / 3_600_000;
+    const STALE_THRESHOLD_H = 36; // data older than 36h is considered stale
+    const isStale = ageHours > STALE_THRESHOLD_H;
+
+    if (isStale) {
+      // Include with explicit stale warning — R-Lo must not act on it as if fresh
+      const staleLabel = `${Math.floor(ageHours / 24)}d ago — STALE, do not reference as recent data`;
+      lines.push("[WEARABLE_DATA]");
+      lines.push(`source: ${w.source} (${staleLabel})`);
+      lines.push("WARNING: This wearable data is outdated. Do not make coaching recommendations based on it. Ask the user to sync their device if relevant.");
+    } else {
+      const ageLabel = ageHours < 24 ? `${Math.round(ageHours)}h ago` : `${Math.floor(ageHours / 24)}d ago`;
+      lines.push("[WEARABLE_DATA]");
+      lines.push(`source: ${w.source} (${ageLabel})`);
+      if (w.readiness_score !== null)    lines.push(`readiness_score: ${w.readiness_score}/100`);
+      if (w.hrv_ms !== null)             lines.push(`hrv: ${Math.round(w.hrv_ms)}ms`);
+      if (w.resting_hr !== null)         lines.push(`resting_hr: ${w.resting_hr}bpm`);
+      if (w.sleep_duration_min !== null) lines.push(`sleep_duration: ${Math.floor(w.sleep_duration_min / 60)}h${w.sleep_duration_min % 60 > 0 ? `${w.sleep_duration_min % 60}m` : ''}`);
+      if (w.sleep_efficiency !== null)   lines.push(`sleep_efficiency: ${Math.round(w.sleep_efficiency * 100)}%`);
+      if (w.rem_min !== null)            lines.push(`rem: ${w.rem_min}min`);
+      if (w.deep_min !== null)           lines.push(`deep: ${w.deep_min}min`);
+      if (w.strain_score !== null)       lines.push(`strain: ${w.strain_score}`);
+    }
     lines.push("");
   }
 
