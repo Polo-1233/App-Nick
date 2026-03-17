@@ -17,9 +17,15 @@
     "ios": {
       "bundleIdentifier": "com.metalab.r90navigator",
       "supportsTablet": false,
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.background-delivery": true
+      },
       "infoPlist": {
         "NSCalendarsUsageDescription": "R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.",
-        "NSUserNotificationUsageDescription": "Get a gentle nudge when it's time to start your pre-sleep routine or take a recovery nap."
+        "NSUserNotificationUsageDescription": "Get a gentle nudge when it's time to start your pre-sleep routine or take a recovery nap.",
+        "NSHealthShareUsageDescription": "R-Lo · Sleep Coach reads your sleep and activity data to personalise your recovery recommendations.",
+        "NSHealthUpdateUsageDescription": "R-Lo · Sleep Coach may write sleep sessions to Apple Health."
       },
       "usesAppleSignIn": true
     },
