@@ -147,9 +147,10 @@ export default function PagerLayout() {
   const CONTENT_H    = BUBBLE_SIZE + 12 + 3 + 6 + 4;
   const tabBarHeight = CONTENT_H + insets.bottom;
 
-  const scrollRef  = useRef<ScrollView>(null);
-  const scrollX    = useRef(new Animated.Value(0)).current;
-  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef      = useRef<ScrollView>(null);
+  const scrollX        = useRef(new Animated.Value(0)).current;
+  const [activeIndex,  setActiveIndex]  = useState(0);
+  const [pagerLocked,  setPagerLocked]  = useState(false);
 
   const goToPage = useCallback(
     (index: number) => {
@@ -167,7 +168,7 @@ export default function PagerLayout() {
   const { tabBarBg, tabBarBorder, tabBarBubble, tabBarIcon } = theme.colors;
 
   return (
-    <PagerContext.Provider value={{ goToPage }}>
+    <PagerContext.Provider value={{ goToPage, setScrollLocked: setPagerLocked }}>
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
 
       <Animated.ScrollView
@@ -177,7 +178,7 @@ export default function PagerLayout() {
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         decelerationRate="fast"
-        scrollEnabled={!isOnboarding}
+        scrollEnabled={!isOnboarding && !pagerLocked}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
           { useNativeDriver: true },

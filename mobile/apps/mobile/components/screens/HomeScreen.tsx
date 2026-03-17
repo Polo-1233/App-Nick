@@ -184,7 +184,8 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep, isTour }
   onboardingStep: string;
   isTour?:        boolean;
 }) {
-  const { width: screenW } = useWindowDimensions();
+  const { width: screenW }         = useWindowDimensions();
+  const { setScrollLocked }        = usePager();
   const cardW  = Math.floor((screenW - CAROUSEL_H_PAD * 2 - CARD_GAP * (CARDS_PER_PAGE - 1)) / CARDS_PER_PAGE);
   const snapW  = cardW + CARD_GAP;
 
@@ -236,6 +237,11 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep, isTour }
         snapToAlignment="start"
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        nestedScrollEnabled={true}
+        directionalLockEnabled={true}
+        onScrollBeginDrag={() => setScrollLocked(true)}
+        onScrollEndDrag={() => setScrollLocked(false)}
+        onMomentumScrollEnd={() => setScrollLocked(false)}
       >
         {cards.map((card, i) => (
           <Pressable
@@ -927,11 +933,12 @@ export default function HomeScreen() {
               isMuted
               useNativeControls={false}
             />
-            {/* Gradient overlay — subtle, keeps text readable without killing the video */}
+            {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
               colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
               locations={[0, 0.5, 1]}
               style={StyleSheet.absoluteFill}
+              pointerEvents="none"
             />
 
             {/* Top info bar — different during onboarding */}
