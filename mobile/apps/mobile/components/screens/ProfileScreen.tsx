@@ -430,54 +430,74 @@ export default function ProfileScreen() {
 
   const avatarLetter = displayName.charAt(0).toUpperCase() || '?';
 
-  const MENU_ITEMS = [
+  const MENU_SECTIONS = [
     {
-      icon:    'time-outline',
-      label:   'History',
-      sub:     'Past sleep events and logs',
-      onPress: () => router.push('/sleep-history'),
+      title: 'Mon sommeil',
+      items: [
+        {
+          icon:    'time-outline',
+          label:   'History',
+          sub:     'Past sleep events and logs',
+          onPress: () => router.push('/sleep-history'),
+        },
+        {
+          icon:    'watch-outline',
+          label:   'Wearables & Health',
+          sub:     'Apple Health, Oura Ring and more',
+          onPress: () => router.push('/wearables'),
+        },
+      ],
     },
     {
-      icon:    'watch-outline',
-      label:   'Wearables & Health',
-      sub:     'Apple Health, Oura Ring and more',
-      onPress: () => router.push('/wearables'),
+      title: 'Personnalisation',
+      items: [
+        {
+          icon:    'fitness-outline',
+          label:   'Lifestyle profile',
+          sub:     'Stress, environment, exercise, alcohol',
+          onPress: () => router.push('/lifestyle'),
+        },
+        {
+          icon:    'calendar-outline',
+          label:   'Life events',
+          sub:     'Travel, illness, important days',
+          onPress: () => router.push('/life-events'),
+        },
+      ],
     },
     {
-      icon:    'fitness-outline',
-      label:   'Lifestyle profile',
-      sub:     'Stress, environment, exercise, alcohol',
-      onPress: () => router.push('/lifestyle'),
+      title: 'App',
+      items: [
+        {
+          icon:    'settings-outline',
+          label:   'Settings',
+          sub:     'Notifications, calendar, account',
+          onPress: () => setShowSettings(true),
+        },
+        {
+          icon:    'headset-outline',
+          label:   'Support',
+          sub:     'Help and resources',
+          onPress: () => router.push('/support'),
+        },
+      ],
     },
     {
-      icon:    'calendar-outline',
-      label:   'Life events',
-      sub:     'Travel, illness, important days',
-      onPress: () => router.push('/life-events'),
-    },
-    {
-      icon:    'settings-outline',
-      label:   'Settings',
-      sub:     'Notifications, calendar, account',
-      onPress: () => setShowSettings(true),
-    },
-    {
-      icon:    'person-circle-outline',
-      label:   'Account management',
-      sub:     'Manage your account and subscription',
-      onPress: () => router.push('/account'),
-    },
-    {
-      icon:    'shield-checkmark-outline',
-      label:   'Your data is secure',
-      sub:     'Your recovery data is encrypted and private.',
-      onPress: () => setShowDataModal(true),
-    },
-    {
-      icon:    'headset-outline',
-      label:   'Support',
-      sub:     'Help and resources',
-      onPress: () => router.push('/support'),
+      title: 'Compte',
+      items: [
+        {
+          icon:    'person-circle-outline',
+          label:   'Account management',
+          sub:     'Manage your account and subscription',
+          onPress: () => router.push('/account'),
+        },
+        {
+          icon:    'shield-checkmark-outline',
+          label:   'Your data is secure',
+          sub:     'Your recovery data is encrypted and private.',
+          onPress: () => setShowDataModal(true),
+        },
+      ],
     },
   ];
 
@@ -500,30 +520,35 @@ export default function ProfileScreen() {
           onPress={() => { HapticsLight(); router.push(isPremium ? '/premium' : '/subscription'); }}
         />
 
-        {/* ── 3. Account menu ── */}
-        <View style={s.menu}>
-          {MENU_ITEMS.map(({ icon, label, sub, onPress }, i) => (
-            <Pressable
-              key={label}
-              style={({ pressed }) => [
-                s.menuRow,
-                i === 0 && s.menuFirst,
-                i === MENU_ITEMS.length - 1 && s.menuLast,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => { HapticsLight(); onPress(); }}
-            >
-              <View style={[s.menuIcon, { backgroundColor: `${C.accent}18` }]}>
-                <Ionicons name={icon as any} size={18} color={C.accent} />
-              </View>
-              <View style={s.menuText}>
-                <Text style={s.menuLabel}>{label}</Text>
-                <Text style={s.menuSub}>{sub}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
-            </Pressable>
-          ))}
-        </View>
+        {/* ── 3. Account menu — grouped ── */}
+        {MENU_SECTIONS.map(({ title, items }) => (
+          <View key={title} style={s.section}>
+            <Text style={s.sectionTitle}>{title}</Text>
+            <View style={s.menu}>
+              {items.map(({ icon, label, sub, onPress }, i) => (
+                <Pressable
+                  key={label}
+                  style={({ pressed }) => [
+                    s.menuRow,
+                    i === 0 && s.menuFirst,
+                    i === items.length - 1 && s.menuLast,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => { HapticsLight(); onPress(); }}
+                >
+                  <View style={[s.menuIcon, { backgroundColor: `${C.accent}18` }]}>
+                    <Ionicons name={icon as any} size={18} color={C.accent} />
+                  </View>
+                  <View style={s.menuText}>
+                    <Text style={s.menuLabel}>{label}</Text>
+                    <Text style={s.menuSub}>{sub}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
 
         <Text style={s.version}>R-Lo · Sleep Coach v0.1.0</Text>
       </ScrollView>
@@ -567,7 +592,9 @@ const s = StyleSheet.create({
   nameSub:  { fontSize: 13, color: C.textMuted },
 
   // Menu
-  menu:      { backgroundColor: C.card, borderRadius: 16, marginHorizontal: 16, marginTop: 16, overflow: 'hidden' },
+  section:      { marginTop: 8 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginHorizontal: 20, marginBottom: 6, marginTop: 8 },
+  menu:      { backgroundColor: C.card, borderRadius: 16, marginHorizontal: 16, overflow: 'hidden' },
   menuRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
   menuFirst: { borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   menuLast:  { borderBottomWidth: 0, borderBottomLeftRadius: 16, borderBottomRightRadius: 16 },
