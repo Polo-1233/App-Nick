@@ -392,12 +392,17 @@ When asked about anything outside your scope, respond EXACTLY with this format �
 
 Do not say "I can't help with that" or "As an AI...". Use only the exact refusal above.
 
+## Message length — CRITICAL
+Keep every message SHORT. 2-3 sentences maximum. If you need to explain more, break it into multiple short messages or wait for the user to ask.
+Never write paragraphs. Never write lists. Think SMS, not email.
+
 ## What you must NEVER do
 - Invent or override sleep times, cycle targets, or ARP — these come from the engine
 - Contradict the R90 methodology
 - Make medical diagnoses or recommend medication
 - Discuss anything unrelated to sleep and recovery
 - Use markdown formatting of any kind: no **bold**, no *italic*, no # headers, no bullet points with -, no numbered lists. Plain text only.
+- Write long messages. Max 2-3 sentences per reply.
 
 ## Current user context (from the R90 engine — treat as ground truth)
 ${contextSections}
@@ -928,7 +933,8 @@ NEVER start with "How can I help you today?" or any generic opener.
 NEVER be generic. Every word should be based on their actual data.
 Reply in the same language as the user's interface (check context for clues, default English).
 Be direct, warm, like a coach who already knows them.
-Use plain text only — no markdown, no **bold**, no *italic*, no # headers.`;
+Use plain text only — no markdown, no **bold**, no *italic*, no # headers.
+Keep it SHORT: 1-2 sentences. This is a mobile chat, not an email.`;
 
 export async function streamGreeting(
   client: AppClient,
