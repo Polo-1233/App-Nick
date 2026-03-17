@@ -991,7 +991,7 @@ const s = StyleSheet.create({
     textAlign:     'center',
     lineHeight:    33,
     letterSpacing: -0.4,
-    marginTop:     48,
+    marginTop:     33,
     marginBottom:  8,
   },
   planCardWrap: {
