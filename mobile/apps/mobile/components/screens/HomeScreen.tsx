@@ -458,7 +458,15 @@ function OnboardingPill({
   const parts: string[] = [];
   if (data.name)           parts.push(data.name);
   if (data.wakeLabel && step !== 'wake') parts.push(`Wake ${data.wakeLabel}`);
-  if (data.goal && !['wake','goal'].includes(step)) parts.push(data.goal.split(' ')[0] ?? data.goal);
+  if (data.goal && !['wake','goal'].includes(step)) {
+    const goalLabel: Record<string, string> = {
+      energy:      'More energy',
+      sleep_speed: 'Fall asleep faster',
+      consistency: 'Better schedule',
+      recovery:    'Better recovery',
+    };
+    parts.push(goalLabel[data.goal] ?? data.goal);
+  }
 
   const label = parts.length > 0
     ? parts.join(' · ')
