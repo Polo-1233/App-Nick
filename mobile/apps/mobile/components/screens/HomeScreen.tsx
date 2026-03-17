@@ -177,6 +177,73 @@ const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
   { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
+// ─── SeamlessVideo — dual-buffer crossfade to eliminate loop black frame ──────
+
+function SeamlessVideo({ source }: { source: number }) {
+  const refA    = useRef<Video>(null);
+  const refB    = useRef<Video>(null);
+  const opacityA = useRef(new Animated.Value(1)).current;
+  const opacityB = useRef(new Animated.Value(0)).current;
+  const active  = useRef<'A' | 'B'>('A');
+
+  function crossfade() {
+    const isA = active.current === 'A';
+    const fadeIn  = isA ? opacityB : opacityA;
+    const fadeOut = isA ? opacityA : opacityB;
+    const nextRef = isA ? refB : refA;
+
+    // Pre-load next video from start
+    nextRef.current?.setPositionAsync(0).catch(() => null);
+    nextRef.current?.playAsync().catch(() => null);
+
+    Animated.parallel([
+      Animated.timing(fadeIn,  { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(fadeOut, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => {
+      active.current = isA ? 'B' : 'A';
+    });
+  }
+
+  function handleStatus(status: any) {
+    if (!status.isLoaded) return;
+    if (status.durationMillis && status.positionMillis >= status.durationMillis - 500) {
+      crossfade();
+    }
+  }
+
+  return (
+    <>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityA }]}>
+        <Video
+          ref={refA}
+          source={source}
+          style={StyleSheet.absoluteFill}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isLooping={false}
+          isMuted
+          useNativeControls={false}
+          onPlaybackStatusUpdate={handleStatus}
+        />
+      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityB }]}>
+        <Video
+          ref={refB}
+          source={source}
+          style={StyleSheet.absoluteFill}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay={false}
+          isLooping={false}
+          isMuted
+          useNativeControls={false}
+        />
+      </Animated.View>
+    </>
+  );
+}
+
+// ─── SmartCarousel ────────────────────────────────────────────────────────────
+
 function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep, isTour }: {
   onPress:        (prompt: string) => void;
   disabled?:      boolean;
@@ -641,7 +708,7 @@ export default function HomeScreen() {
   const [reportBannerDismissed, setReportBannerDismissed] = useState(false);
 
   // Guided
-  const videoRef        = useRef<Video>(null);
+
   const scrollRef       = useRef<ScrollView>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
@@ -746,12 +813,8 @@ export default function HomeScreen() {
   }, [needsOnboarding, router]);
 
   useFocusEffect(useCallback(() => {
-    videoRef.current?.playAsync().catch(() => null);
     if (!hasMountedFocus.current) { hasMountedFocus.current = true; return; }
     refreshPlan();
-    return () => {
-      videoRef.current?.pauseAsync().catch(() => null);
-    };
   }, [refreshPlan]));
 
   useEffect(() => {
@@ -920,24 +983,8 @@ export default function HomeScreen() {
       >
         <View style={sc.flex}>
 
-            {/* Full-page background video — seamless loop via manual seek */}
-            <Video
-              ref={videoRef}
-              source={require('../../assets/Animation_V3.mp4')}
-              style={StyleSheet.absoluteFill}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping={false}
-              isMuted
-              useNativeControls={false}
-              onPlaybackStatusUpdate={(status) => {
-                if (!status.isLoaded) return;
-                // Seek to 0 before the natural end to avoid black frame
-                if (status.durationMillis && status.positionMillis >= status.durationMillis - 180) {
-                  videoRef.current?.setPositionAsync(0).catch(() => null);
-                }
-              }}
-            />
+            {/* Full-page background video — seamless loop via dual-video crossfade */}
+            <SeamlessVideo source={require('../../assets/Animation_V3.mp4')} />
             {/* Gradient overlay — pointerEvents none so header stays tappable */}
             <LinearGradient
               colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
