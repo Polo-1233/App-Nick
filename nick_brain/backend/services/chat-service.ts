@@ -101,7 +101,8 @@ interface StructuredContext {
   arp_time:       string | null;
   chronotype:     string;
   cycle_target:   number;
-  memory_section: string;   // pre-formatted [MEMORY] block, empty string if none
+  memory_section:  string;   // pre-formatted [MEMORY] block, empty string if none
+  user_anxiety:    boolean;  // user_reported_anxiety from profile
   onboarding_ok:  boolean;
   weekly_cycles:  string;
   on_track:       boolean;
@@ -185,8 +186,9 @@ export async function buildStructuredContext(
     arp_time:       ctx.profile.arp_time ?? null,
     chronotype:     ctx.profile.chronotype,
     cycle_target:   cycleTarget,
-    memory_section: formatMemorySection(memoryItems),
-    onboarding_ok:  ctx.profile.onboarding_completed,
+    memory_section:  formatMemorySection(memoryItems),
+    user_anxiety:    ctx.profile.user_reported_anxiety,
+    onboarding_ok:   ctx.profile.onboarding_completed,
     weekly_cycles: wb ? `${wb.total}/${wb.target}` : "unknown",
     on_track:      wb?.on_track ?? false,
     deficit:       wb?.deficit ?? 0,
@@ -304,6 +306,11 @@ export function formatContextSections(ctx: StructuredContext): string {
   }
   if (ctx.primary_rec) {
     lines.push(`primary_recommendation: ${ctx.primary_rec}`);
+  }
+  // State-specific coaching rules
+  if (ctx.user_anxiety) {
+    lines.push("COACHING_MODE: anxiety_sensitive");
+    lines.push("RULES: suppress deficit framing; suppress cycle count emphasis; avoid pressure language; be calm and supportive; focus on what IS working; never say 'you need to' or 'you should'");
   }
   lines.push("");
 
@@ -854,6 +861,9 @@ export async function streamChatResponse(
     failed = fallbackResult.failed;
   }
 
+  // ── Post-processing: forbidden words filter ───────────────────────
+  assistantReply = sanitizeReply(assistantReply);
+
   // ── Persist exchange (best-effort, non-blocking) ──────────────────
   const sessionId = input.session_id ?? dailySessionId();
   if (!failed) {
@@ -879,6 +889,43 @@ export async function streamChatResponse(
   } else {
     await fakeStreamResponse(res, assistantReply);
   }
+}
+
+// ─── Post-processing: forbidden words + persona sanitizer ─────────────────────
+
+const FORBIDDEN_REPLACEMENTS: Array<[RegExp, string]> = [
+  // Technical / AI references
+  [/\bAs an AI\b/gi,              "As your coach"],
+  [/\bI('m| am) an AI\b/gi,       "I'm R-Lo, your coach"],
+  [/\blanguage model\b/gi,        "coaching system"],
+  [/\bChatGPT\b/gi,               "R-Lo"],
+  [/\bOpenAI\b/gi,                ""],
+  [/\bGPT-?\d*/gi,                "R-Lo"],
+  // Forbidden app references
+  [/\bSleep Score\b/gi,           "readiness zone"],
+  [/\bsleep tracker\b/gi,         "wearable"],
+  [/\bFitbit\b/gi,                "your wearable"],
+  [/\bApple Watch\b/gi,           "your wearable"],
+  // Medical overreach
+  [/\b(diagnos|prescri|medic(at|ine)|therap(y|ist)|psychiatr)\w*/gi, ""],
+  // Formatting artifacts (safety net — mobile also strips these)
+  [/\*\*(.+?)\*\*/g,              "$1"],
+  [/\*(.+?)\*/g,                  "$1"],
+  [/^#{1,6}\s+/gm,                ""],
+];
+
+function sanitizeReply(text: string): string {
+  let result = text;
+  for (const [pattern, replacement] of FORBIDDEN_REPLACEMENTS) {
+    const before = result;
+    result = result.replace(pattern, replacement);
+    if (result !== before) {
+      console.warn(`[chat-service] sanitizeReply: replaced pattern ${pattern}`);
+    }
+  }
+  // Clean up double spaces from replacements
+  result = result.replace(/  +/g, " ").trim();
+  return result;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
