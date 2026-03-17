@@ -50,7 +50,7 @@ interface AVSound {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 5;
+const TOTAL_PAGES = 4;
 
 const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
@@ -553,39 +553,7 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>}
 
-            {/* ── Slide 5: Meet R-Lo ───────────────────────────────────── */}
-            {page === 4 && <View style={s.slide3}>
-              <Animated.View style={[s.slide3Content, { opacity: fadeAnim4 }]}>
 
-                {/* Mascot — 30% screen height, isolated breathing */}
-                <View style={s.slide3MascotArea}>
-                  <Animated.View
-                    style={[
-                      s.slide3Glow,
-                      { opacity: slide3GlowOpacity },
-                    ]}
-                  />
-                  <Animated.View style={{ transform: [{ scale: slide3MascotScale }] }}>
-                    <MascotImage
-                      emotion="encourageant"
-                      style={{ width: windowHeight * 0.30, height: windowHeight * 0.30 }}
-                    />
-                  </Animated.View>
-                </View>
-
-                {/* Speech bubble */}
-                <View style={s.slide3BubbleWrap}>
-                  <View style={s.slide3BubbleTip} />
-                  <View style={s.slide3Bubble}>
-                    <Text style={s.slide3BubbleHi}>{"Hi, I'm R-Lo."}</Text>
-                    <Text style={s.slide3BubbleText}>
-                      {"Your personal sleep coach.\n\nLet's optimize your sleep."}
-                    </Text>
-                  </View>
-                </View>
-
-              </Animated.View>
-            </View>}
 
             {/* slide 4 removed */}
             {false && <View style={s.slide4}>
