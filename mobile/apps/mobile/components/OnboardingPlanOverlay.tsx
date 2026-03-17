@@ -667,31 +667,32 @@ function PermissionStep({
   // Save profile and complete after permissions
   useEffect(() => {
     if (permStep !== 'saving') return;
-    const t = setTimeout(async () => {
-      try {
-        const anchorMin = parseHHMM(plan.wakeDisplay, 390);
-        const h   = Math.floor(anchorMin / 60);
-        const m   = anchorMin % 60;
-        const rMM = m >= 15 ? '30' : '00';
-        const arpTime = `${String(h).padStart(2, '0')}:${rMM}`;
-        await Promise.all([
-          saveProfile({
-            anchorTime:          anchorMin,
-            chronotype:          'Neither',
-            idealCyclesPerNight: plan.cycles,
-            weeklyTarget:        plan.cycles * 7,
-          }),
-          updateProfile({
-            arp_time:             arpTime,
-            arp_committed:        true,
-            cycle_target:         plan.cycles,
-            onboarding_completed: true,
-            onboarding_step:      12,
-          }),
-        ]);
-      } catch { /* non-blocking */ }
+    const t = setTimeout(() => {
+      // Fire onComplete immediately — saves run in background (non-blocking)
       markPlanOnboardingComplete().catch(() => {});
       onComplete();
+
+      // Background saves — don't block navigation
+      const anchorMin = parseHHMM(plan.wakeDisplay, 390);
+      const h   = Math.floor(anchorMin / 60);
+      const m   = anchorMin % 60;
+      const rMM = m >= 15 ? '30' : '00';
+      const arpTime = `${String(h).padStart(2, '0')}:${rMM}`;
+      Promise.all([
+        saveProfile({
+          anchorTime:          anchorMin,
+          chronotype:          'Neither',
+          idealCyclesPerNight: plan.cycles,
+          weeklyTarget:        plan.cycles * 7,
+        }),
+        updateProfile({
+          arp_time:             arpTime,
+          arp_committed:        true,
+          cycle_target:         plan.cycles,
+          onboarding_completed: true,
+          onboarding_step:      12,
+        }),
+      ]).catch(() => {});
     }, 400);
     return () => clearTimeout(t);
   }, [permStep, plan, onComplete]);
