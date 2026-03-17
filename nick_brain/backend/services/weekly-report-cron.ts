@@ -70,7 +70,7 @@ async function runWeeklyReportJob(): Promise<void> {
         const patterns = detectPatterns(summaries);
 
         const summaryText = summaries.map(s =>
-          `Week ${s.week_start}: avg ${s.avg_cycles ?? "?"} cycles, total ${s.total_cycles ?? 0}/${s.target_cycles ?? 35}, ` +
+          `Week ${s.week_start}: avg ${s.avg_cycles ?? "?"} cycles, total ${s.total_cycles ?? 0}/${s.target_cycles ?? "?"}, ` +
           `on_track: ${s.on_track ?? "?"}, deficit: ${s.deficit ?? 0}`
         ).join("\n");
 

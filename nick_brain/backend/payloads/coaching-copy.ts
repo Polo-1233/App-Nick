@@ -95,7 +95,7 @@ export const COACHING_COPY: Record<string, CoachingMessage> = {
   },
   "REC-14": {
     title: "Weekly balance",
-    body: "This week: {weekly_total} cycles of 35 target.",
+    body: "This week: {weekly_total} cycles of {weekly_target} target.",
     cta: "See full summary",
   },
   "REC-15": {

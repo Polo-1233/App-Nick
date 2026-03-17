@@ -42,7 +42,7 @@ export async function generateReportHandler(
 
   // Build prompt
   const summaryText = summaries.map(s =>
-    `Week ${s.week_start}: avg ${s.avg_cycles ?? "?"} cycles, total ${s.total_cycles ?? 0}/${s.target_cycles ?? 35}, ` +
+    `Week ${s.week_start}: avg ${s.avg_cycles ?? "?"} cycles, total ${s.total_cycles ?? 0}/${s.target_cycles ?? (s.avg_cycles ? Math.round(s.avg_cycles) * 7 : 35)}, ` +
     `on_track: ${s.on_track ?? "?"}, deficit: ${s.deficit ?? 0}` +
     (s.mood_avg !== null ? `, mood: ${s.mood_avg}` : "") +
     (s.stress_avg !== null ? `, stress: ${s.stress_avg}` : "")

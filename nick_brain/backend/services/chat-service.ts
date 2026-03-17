@@ -30,6 +30,7 @@ import {
   fetchUpcomingCalendarEvents,
   fetchWeeklySummaries,
   fetchLatestWeeklyReport,
+  fetchUserProfile,
 } from "../db/queries.js";
 import { detectPatterns } from "./pattern-detector.js";
 import { SLEEP_COACH_TOOLS } from "./tool-definitions.js";
@@ -146,8 +147,9 @@ export async function buildStructuredContext(
   client: AppClient,
   userId: string,
 ): Promise<StructuredContext> {
-  const [ctx, lifeEvents, calendarEvents, weeklySummaries, wearableData] = await Promise.all([
+  const [ctx, profileRow, lifeEvents, calendarEvents, weeklySummaries, wearableData] = await Promise.all([
     assembleEngineContext(client, userId),
+    fetchUserProfile(client, userId),
     fetchRecentLifeEvents(client, userId),
     fetchUpcomingCalendarEvents(client, userId, 48),
     fetchWeeklySummaries(client, userId, 4),
@@ -158,8 +160,9 @@ export async function buildStructuredContext(
       .limit(3)
       .then(r => r.data ?? []),
   ]);
+  const cycleTarget = profileRow?.cycle_target ?? 5;
   const output = runEngineSafe(ctx);
-  const home   = buildHomeScreenPayload(output, ctx);
+  const home   = buildHomeScreenPayload(output, ctx, cycleTarget);
 
   const wb = home.weekly_balance;
   const recentLogs = ctx.sleep_logs.slice(0, 3).map(l =>
@@ -178,7 +181,7 @@ export async function buildStructuredContext(
     today:         ctx.today,
     arp_time:      ctx.profile.arp_time ?? null,
     chronotype:    ctx.profile.chronotype,
-    cycle_target:  5,
+    cycle_target:  cycleTarget,
     onboarding_ok: ctx.profile.onboarding_completed,
     weekly_cycles: wb ? `${wb.total}/${wb.target}` : "unknown",
     on_track:      wb?.on_track ?? false,
@@ -420,8 +423,8 @@ ${contextSections}
 - **Bedtime** = Anchor wake time − (cycle_target × 90 minutes)
 - **Pre-sleep window** = 90 minutes before bedtime (starts wind-down)
 - **CRP windows**: 13:00–15:00 (30 or 90 min), 17:00–19:00 (30 min only)
-- **Weekly target** = cycle_target × 7 (default: 35 cycles)
-- **Readiness zones**: Green ≥ 35 cycles/week, Yellow 28–34, Orange < 28
+- **Weekly target** = cycle_target × 7 (e.g. 4 cycles/night → 28/week, 5 → 35, 6 → 42)
+- **Readiness zones**: Green ≥ weekly_target, Yellow ≥ weekly_target - 7, Orange < weekly_target - 7
 - Example: anchor 06:30, target 5 cycles → bedtime = 06:30 − 7h30 = 23:00 → pre-sleep starts 21:30
 
 ## Example responses (match this tone and structure exactly)

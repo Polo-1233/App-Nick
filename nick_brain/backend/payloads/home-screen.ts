@@ -58,10 +58,13 @@ function computeCurrentPhaseCycle(
  */
 export function buildHomeScreenPayload(
   output: EngineOutput,
-  ctx: EngineContext
+  ctx: EngineContext,
+  cycleTarget?: number,
 ): HomeScreenPayload {
-  const arpConfig = output.arp_config;
-  const profile = ctx.profile;
+  const arpConfig  = output.arp_config;
+  const profile    = ctx.profile;
+  const nightTarget = cycleTarget ?? 5;
+  const weekTarget  = nightTarget * 7;
 
   // Tonight's sleep onset
   const tonightOnset = arpConfig?.sleep_onset_5cycle ?? null;
@@ -83,8 +86,8 @@ export function buildHomeScreenPayload(
     const acct = output.weekly_accounting;
     weeklyBalance = {
       total: acct.weekly_cycle_total,
-      target: 35,
-      floor: 28,
+      target: weekTarget,
+      floor: (nightTarget - 1) * 7,
       deficit: acct.cycle_deficit,
       pace_deficit: acct.pace_deficit,
       deficit_risk: acct.deficit_risk_flag,
@@ -131,6 +134,7 @@ function computeFallback(onset5cycle: string): string {
 
 import type { AppClient } from "../db/client.js";
 import { assembleEngineContext } from "../context/assembler.js";
+import { fetchUserProfile } from "../db/queries.js";
 import { runEngineSafe } from "../../engine/engine-runner.js";
 
 /**
@@ -142,7 +146,10 @@ export async function getHomeScreenPayload(
   client: AppClient,
   userId: string
 ): Promise<HomeScreenPayload> {
-  const ctx = await assembleEngineContext(client, userId);
+  const [ctx, profileRow] = await Promise.all([
+    assembleEngineContext(client, userId),
+    fetchUserProfile(client, userId),
+  ]);
   const output = runEngineSafe(ctx);
-  return buildHomeScreenPayload(output, ctx);
+  return buildHomeScreenPayload(output, ctx, profileRow?.cycle_target ?? 5);
 }
