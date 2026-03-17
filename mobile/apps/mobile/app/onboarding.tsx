@@ -478,10 +478,12 @@ export default function OnboardingScreen() {
             {page === 3 && <View style={s.slidePlan}>
               <Animated.View style={[s.slidePlanContent, { opacity: fadeAnim3 }]}>
 
-                {/* Titre */}
-                <Text style={s.planSlideTitle}>
-                  {"Every day you receive\na personalized plan"}
-                </Text>
+                {/* Titre — centré dans l'espace disponible au-dessus du plan */}
+                <View style={s.planTitleWrap}>
+                  <Text style={s.planSlideTitle}>
+                    {"Every day you receive\na personalized plan"}
+                  </Text>
+                </View>
 
                 {/* ── Plan mockup card ── */}
                 <View style={s.planMockCard}>
@@ -537,6 +539,7 @@ export default function OnboardingScreen() {
                     </View>
                   ))}
                 </View>
+                <View style={{ height: 16 }} />
 
               </Animated.View>
             </View>}
@@ -994,14 +997,18 @@ const s = StyleSheet.create({
   // ── Slide 4 — Plan mockup ─────────────────────────────────────────────────
   slidePlan: {
     flex:              1,
-    alignItems:        'center',
-    justifyContent:    'center',
     paddingHorizontal: 24,
   },
   slidePlanContent: {
-    width:      '100%',
-    alignItems: 'center',
-    gap:        20,
+    flex:           1,
+    width:          '100%',
+    alignItems:     'center',
+    flexDirection:  'column',
+  },
+  planTitleWrap: {
+    flex:           1,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
   planMockCard: {
     width:           '100%',
