@@ -635,6 +635,7 @@ export default function HomeScreen() {
   const [reportBannerDismissed, setReportBannerDismissed] = useState(false);
 
   // Guided
+  const videoRef        = useRef<Video>(null);
   const scrollRef       = useRef<ScrollView>(null);
   const hasMountedFocus = useRef(false);
   const hasRedirected   = useRef(false);
@@ -739,8 +740,14 @@ export default function HomeScreen() {
   }, [needsOnboarding, router]);
 
   useFocusEffect(useCallback(() => {
+    // Play video when tab gains focus
+    videoRef.current?.playAsync().catch(() => null);
     if (!hasMountedFocus.current) { hasMountedFocus.current = true; return; }
     refreshPlan();
+    return () => {
+      // Pause video when tab loses focus (prevents double-play glitch)
+      videoRef.current?.pauseAsync().catch(() => null);
+    };
   }, [refreshPlan]));
 
   useEffect(() => {
@@ -911,6 +918,7 @@ export default function HomeScreen() {
 
             {/* Full-page background video */}
             <Video
+              ref={videoRef}
               source={require('../../assets/animation-v2.mp4')}
               style={StyleSheet.absoluteFill}
               resizeMode={ResizeMode.COVER}

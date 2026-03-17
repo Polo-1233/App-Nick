@@ -80,9 +80,14 @@ export default function TabsLayout() {
           <View style={st.root}>
             <Slot />
 
-            {/* Tab bar lock — visible but non-interactive during guided chat */}
+            {/* Tab bar lock — blocks ALL touch events on bottom nav during onboarding */}
             {tabsLocked && (
-              <View style={st.tabLock} pointerEvents="box-only" />
+              <View
+                style={st.tabLock}
+                pointerEvents="box-only"
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
             )}
 
             {/* Plan overlay — new users only, pre-login */}
@@ -121,7 +126,8 @@ const st = StyleSheet.create({
     bottom:          0,
     left:            0,
     right:           0,
-    height:          84,
-    backgroundColor: 'rgba(11,18,32,0.55)',
+    height:          120, // covers tab bar + safe area + swipe zone
+    backgroundColor: 'rgba(11,18,32,0.92)',
+    zIndex:          9999,
   },
 });
