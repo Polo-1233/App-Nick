@@ -435,7 +435,7 @@ function nextAction(bedtime: number | null, wake: number | null, nowMin: number)
 // ─── Mock fallback (dev / no backend) ────────────────────────────────────────
 // ─── Onboarding header pill ───────────────────────────────────────────────────
 
-const ONBOARDING_STEPS = ['name', 'wake', 'goal', 'sleep_duration', 'sleep_issue', 'training', 'chronotype', 'device', 'summary'];
+const ONBOARDING_STEPS = ['name', 'wake', 'goal', 'summary'];
 
 function OnboardingPill({
   topInset,
@@ -816,35 +816,10 @@ export default function HomeScreen() {
              : lower.includes('fall') || lower.includes('fast') ? 'sleep_speed'
              : lower.includes('fix')  || lower.includes('sch')  ? 'consistency'
              : 'recovery';
-      setOnboardingStep('sleep_duration');
-      setTimeout(() => injectMessage("How many hours do you usually sleep?"), 400);
-
-    } else if (step === 'sleep_duration') {
-      d.sleep_duration = txt;
-      setOnboardingStep('sleep_issue');
-      setTimeout(() => injectMessage("What usually disrupts your sleep?"), 400);
-
-    } else if (step === 'sleep_issue') {
-      d.sleep_issue = txt;
-      setOnboardingStep('training');
-      setTimeout(() => injectMessage("Do you train or exercise regularly?"), 400);
-
-    } else if (step === 'training') {
-      d.training = txt;
-      setOnboardingStep('chronotype');
-      setTimeout(() => injectMessage("When do you feel naturally most productive?"), 400);
-
-    } else if (step === 'chronotype') {
-      d.chronotype = txt;
-      setOnboardingStep('device');
-      setTimeout(() => injectMessage("Do you track your sleep with a device?"), 400);
-
-    } else if (step === 'device') {
-      d.device = txt;
+      // Go directly to summary — no more questions
       setOnboardingStep('summary');
       setTimeout(() => {
-        injectMessage(`Perfect, ${d.name}.\n\nBased on what you told me, I can help you optimize your sleep cycles.`);
-        setTimeout(() => injectMessage("We'll start by aligning your nights with your natural rhythm."), 1400);
+        injectMessage(`Perfect, ${d.name}. I have everything I need.`);
       }, 400);
 
     } else if (step === 'summary') {
@@ -855,15 +830,6 @@ export default function HomeScreen() {
         priority:        d.goal,
         constraint:      'before_midnight',
       }).then(async () => {
-        try {
-          await AsyncStorage.setItem('@r90:onboarding:extra', JSON.stringify({
-            sleep_duration:     d.sleep_duration,
-            sleep_issue:        d.sleep_issue,
-            training_frequency: d.training,
-            chronotype:         d.chronotype,
-            tracking_device:    d.device,
-          }));
-        } catch { /* non-critical */ }
         setTimeout(() => advance('plan'), 400);
       });
     }
