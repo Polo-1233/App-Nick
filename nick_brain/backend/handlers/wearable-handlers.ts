@@ -1,9 +1,10 @@
 /**
  * wearable-handlers.ts
  *
- * POST /wearables/sync     — receive Apple Health data from app
- * GET  /wearables/status   — connected sources for current user
- * GET  /wearables/latest   — latest snapshot per source (for LLM context)
+ * POST /wearables/sync           — receive Apple Health data from app
+ * POST /wearables/apple/register — mark Apple Health as connected (permission granted)
+ * GET  /wearables/status         — connected sources for current user
+ * GET  /wearables/latest         — latest snapshot per source (for LLM context)
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -98,6 +99,23 @@ export async function wearableSyncHandler(
   sendError(res, 400, `Unsupported source: ${source}`);
 }
 
+// ─── POST /wearables/apple/register ──────────────────────────────────────────
+
+export async function appleHealthRegisterHandler(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  ctx: AuthContext,
+): Promise<void> {
+  const { error } = await createServerClient()
+    .from("wearable_tokens")
+    .upsert(
+      { user_id: ctx.userId, source: "apple_health", access_token: "granted", updated_at: new Date().toISOString() },
+      { onConflict: "user_id,source" }
+    );
+  if (error) { sendError(res, 500, error.message); return; }
+  sendJson(res, 200, { ok: true });
+}
+
 // ─── GET /wearables/status ────────────────────────────────────────────────────
 
 export async function wearableStatusHandler(
@@ -126,10 +144,12 @@ export async function wearableStatusHandler(
     if (sourceMap[t.source]) sourceMap[t.source].connected = true;
   });
 
+  // lastSync comes from wearable_data, but connected stays token-driven only
+  // (apple_health has no token — it's permission-based, tracked separately)
   (latest ?? []).forEach((row: any) => {
     if (sourceMap[row.source] && !sourceMap[row.source].lastSync) {
-      sourceMap[row.source].connected = true;
-      sourceMap[row.source].lastSync  = row.collected_at;
+      sourceMap[row.source].lastSync = row.collected_at;
+      // Do NOT set connected=true from data alone — only token presence counts
     }
   });
 

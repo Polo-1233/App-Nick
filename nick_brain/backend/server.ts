@@ -58,6 +58,7 @@ import {
 import {
   wearableSyncHandler,
   wearableStatusHandler,
+  appleHealthRegisterHandler,
   wearableLatestHandler,
 } from "./handlers/wearable-handlers.js";
 import {
@@ -147,8 +148,9 @@ const routes: AnyRoute[] = [
   { method: "GET",    path: "/notifications/morning-briefing", handler: morningBriefingHandler },
   { method: "GET",    path: "/notifications/evening-prep",     handler: eveningPrepHandler },
   // Wearables — Apple Health
-  { method: "POST",   path: "/wearables/sync",    handler: wearableSyncHandler },
-  { method: "GET",    path: "/wearables/status",  handler: wearableStatusHandler },
+  { method: "POST",   path: "/wearables/sync",           handler: wearableSyncHandler },
+  { method: "POST",   path: "/wearables/apple/register", handler: appleHealthRegisterHandler },
+  { method: "GET",    path: "/wearables/status",         handler: wearableStatusHandler },
   { method: "GET",    path: "/wearables/latest",  handler: wearableLatestHandler },
   // Wearables — Oura Ring
   { method: "GET",    path: "/wearables/oura/connect",    handler: ouraConnectHandler },

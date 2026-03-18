@@ -256,6 +256,18 @@ export async function initAppleHealth(): Promise<void> {
   if (Platform.OS !== 'ios') return;
   const granted = await requestHealthKitPermissions();
   if (granted) {
+    // Register Apple Health as connected in backend
+    try {
+      const { getAccessToken } = await import('./supabase');
+      const { BASE_URL } = await import('./api');
+      const token = await getAccessToken();
+      if (token) {
+        await fetch(`${BASE_URL}/wearables/apple/register`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch {}
     void syncHealthKitToBackend();
   }
 }
