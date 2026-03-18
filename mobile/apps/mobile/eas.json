@@ -10,6 +10,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_NICK_BRAIN_API_URL": "https://app-nick-production.up.railway.app",
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_587fcyNBQciyffm0J0VPDIsdwgBXdh8vWqPm51M7Rv8",
