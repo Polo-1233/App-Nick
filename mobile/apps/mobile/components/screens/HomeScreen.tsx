@@ -33,6 +33,7 @@ import {
 } from '../../lib/storage';
 import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }             from '../ui/MascotImage';
+import { Video, ResizeMode }        from 'expo-av';
 import { CircadianBackground }      from '../CircadianBackground';
 import { computeInsights }         from '../../lib/insights';
 import { Analytics }               from '../../lib/analytics';
@@ -914,7 +915,20 @@ export default function HomeScreen() {
   return (
     <View style={sc.root}>
       {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
-      <CircadianBackground />
+      {/* iOS → vidéo H.264 / Android → gradient circadien (expo-av instable) */}
+      {Platform.OS === 'ios' ? (
+        <Video
+          source={require('../../assets/animation-v2.mp4')}
+          style={StyleSheet.absoluteFill}
+          resizeMode={ResizeMode.COVER}
+          shouldPlay
+          isLooping
+          isMuted
+          useNativeControls={false}
+        />
+      ) : (
+        <CircadianBackground />
+      )}
       <LinearGradient
         colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
         locations={[0, 0.5, 1]}
