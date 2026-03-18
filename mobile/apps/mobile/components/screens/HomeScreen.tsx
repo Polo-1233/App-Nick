@@ -33,7 +33,7 @@ import {
 } from '../../lib/storage';
 import { useChat, type ChatMessage } from '../../lib/use-chat';
 import { MascotImage }             from '../ui/MascotImage';
-import { Video, ResizeMode }        from 'expo-av';
+import { CircadianBackground }      from '../CircadianBackground';
 import { computeInsights }         from '../../lib/insights';
 import { Analytics }               from '../../lib/analytics';
 
@@ -177,21 +177,7 @@ const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
   { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
-// ─── BackgroundVideo — simple single instance with native loop ────────────────
 
-function BackgroundVideo({ source }: { source: number }) {
-  return (
-    <Video
-      source={source}
-      style={StyleSheet.absoluteFill}
-      resizeMode={ResizeMode.COVER}
-      shouldPlay
-      isLooping
-      isMuted
-      useNativeControls={false}
-    />
-  );
-}
 
 // ─── SmartCarousel ────────────────────────────────────────────────────────────
 
@@ -928,7 +914,7 @@ export default function HomeScreen() {
   return (
     <View style={sc.root}>
       {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
-      <BackgroundVideo source={require('../../assets/animation-v2.mp4')} />
+      <CircadianBackground />
       <LinearGradient
         colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
         locations={[0, 0.5, 1]}
