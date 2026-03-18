@@ -8,7 +8,7 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
-import { hasCompletedIntro } from '../lib/storage';
+import { hasCompletedIntro, getOnboardingPhase } from '../lib/storage';
 import { ThemeProvider, useTheme } from '../lib/theme-context';
 import { TourProvider } from '../lib/tour-context';
 import { configurePurchases } from '../lib/purchases';
@@ -146,16 +146,24 @@ function RootLayoutInner() {
 
   useEffect(() => {
     if (!dataReady || !splashDone || authLoading) return;
-    // Only redirect on initial load — don't interrupt an OAuth flow in progress
     if (!hasIntro) {
       router.replace('/onboarding');
-    } else if (!isAuthenticated) {
-      // Small guard: give auth state 300ms to settle after OAuth callback
-      const t = setTimeout(() => {
-        if (!isAuthenticated) router.replace('/login');
-      }, 300);
-      return () => clearTimeout(t);
+      return;
     }
+    // Don't redirect to login during onboarding chat phase (user not yet authenticated)
+    getOnboardingPhase().then(phase => {
+      if (phase === 'guided_chat' || phase === 'plan') return;
+      if (!isAuthenticated) {
+        const t = setTimeout(() => {
+          getOnboardingPhase().then(p => {
+            if (p !== 'guided_chat' && p !== 'plan' && !isAuthenticated) {
+              router.replace('/login');
+            }
+          });
+        }, 300);
+        return () => clearTimeout(t);
+      }
+    });
   }, [dataReady, splashDone, authLoading, isAuthenticated, hasIntro, router]);
 
   // Sync calendar events and init proactive notifications after auth
