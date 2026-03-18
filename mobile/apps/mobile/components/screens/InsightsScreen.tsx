@@ -20,7 +20,7 @@ import { SafeAreaView }           from 'react-native-safe-area-context';
 import { Ionicons }               from '@expo/vector-icons';
 import { MascotImage }            from '../ui/MascotImage';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
-import { getWeeklySummaries, type WeeklySummaryResponse } from '../../lib/api';
+import { getWeeklySummaries, getWearableLatest, type WeeklySummaryResponse } from '../../lib/api';
 import {
   computeInsights,
   type InsightsData,
@@ -249,10 +249,26 @@ export default function InsightsScreen() {
 
   useEffect(() => {
     async function load() {
-      const [p, h] = await Promise.all([loadProfile(), loadWeekHistory()]);
+      const [p, h, wearableRes] = await Promise.all([
+        loadProfile(),
+        loadWeekHistory(),
+        getWearableLatest().catch(() => null),
+      ]);
       if (p) setProfile(p);
-      if (p && h && h.length > 0) {
-        setInsights(computeInsights(h, p));
+
+      // Build NightRecord array from wearable backend data if local history is empty
+      let history = h;
+      if ((!history || history.length === 0) && wearableRes?.ok && wearableRes.data?.data) {
+        const wearableEntries = Object.values(wearableRes.data.data);
+        history = wearableEntries.map((w: any) => ({
+          date:            w.collected_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+          cyclesCompleted: w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4,
+          anchorTime:      p?.anchorTime ?? 390,
+        }));
+      }
+
+      if (p && history && history.length > 0) {
+        setInsights(computeInsights(history, p));
       }
       setLoading(false);
     }
