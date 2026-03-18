@@ -188,13 +188,18 @@ export async function connectGoogleCalendar(): Promise<GoogleAuthResult> {
   try {
     // iOS: use reverse client ID scheme (com.googleusercontent.apps.xxx)
     // Android: use package name scheme (com.metalab.r90navigator)
+    // Google Calendar OAuth redirect URI:
+    // Android → reverse of Android client ID (e.g. com.googleusercontent.apps.xxx:/oauth2redirect)
+    // iOS     → reverse of iOS client ID
+    const activeClientId = Platform.OS === 'ios'
+      ? (IOS_CLIENT_ID || WEB_CLIENT_ID)
+      : (ANDROID_CLIENT_ID || WEB_CLIENT_ID);
+
+    const reverseClientId = activeClientId.split('.').reverse().join('.');
     const redirectUri = AuthSession.makeRedirectUri({
-      scheme: Platform.OS === 'ios' && IOS_CLIENT_ID
-        ? IOS_CLIENT_ID.split('.').reverse().join('.')  // reverse client ID
-        : 'r90',
-      native: Platform.OS === 'android'
-        ? 'com.metalab.r90navigator:/'
-        : undefined,
+      scheme: reverseClientId,
+      path:   'oauth2redirect',
+      native: `${reverseClientId}:/oauth2redirect`,
     });
 
     const request = new AuthSession.AuthRequest({
