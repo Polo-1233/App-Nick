@@ -26,7 +26,7 @@ import {
   type InsightsData,
   type DayTrend,
 } from '../../lib/insights';
-import { getMockInsightsData }    from '../../lib/mock-insights-data';
+
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────

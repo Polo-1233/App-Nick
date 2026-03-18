@@ -23,7 +23,6 @@ import { Ionicons }     from '@expo/vector-icons';
 import { MascotImage }  from '../components/ui/MascotImage';
 import { loadWeekHistory } from '../lib/storage';
 import {
-  getMockSleepHistory,
   recoveryColor,
   recoveryIcon,
   type EnrichedNightRecord,

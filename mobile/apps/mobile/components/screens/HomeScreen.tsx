@@ -36,7 +36,7 @@ import { MascotImage }             from '../ui/MascotImage';
 import { Video, ResizeMode }        from 'expo-av';
 import { computeInsights }         from '../../lib/insights';
 import { Analytics }               from '../../lib/analytics';
-import { getMockInsightsData }     from '../../lib/mock-insights-data';
+
 import type { UserProfile }        from '@r90/types';
 import { usePager }                from '../../lib/pager-context';
 import { useTour }                 from '../../lib/tour-context';
@@ -177,68 +177,19 @@ const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
   { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
-// ─── SeamlessVideo — dual-buffer crossfade to eliminate loop black frame ──────
+// ─── BackgroundVideo — simple single instance with native loop ────────────────
 
-function SeamlessVideo({ source }: { source: number }) {
-  const refA    = useRef<Video>(null);
-  const refB    = useRef<Video>(null);
-  const opacityA = useRef(new Animated.Value(1)).current;
-  const opacityB = useRef(new Animated.Value(0)).current;
-  const active  = useRef<'A' | 'B'>('A');
-
-  function crossfade() {
-    const isA = active.current === 'A';
-    const fadeIn  = isA ? opacityB : opacityA;
-    const fadeOut = isA ? opacityA : opacityB;
-    const nextRef = isA ? refB : refA;
-
-    // Pre-load next video from start
-    nextRef.current?.setPositionAsync(0).catch(() => null);
-    nextRef.current?.playAsync().catch(() => null);
-
-    Animated.parallel([
-      Animated.timing(fadeIn,  { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(fadeOut, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]).start(() => {
-      active.current = isA ? 'B' : 'A';
-    });
-  }
-
-  function handleStatus(status: any) {
-    if (!status.isLoaded) return;
-    if (status.durationMillis && status.positionMillis >= status.durationMillis - 500) {
-      crossfade();
-    }
-  }
-
+function BackgroundVideo({ source }: { source: number }) {
   return (
-    <>
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityA }]}>
-        <Video
-          ref={refA}
-          source={source}
-          style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping={false}
-          isMuted
-          useNativeControls={false}
-          onPlaybackStatusUpdate={handleStatus}
-        />
-      </Animated.View>
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityB }]}>
-        <Video
-          ref={refB}
-          source={source}
-          style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay={false}
-          isLooping={false}
-          isMuted
-          useNativeControls={false}
-        />
-      </Animated.View>
-    </>
+    <Video
+      source={source}
+      style={StyleSheet.absoluteFill}
+      resizeMode={ResizeMode.COVER}
+      shouldPlay
+      isLooping
+      isMuted
+      useNativeControls={false}
+    />
   );
 }
 
@@ -977,7 +928,7 @@ export default function HomeScreen() {
   return (
     <View style={sc.root}>
       {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
-      <SeamlessVideo source={require('../../assets/animation-v2.mp4')} />
+      <BackgroundVideo source={require('../../assets/animation-v2.mp4')} />
       <LinearGradient
         colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
         locations={[0, 0.5, 1]}
