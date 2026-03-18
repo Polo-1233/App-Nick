@@ -158,6 +158,26 @@ export async function wearableStatusHandler(
 
 // ─── GET /wearables/latest ────────────────────────────────────────────────────
 
+// ─── GET /wearables/history ───────────────────────────────────────────────────
+
+export async function wearableHistoryHandler(
+  _req: IncomingMessage,
+  res: ServerResponse,
+  ctx: AuthContext,
+): Promise<void> {
+  const { data, error } = await createServerClient()
+    .from("wearable_data")
+    .select("source, collected_at, sleep_duration_min, sleep_efficiency, hrv_ms, resting_hr, readiness_score, rem_min, deep_min")
+    .eq("user_id", ctx.userId)
+    .order("collected_at", { ascending: false })
+    .limit(30);
+
+  if (error) { sendError(res, 500, error.message); return; }
+  sendJson(res, 200, { ok: true, data: data ?? [] });
+}
+
+// ─── GET /wearables/latest ────────────────────────────────────────────────────
+
 export async function wearableLatestHandler(
   _req: IncomingMessage,
   res: ServerResponse,

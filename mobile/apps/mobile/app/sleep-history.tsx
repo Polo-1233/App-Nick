@@ -21,7 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter }    from 'expo-router';
 import { Ionicons }     from '@expo/vector-icons';
 import { MascotImage }  from '../components/ui/MascotImage';
-import { loadWeekHistory } from '../lib/storage';
+import { loadWeekHistory, loadProfile } from '../lib/storage';
+import { getWearableHistory } from '../lib/api';
 import {
   recoveryColor,
   recoveryIcon,
@@ -193,24 +194,45 @@ export default function SleepHistoryScreen() {
   const [usingMock, setUsingMock] = useState(false);
 
   useEffect(() => {
-    loadWeekHistory()
-      .then(real => {
-        if (real && real.length > 0) {
-          const enriched: EnrichedNightRecord[] = real.map(r => ({
-            ...r,
-            recoveryStatus: r.cyclesCompleted >= 4 ? 'Great recovery'
-                          : r.cyclesCompleted >= 2 ? 'Stable rhythm'
-                          : 'Slight sleep debt',
-            note: '',
-          }));
-          setHistory(enriched);
-        } else {
-          setHistory([]);
-          setUsingMock(false);
-        }
-      })
-      .catch(() => { setHistory([]); setUsingMock(false); })
-      .finally(() => setLoading(false));
+    async function load() {
+      const [real, wearableRes, profile] = await Promise.all([
+        loadWeekHistory().catch(() => []),
+        getWearableHistory().catch(() => null),
+        loadProfile().catch(() => null),
+      ]);
+
+      if (real && real.length > 0) {
+        const enriched: EnrichedNightRecord[] = real.map(r => ({
+          ...r,
+          recoveryStatus: r.cyclesCompleted >= 4 ? 'Great recovery'
+                        : r.cyclesCompleted >= 2 ? 'Stable rhythm'
+                        : 'Slight sleep debt',
+          note: '',
+        }));
+        setHistory(enriched);
+      } else if (wearableRes?.ok && wearableRes.data?.data) {
+        // Fallback: build history from wearable backend data
+        const anchorTime = profile?.anchorTime ?? 390;
+        const entries = wearableRes.data.data as any[];
+        const enriched: EnrichedNightRecord[] = entries
+          .sort((a, b) => new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime())
+          .map(w => {
+            const cycles = w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4;
+            return {
+              date:            w.collected_at?.slice(0, 10) ?? '',
+              cyclesCompleted: cycles,
+              anchorTime,
+              recoveryStatus:  cycles >= 4 ? 'Great recovery' : cycles >= 2 ? 'Stable rhythm' : 'Slight sleep debt',
+              note:            '',
+            };
+          });
+        setHistory(enriched);
+      } else {
+        setHistory([]);
+      }
+      setLoading(false);
+    }
+    void load();
   }, []);
 
   // ── Stats ─────────────────────────────────────────────────────────────────

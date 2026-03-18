@@ -20,7 +20,7 @@ import { SafeAreaView }           from 'react-native-safe-area-context';
 import { Ionicons }               from '@expo/vector-icons';
 import { MascotImage }            from '../ui/MascotImage';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
-import { getWeeklySummaries, getWearableLatest, type WeeklySummaryResponse } from '../../lib/api';
+import { getWeeklySummaries, getWearableLatest, getWearableHistory, type WeeklySummaryResponse } from '../../lib/api';
 import {
   computeInsights,
   type InsightsData,
@@ -252,14 +252,14 @@ export default function InsightsScreen() {
       const [p, h, wearableRes] = await Promise.all([
         loadProfile(),
         loadWeekHistory(),
-        getWearableLatest().catch(() => null),
+        getWearableHistory().catch(() => null),
       ]);
       if (p) setProfile(p);
 
       // Build NightRecord array from wearable backend data if local history is empty
       let history = h;
       if ((!history || history.length === 0) && wearableRes?.ok && wearableRes.data?.data) {
-        const wearableEntries = Object.values(wearableRes.data.data);
+        const wearableEntries = wearableRes.data.data as any[];
         history = wearableEntries.map((w: any) => ({
           date:            w.collected_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
           cyclesCompleted: w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4,

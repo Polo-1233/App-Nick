@@ -474,6 +474,22 @@ export async function getWearableStatus(): Promise<ApiResponse<{
   return request('GET', '/wearables/status');
 }
 
+export async function getWearableHistory(): Promise<ApiResponse<{
+  data: Array<{
+    source:             string;
+    collected_at:       string;
+    sleep_duration_min: number | null;
+    sleep_efficiency:   number | null;
+    hrv_ms:             number | null;
+    resting_hr:         number | null;
+    readiness_score:    number | null;
+    rem_min:            number | null;
+    deep_min:           number | null;
+  }>;
+}>> {
+  return request('GET', '/wearables/history');
+}
+
 export async function getWearableLatest(): Promise<ApiResponse<{
   data: Record<string, {
     source:             string;
