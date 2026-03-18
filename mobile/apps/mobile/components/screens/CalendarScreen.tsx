@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons }    from '@expo/vector-icons';
+import { MascotImage } from '../ui/MascotImage';
 import { useDayPlanContext } from '../../lib/day-plan-context';
 import { loadProfile } from '../../lib/storage';
 import type { UserProfile } from '@r90/types';
@@ -472,14 +473,7 @@ export default function CalendarScreen() {
     loadProfile().then(p => { if (p) setProfile(p); });
   }, []);
 
-  // Fallback mock profile when no real data yet
-  const MOCK_PROFILE: UserProfile = {
-    anchorTime:          420,   // 07:00
-    chronotype:          'Neither',
-    idealCyclesPerNight: 5,
-    weeklyTarget:        35,
-  };
-  const activeProfile: UserProfile = profile ?? MOCK_PROFILE;
+  const activeProfile: UserProfile = profile!;
 
   const recentCycles  = dayPlan?.readiness?.recentCycles ?? [5, 4, 5];
   const target        = activeProfile.idealCyclesPerNight;
@@ -500,6 +494,23 @@ export default function CalendarScreen() {
   // R90 Score
   const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
   const r90Score      = calcR90Score(recentCycles, target);
+
+  // If no profile yet (new user, onboarding not complete), show setup prompt
+  if (!profile) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
+          <MascotImage emotion="rassurante" size="md" />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff', textAlign: 'center' }}>
+            Your plan is being built
+          </Text>
+          <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 }}>
+            {"Complete your sleep profile so R-Lo can calculate your anchor time, bedtime windows, and weekly target."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>

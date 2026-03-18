@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView }           from 'react-native-safe-area-context';
 import { Ionicons }               from '@expo/vector-icons';
+import { MascotImage }            from '../ui/MascotImage';
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
 import { getWeeklySummaries, type WeeklySummaryResponse } from '../../lib/api';
 import {
@@ -229,8 +230,11 @@ function TrendChart({
 function EmptyState() {
   return (
     <View style={s.emptyState}>
-      <Text style={s.emptyTitle}>No data yet</Text>
-      <Text style={s.emptySub}>Log your first night to unlock your Insights.</Text>
+      <MascotImage emotion="Reflexion" size="md" />
+      <Text style={s.emptyTitle}>Your insights are building</Text>
+      <Text style={s.emptySub}>
+        {"R-Lo needs a few nights of data to calculate your sleep score, consistency, and recovery trends.\n\nStart by logging your first night or connecting a wearable."}
+      </Text>
     </View>
   );
 }
