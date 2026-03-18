@@ -218,7 +218,7 @@ function SeamlessVideo({ source }: { source: number }) {
           ref={refA}
           source={source}
           style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER}
           shouldPlay
           isLooping={false}
           isMuted
@@ -231,7 +231,7 @@ function SeamlessVideo({ source }: { source: number }) {
           ref={refB}
           source={source}
           style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER}
           shouldPlay={false}
           isLooping={false}
           isMuted
