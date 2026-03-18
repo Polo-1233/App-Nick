@@ -976,6 +976,15 @@ export default function HomeScreen() {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={sc.root}>
+      {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
+      <SeamlessVideo source={require('../../assets/homepage/Animation_V3.mp4')} />
+      <LinearGradient
+        colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
+        locations={[0, 0.5, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
       <KeyboardAvoidingView
         style={sc.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -983,15 +992,6 @@ export default function HomeScreen() {
       >
         <View style={sc.flex}>
 
-            {/* Full-page background video — seamless loop via dual-video crossfade */}
-            <SeamlessVideo source={require('../../assets/homepage/Animation_V3.mp4')} />
-            {/* Gradient overlay — pointerEvents none so header stays tappable */}
-            <LinearGradient
-              colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
-              locations={[0, 0.5, 1]}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
 
             {/* Top info bar — different during onboarding */}
             {isOnboarding ? (
