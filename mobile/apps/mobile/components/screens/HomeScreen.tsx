@@ -915,20 +915,16 @@ export default function HomeScreen() {
   return (
     <View style={sc.root}>
       {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
-      {/* iOS → vidéo H.264 / Android → gradient circadien (expo-av instable) */}
-      {Platform.OS === 'ios' ? (
-        <Video
-          source={require('../../assets/animation-v2.mp4')}
-          style={StyleSheet.absoluteFill}
-          resizeMode={ResizeMode.COVER}
-          shouldPlay
-          isLooping
-          isMuted
-          useNativeControls={false}
-        />
-      ) : (
-        <CircadianBackground />
-      )}
+      {/* Background video */}
+      <Video
+        source={require('../../assets/animation-v2.mp4')}
+        style={StyleSheet.absoluteFill}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+        useNativeControls={false}
+      />
       <LinearGradient
         colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
         locations={[0, 0.5, 1]}
