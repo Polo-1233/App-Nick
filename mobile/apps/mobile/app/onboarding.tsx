@@ -118,8 +118,10 @@ export default function OnboardingScreen() {
     return () => loop.stop();
   }, [circlePulse1]);
 
-  // ── Slide 2: circle pulse — authority/silver, slow + calm ───────────────────
+  // ── Slide 2: circle pulse — démarre quand on arrive sur la slide Nick ───────
   useEffect(() => {
+    if (page !== 1) return;
+    circlePulse2.setValue(1);
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(circlePulse2, { toValue: 1.06, duration: 3400, useNativeDriver: true }),
@@ -128,7 +130,7 @@ export default function OnboardingScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [circlePulse2]);
+  }, [page, circlePulse2]);
 
   // ── Slide 0: mascot idle — breathing + occasional blink ───────────────────
   useEffect(() => {
