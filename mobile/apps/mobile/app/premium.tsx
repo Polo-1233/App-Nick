@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter }    from 'expo-router';
 import { Ionicons }     from '@expo/vector-icons';
 import { usePremiumGate }   from '../lib/use-premium-gate';
+import { getCustomerInfo }  from '../lib/purchases';
 import { MascotImage }      from '../components/ui/MascotImage';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -50,8 +51,18 @@ export default function PremiumScreen() {
   const router              = useRouter();
   const { isPremium }       = usePremiumGate();
 
-  // Mock renewal date — replace with real RevenueCat expiry when wired
-  const renewalDate = 'April 15, 2026';
+  const [renewalDate, setRenewalDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCustomerInfo().then(info => {
+      if (!info) return;
+      const entitlement = info.entitlements.active['premium'];
+      if (entitlement?.expirationDate) {
+        const d = new Date(entitlement.expirationDate);
+        setRenewalDate(d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+      }
+    }).catch(() => {});
+  }, []);
 
   function openManage() {
     Linking.openURL(MANAGE_URL).catch(() => {});
@@ -116,7 +127,7 @@ export default function PremiumScreen() {
 
           <View style={s.renewRow}>
             <Ionicons name="calendar-outline" size={15} color={C.muted} />
-            <Text style={s.renewTxt}>Renews {renewalDate}</Text>
+            {renewalDate && <Text style={s.renewTxt}>Renews {renewalDate}</Text>}
           </View>
         </View>
 

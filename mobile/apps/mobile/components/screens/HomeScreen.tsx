@@ -720,8 +720,8 @@ export default function HomeScreen() {
     (async () => {
       const [p, h, onboarding] = await Promise.all([loadProfile(), loadWeekHistory(), loadOnboardingData()]);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
-      if (p && h && h.length > 0) { setProfile(p); setEnergyScore(computeInsights(h, p).energyScore); }
-      else { const { history: mh, profile: mp } = getMockInsightsData(); setProfile(mp); setEnergyScore(computeInsights(mh, mp).energyScore); }
+      if (p) setProfile(p);
+      if (p && h && h.length > 0) setEnergyScore(computeInsights(h, p).energyScore);
     })();
   }, []);
 

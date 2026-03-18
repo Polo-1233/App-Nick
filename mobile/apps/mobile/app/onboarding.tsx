@@ -368,7 +368,7 @@ export default function OnboardingScreen() {
 
                 {/* Texte */}
                 <Text style={s.schemaText}>
-                  {"R90 Navigator combines your sleep data, your schedule, and the R90 method to build your optimal sleep plan."}
+                  {"R-Lo combines your sleep data, your schedule, and the R90 method to build your optimal sleep plan."}
                 </Text>
 
               </Animated.View>

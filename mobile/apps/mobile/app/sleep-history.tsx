@@ -206,11 +206,11 @@ export default function SleepHistoryScreen() {
           }));
           setHistory(enriched);
         } else {
-          setHistory(getMockSleepHistory());
-          setUsingMock(true);
+          setHistory([]);
+          setUsingMock(false);
         }
       })
-      .catch(() => { setHistory(getMockSleepHistory()); setUsingMock(true); })
+      .catch(() => { setHistory([]); setUsingMock(false); })
       .finally(() => setLoading(false));
   }, []);
 

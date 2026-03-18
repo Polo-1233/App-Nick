@@ -246,11 +246,10 @@ export default function InsightsScreen() {
   useEffect(() => {
     async function load() {
       const [p, h] = await Promise.all([loadProfile(), loadWeekHistory()]);
-      const useReal = p && h && h.length > 0;
-      const { history, profile: mockProfile } = useReal ? { history: h!, profile: p! } : getMockInsightsData();
-      const resolvedProfile = useReal ? p! : mockProfile;
-      setProfile(resolvedProfile);
-      setInsights(computeInsights(history, resolvedProfile));
+      if (p) setProfile(p);
+      if (p && h && h.length > 0) {
+        setInsights(computeInsights(h, p));
+      }
       setLoading(false);
     }
     void load();
