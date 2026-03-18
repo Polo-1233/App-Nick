@@ -977,7 +977,7 @@ export default function HomeScreen() {
   return (
     <View style={sc.root}>
       {/* Video + gradient always full-screen, outside KeyboardAvoidingView */}
-      <SeamlessVideo source={require('../../assets/homepage/Animation_V3.mp4')} />
+      <SeamlessVideo source={require('../../assets/animation-v2.mp4')} />
       <LinearGradient
         colors={['rgba(11,18,32,0.10)', 'rgba(11,18,32,0.25)', 'rgba(11,18,32,0.55)']}
         locations={[0, 0.5, 1]}
