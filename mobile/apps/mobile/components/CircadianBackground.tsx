@@ -141,7 +141,7 @@ export function CircadianBackground({ style, children }: Props) {
   const nextColors    = nextPeriod ? PALETTES[nextPeriod] : null;
 
   return (
-    <View style={[StyleSheet.absoluteFill, style]}>
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: PALETTES[currentPeriod][0] }, style]}>
       {/* Layer 1 — current period */}
       <LinearGradient
         colors={[...currentColors]}
