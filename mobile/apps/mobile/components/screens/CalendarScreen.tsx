@@ -473,7 +473,24 @@ export default function CalendarScreen() {
     loadProfile().then(p => { if (p) setProfile(p); });
   }, []);
 
-  const activeProfile: UserProfile = profile!;
+  // Guard — profile not yet loaded: show setup prompt
+  if (!profile) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
+          <MascotImage emotion="rassurante" size="md" />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff', textAlign: 'center' }}>
+            Your plan is being built
+          </Text>
+          <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 }}>
+            {"Complete your sleep profile so R-Lo can calculate your anchor time, bedtime windows, and weekly target."}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const activeProfile: UserProfile = profile;
 
   const recentCycles  = dayPlan?.readiness?.recentCycles ?? [5, 4, 5];
   const target        = activeProfile.idealCyclesPerNight;
@@ -494,23 +511,6 @@ export default function CalendarScreen() {
   // R90 Score
   const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
   const r90Score      = calcR90Score(recentCycles, target);
-
-  // If no profile yet (new user, onboarding not complete), show setup prompt
-  if (!profile) {
-    return (
-      <SafeAreaView style={s.safe} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
-          <MascotImage emotion="rassurante" size="md" />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff', textAlign: 'center' }}>
-            Your plan is being built
-          </Text>
-          <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 }}>
-            {"Complete your sleep profile so R-Lo can calculate your anchor time, bedtime windows, and weekly target."}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
