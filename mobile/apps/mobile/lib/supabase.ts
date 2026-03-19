@@ -8,8 +8,7 @@
  * The app uses Supabase Auth only. All data reads/writes go via the nick_brain
  * HTTP backend (lib/api.ts), which uses the service role key server-side.
  *
- * Credentials: from .env (injected via expo-constants / app.config.js).
- * Fallback: hardcoded for dev builds — replace with environment variables before production.
+ * Credentials: from .env (EXPO_PUBLIC_SUPABASE_URL + EXPO_PUBLIC_SUPABASE_ANON_KEY).
  */
 
 import { createClient, type SupabaseClient, type Session, type User } from '@supabase/supabase-js';
@@ -23,8 +22,12 @@ WebBrowser.maybeCompleteAuthSession();
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const SUPABASE_URL      = 'https://ullvnvtyjmaclkrruhds.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsbHZudnR5am1hY2xrcnJ1aGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTc2MzUsImV4cCI6MjA4ODc3MzYzNX0.hThK9Dv858RWkb_59H3xhDkZJwD8kq6y4PyqwC4R-7M';
+const SUPABASE_URL      = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error('[supabase] EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY must be set in .env');
+}
 
 // ─── SecureStore adapter ──────────────────────────────────────────────────────
 

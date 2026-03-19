@@ -16,7 +16,6 @@
     },
     "ios": {
       "bundleIdentifier": "com.metalab.r90navigator",
-
       "supportsTablet": false,
       "entitlements": {
         "com.apple.developer.healthkit": true,

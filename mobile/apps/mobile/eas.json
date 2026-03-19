@@ -15,7 +15,9 @@
         "EXPO_PUBLIC_NICK_BRAIN_API_URL": "https://app-nick-production.up.railway.app",
         "EXPO_PUBLIC_POSTHOG_KEY": "phc_587fcyNBQciyffm0J0VPDIsdwgBXdh8vWqPm51M7Rv8",
         "EXPO_PUBLIC_GOOGLE_CALENDAR_ANDROID_CLIENT_ID": "736295281381-8pln69g3rrac4gqo3oqgocvff8p3vhks.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_CALENDAR_IOS_CLIENT_ID": "736295281381-qti1irrli674l98qqcf3ojlla5ss1dkn.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_CALENDAR_IOS_CLIENT_ID": "736295281381-qti1irrli674l98qqcf3ojlla5ss1dkn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ullvnvtyjmaclkrruhds.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsbHZudnR5am1hY2xrcnJ1aGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxOTc2MzUsImV4cCI6MjA4ODc3MzYzNX0.hThK9Dv858RWkb_59H3xhDkZJwD8kq6y4PyqwC4R-7M"
       }
     },
     "android-test": {
