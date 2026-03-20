@@ -119,7 +119,7 @@ export function RLoChat({ visible, onClose }: Props) {
             <View>
               <Text style={[s.headerTitle, { color: c.text }]}>R-Lo</Text>
               <Text style={[s.headerSub, { color: c.textMuted }]}>
-                Sleep Coach · Powered by GPT-4o
+                Sleep Coach
               </Text>
             </View>
           </View>
