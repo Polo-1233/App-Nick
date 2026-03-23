@@ -43,10 +43,10 @@ import { usePager }                from '../../lib/pager-context';
 import { useTour }                 from '../../lib/tour-context';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
-const BG      = '#0B1220';
-const CARD    = '#1A2436';
-const SURFACE2= '#243046';
-const ACCENT  = '#4DA3FF';
+const BG      = '#0a0a3a';
+const CARD    = '#141466';
+const SURFACE2= '#1c1c7a';
+const ACCENT  = '#1c9fda';
 const WARNING = '#F5A623';
 const SUCCESS = '#3DDC97';
 const TEXT    = '#E6EDF7';
@@ -82,7 +82,7 @@ type SmartCard = { icon: string; color: string; label: string; prompt: string };
 
 const CARDS_MORNING: SmartCard[] = [
   { icon: 'partly-sunny-outline', color: '#FACC15', label: 'How did you sleep?',  prompt: 'How did I sleep last night based on my data?' },
-  { icon: 'stats-chart-outline',  color: '#4DA3FF', label: 'See your score',      prompt: 'What is my sleep score today and what does it mean?' },
+  { icon: 'stats-chart-outline',  color: '#1c9fda', label: 'See your score',      prompt: 'What is my sleep score today and what does it mean?' },
   { icon: 'hourglass-outline',    color: '#F87171', label: 'Sleep debt update',   prompt: 'How much sleep debt do I have and how can I recover?' },
   { icon: 'flash-outline',        color: '#3DDC97', label: 'Energy forecast',     prompt: 'How will my energy levels look throughout the day?' },
   { icon: 'cafe-outline',         color: '#F5A623', label: 'Caffeine window',     prompt: 'What is the best time for caffeine today based on my schedule?' },
@@ -91,7 +91,7 @@ const CARDS_MORNING: SmartCard[] = [
 const CARDS_EVENING: SmartCard[] = [
   { icon: 'moon-outline',         color: '#9B59B6', label: 'Prepare tonight',     prompt: 'Help me prepare for tonight\'s sleep' },
   { icon: 'leaf-outline',         color: '#3DDC97', label: 'Wind-down routine',   prompt: 'What should my wind-down routine look like tonight?' },
-  { icon: 'time-outline',         color: '#4DA3FF', label: 'Adjust bedtime',      prompt: 'Should I adjust my bedtime tonight?' },
+  { icon: 'time-outline',         color: '#1c9fda', label: 'Adjust bedtime',      prompt: 'Should I adjust my bedtime tonight?' },
   { icon: 'phone-portrait-outline',color: '#F5A623', label: 'Screen cutoff',      prompt: 'When should I stop using screens tonight?' },
   { icon: 'thermometer-outline',  color: '#F87171', label: 'Room setup',          prompt: 'How should I set up my room for optimal sleep tonight?' },
 ];
@@ -100,12 +100,12 @@ const CARDS_BAD_NIGHT: SmartCard[] = [
   { icon: 'medkit-outline',       color: '#F87171', label: 'Recovery plan',       prompt: 'I had a bad night. What is the best recovery plan for today?' },
   { icon: 'bed-outline',          color: '#F5A623', label: 'I slept late',        prompt: 'I slept much later than usual last night. How do I adjust?' },
   { icon: 'sunny-outline',        color: '#FACC15', label: 'Nap calculator',      prompt: 'Should I nap today? If so, when and for how long?' },
-  { icon: 'trending-up-outline',  color: '#4DA3FF', label: 'Get back on track',   prompt: 'How do I get back on my sleep schedule after a bad night?' },
+  { icon: 'trending-up-outline',  color: '#1c9fda', label: 'Get back on track',   prompt: 'How do I get back on my sleep schedule after a bad night?' },
   { icon: 'cafe-outline',         color: '#9B59B6', label: 'Manage fatigue',      prompt: 'How do I manage fatigue today after a rough night?' },
 ];
 
 const CARDS_DEFAULT: SmartCard[] = [
-  { icon: 'stats-chart-outline',  color: '#4DA3FF', label: 'My week in review',   prompt: 'How am I doing this week overall?' },
+  { icon: 'stats-chart-outline',  color: '#1c9fda', label: 'My week in review',   prompt: 'How am I doing this week overall?' },
   { icon: 'moon-outline',         color: '#9B59B6', label: 'Prepare tonight',     prompt: 'Help me plan my sleep for tonight' },
   { icon: 'airplane-outline',     color: '#3DDC97', label: 'Jet lag recovery',    prompt: 'Help me recover from jet lag' },
   { icon: 'refresh-outline',      color: '#F5A623', label: 'Adjust my rhythm',    prompt: 'Help me recalibrate my sleep rhythm' },
@@ -127,18 +127,18 @@ const CARD_GAP       = 8;
 const CAROUSEL_H_PAD = 14;
 
 const ONBOARDING_START_CARDS: SmartCard[] = [
-  { icon: 'arrow-forward-outline', color: '#33C8E8', label: "Let's start", prompt: 'start' },
+  { icon: 'arrow-forward-outline', color: '#1c9fda', label: "Let's start", prompt: 'start' },
 ];
 const ONBOARDING_WAKE_CARDS: SmartCard[] = [
   { icon: 'sunny-outline', color: '#FACC15', label: '5–6 AM', prompt: '5:30' },
   { icon: 'sunny-outline', color: '#FACC15', label: '6–7 AM', prompt: '6:30' },
-  { icon: 'sunny-outline', color: '#4DA3FF', label: '7–8 AM', prompt: '7:30' },
-  { icon: 'sunny-outline', color: '#4DA3FF', label: '8–9 AM', prompt: '8:30' },
+  { icon: 'sunny-outline', color: '#1c9fda', label: '7–8 AM', prompt: '7:30' },
+  { icon: 'sunny-outline', color: '#1c9fda', label: '8–9 AM', prompt: '8:30' },
   { icon: 'moon-outline',  color: '#9B59B6', label: '9+ AM',  prompt: '9:30' },
 ];
 const ONBOARDING_GOAL_CARDS: SmartCard[] = [
   { icon: 'flash-outline',   color: '#FACC15', label: 'Wake up with more energy',     prompt: 'Wake up with more energy' },
-  { icon: 'moon-outline',    color: '#4DA3FF', label: 'Fall asleep faster',           prompt: 'Fall asleep faster' },
+  { icon: 'moon-outline',    color: '#1c9fda', label: 'Fall asleep faster',           prompt: 'Fall asleep faster' },
   { icon: 'refresh-outline', color: '#3DDC97', label: 'Fix my sleep schedule',        prompt: 'Fix my sleep schedule' },
   { icon: 'barbell-outline', color: '#F87171', label: 'Recover better from training', prompt: 'Recover better from training' },
 ];
@@ -146,24 +146,24 @@ const ONBOARDING_DURATION_CARDS: SmartCard[] = [
   { icon: 'time-outline', color: '#F87171', label: 'Less than 6h', prompt: 'Less than 6 hours' },
   { icon: 'time-outline', color: '#FACC15', label: '6–7 hours',    prompt: '6–7 hours' },
   { icon: 'time-outline', color: '#3DDC97', label: '7–8 hours',    prompt: '7–8 hours' },
-  { icon: 'time-outline', color: '#4DA3FF', label: '8–9 hours',    prompt: '8–9 hours' },
+  { icon: 'time-outline', color: '#1c9fda', label: '8–9 hours',    prompt: '8–9 hours' },
   { icon: 'time-outline', color: '#9B59B6', label: 'More than 9h', prompt: 'More than 9 hours' },
 ];
 const ONBOARDING_ISSUE_CARDS: SmartCard[] = [
   { icon: 'moon-outline',         color: '#9B59B6', label: 'Fall asleep late',       prompt: 'I fall asleep late' },
   { icon: 'alert-outline',        color: '#FACC15', label: 'Wake up at night',       prompt: 'I wake up during the night' },
   { icon: 'battery-dead-outline', color: '#F87171', label: 'Wake up tired',          prompt: 'I wake up tired' },
-  { icon: 'shuffle-outline',      color: '#4DA3FF', label: 'Schedule changes a lot', prompt: 'My schedule changes a lot' },
+  { icon: 'shuffle-outline',      color: '#1c9fda', label: 'Schedule changes a lot', prompt: 'My schedule changes a lot' },
 ];
 const ONBOARDING_TRAINING_CARDS: SmartCard[] = [
   { icon: 'close-circle-outline', color: '#6B7F99', label: 'No exercise',      prompt: 'No' },
   { icon: 'walk-outline',         color: '#FACC15', label: '1–2x per week',    prompt: '1–2 times per week' },
-  { icon: 'fitness-outline',      color: '#4DA3FF', label: '3–4x per week',    prompt: '3–4 times per week' },
+  { icon: 'fitness-outline',      color: '#1c9fda', label: '3–4x per week',    prompt: '3–4 times per week' },
   { icon: 'flame-outline',        color: '#F87171', label: 'Almost every day', prompt: 'Almost every day' },
 ];
 const ONBOARDING_CHRONOTYPE_CARDS: SmartCard[] = [
   { icon: 'sunny-outline',        color: '#FACC15', label: 'Morning',    prompt: 'Morning' },
-  { icon: 'cloudy-outline',       color: '#4DA3FF', label: 'Afternoon',  prompt: 'Afternoon' },
+  { icon: 'cloudy-outline',       color: '#1c9fda', label: 'Afternoon',  prompt: 'Afternoon' },
   { icon: 'partly-sunny-outline', color: '#F97316', label: 'Evening',    prompt: 'Evening' },
   { icon: 'moon-outline',         color: '#9B59B6', label: 'Late night', prompt: 'Late night' },
 ];
@@ -171,11 +171,11 @@ const ONBOARDING_DEVICE_CARDS: SmartCard[] = [
   { icon: 'watch-outline',   color: '#E5E7EB', label: 'Apple Watch', prompt: 'Apple Watch' },
   { icon: 'radio-outline',   color: '#3DDC97', label: 'Oura Ring',   prompt: 'Oura Ring' },
   { icon: 'pulse-outline',   color: '#F87171', label: 'Whoop',       prompt: 'Whoop' },
-  { icon: 'fitness-outline', color: '#4DA3FF', label: 'Garmin',      prompt: 'Garmin' },
+  { icon: 'fitness-outline', color: '#1c9fda', label: 'Garmin',      prompt: 'Garmin' },
   { icon: 'close-outline',   color: '#6B7F99', label: 'No device',   prompt: 'No device' },
 ];
 const ONBOARDING_SUMMARY_CARDS: SmartCard[] = [
-  { icon: 'arrow-forward-outline', color: '#33C8E8', label: 'Start coaching', prompt: 'start_coaching' },
+  { icon: 'arrow-forward-outline', color: '#1c9fda', label: 'Start coaching', prompt: 'start_coaching' },
 ];
 
 
@@ -215,7 +215,7 @@ function SmartCarousel({ onPress, disabled, lastCycles, onboardingStep, isTour }
   else if (onboardingStep === 'summary')        cards = ONBOARDING_SUMMARY_CARDS;
   else if (isTour) {
     // Tour mode: single "Got it" card to skip the tour
-    cards = [{ icon: 'checkmark-circle-outline', color: '#4DA3FF', label: 'Got it!', prompt: '__TOUR_SKIP__' }];
+    cards = [{ icon: 'checkmark-circle-outline', color: '#1c9fda', label: 'Got it!', prompt: '__TOUR_SKIP__' }];
   }
   else {
     const hour = new Date().getHours();
@@ -506,7 +506,7 @@ function OnboardingPill({
 const op = StyleSheet.create({
   dotsRow:   { flexDirection: 'row', gap: 3, alignItems: 'center' },
   dot:       { width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  dotFilled: { backgroundColor: '#4DA3FF' },
+  dotFilled: { backgroundColor: '#1c9fda' },
 });
 
 const MOCK_PILL = {

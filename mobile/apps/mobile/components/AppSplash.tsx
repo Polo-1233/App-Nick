@@ -1,7 +1,7 @@
 /**
  * AppSplash — in-app animated splash screen.
  *
- * R-Lo mascot centered on dark navy background (#0B1220) with a slow
+ * R-Lo mascot centered on dark navy background (#0a0a3a) with a slow
  * breathing circle animation — calm and premium, like a wellness app.
  *
  * Breathing animation: scale 1.0 → 1.18 → 1.0 over 3s, loops infinitely.
@@ -62,7 +62,7 @@ export function AppSplash() {
 const s = StyleSheet.create({
   container: {
     flex:            1,
-    backgroundColor: '#0B1220',
+    backgroundColor: '#0a0a3a',
     justifyContent:  'center',
     alignItems:      'center',
   },

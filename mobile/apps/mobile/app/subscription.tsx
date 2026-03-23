@@ -30,12 +30,12 @@ import { HapticsLight }   from '../utils/haptics';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:      '#0B1220',
-  card:    '#1A2436',
+  bg:      '#0a0a3a',
+  card:    '#141466',
   cardHL:  '#0E1E35',   // yearly highlighted card
-  surface: '#243046',
+  surface: '#1c1c7a',
   accent:  '#F5A623',   // orange — CTA only
-  blue:    '#4DA3FF',
+  blue:    '#1c9fda',
   text:    '#E6EDF7',
   sub:     '#9FB0C5',
   muted:   '#6B7F99',
@@ -198,7 +198,7 @@ export default function SubscriptionScreen() {
             disabled={loading}
           >
             {loading
-              ? <ActivityIndicator color="#0B1220" />
+              ? <ActivityIndicator color="#0a0a3a" />
               : <Text style={s.ctaTxt}>Start free trial</Text>
             }
           </Pressable>
@@ -263,7 +263,7 @@ const s = StyleSheet.create({
 
   // CTA
   cta:    { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 18, alignItems: 'center', marginBottom: 16 },
-  ctaTxt: { fontSize: 17, fontWeight: '800', color: '#0B1220', letterSpacing: 0.2 },
+  ctaTxt: { fontSize: 17, fontWeight: '800', color: '#0a0a3a', letterSpacing: 0.2 },
 
   activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center', paddingVertical: 18, marginBottom: 16 },
   activeTxt: { fontSize: 15, fontWeight: '600', color: C.success },

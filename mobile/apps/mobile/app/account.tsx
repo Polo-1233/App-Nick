@@ -30,10 +30,10 @@ import AsyncStorage            from '@react-native-async-storage/async-storage';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:      '#0B1220',
-  card:    '#1A2436',
-  surface2:'#243046',
-  accent:  '#4DA3FF',
+  bg:      '#0a0a3a',
+  card:    '#141466',
+  surface2:'#1c1c7a',
+  accent:  '#1c9fda',
   success: '#3DDC97',
   warning: '#F5A623',
   danger:  '#F87171',

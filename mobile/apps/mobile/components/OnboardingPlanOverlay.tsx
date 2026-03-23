@@ -45,15 +45,15 @@ import { Analytics } from '../lib/analytics';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const BG        = '#0B1220';
-const SURFACE   = '#1A2436';
-const SURFACE_2 = '#243046';
-const BORDER    = '#243046';
+const BG        = '#0a0a3a';
+const SURFACE   = '#141466';
+const SURFACE_2 = '#1c1c7a';
+const BORDER    = '#1c1c7a';
 const TEXT      = '#E6EDF7';
 const TEXT_SUB  = '#9FB0C5';
 const TEXT_MUTED= '#6B7F99';
-const ACCENT    = '#33C8E8';
-const USER_TEXT = '#0B1220';
+const ACCENT    = '#1c9fda';
+const USER_TEXT = '#0a0a3a';
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -389,12 +389,12 @@ const pw = StyleSheet.create({
   planSelected:{ borderColor: ACCENT, backgroundColor: `${ACCENT}0D` },
   planBadgeWrap:{ height: 20, justifyContent: 'center' },
   saveBadge:  { backgroundColor: ACCENT, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  saveBadgeText:{ fontSize: 10, fontWeight: '700', color: '#0B1220' },
+  saveBadgeText:{ fontSize: 10, fontWeight: '700', color: '#0a0a3a' },
   planLabel:  { fontSize: 15, fontWeight: '700', color: TEXT },
   planPrice:  { fontSize: 18, fontWeight: '800', color: TEXT },
   planSub:    { fontSize: 11, color: TEXT_MUTED, textAlign: 'center' },
   cta:        { backgroundColor: ACCENT, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
-  ctaText:    { fontSize: 17, fontWeight: '700', color: '#0B1220' },
+  ctaText:    { fontSize: 17, fontWeight: '700', color: '#0a0a3a' },
   ctaSub:     { fontSize: 12, color: TEXT_MUTED, textAlign: 'center' },
   skip:       { alignItems: 'center', paddingVertical: 4 },
   skipText:   { fontSize: 14, color: TEXT_MUTED },
@@ -745,7 +745,7 @@ function PermissionStep({
           </View>
           <View style={bs.actions}>
             <Pressable style={bs.btnApple} onPress={handleNativeCalendar}>
-              <Ionicons name="calendar" size={18} color="#0B1220" />
+              <Ionicons name="calendar" size={18} color="#0a0a3a" />
               <Text style={bs.btnAppleText}>Allow Calendar Access</Text>
             </Pressable>
             <Pressable style={bs.btnGoogle} onPress={handleGoogleCalendar} disabled={googleLoading}>
@@ -779,7 +779,7 @@ function PermissionStep({
           </View>
           <View style={bs.actions}>
             <Pressable style={bs.btnApple} onPress={handleAppleHealthOnboard}>
-              <Ionicons name="heart" size={18} color="#0B1220" />
+              <Ionicons name="heart" size={18} color="#0a0a3a" />
               <Text style={bs.btnAppleText}>Connect Apple Health</Text>
             </Pressable>
             <Pressable style={[bs.btnGoogle, ouraLoading && { opacity: 0.6 }]} onPress={handleOuraOnboard} disabled={ouraLoading}>
@@ -812,7 +812,7 @@ function PermissionStep({
         </View>
         <View style={bs.actions}>
           <Pressable style={bs.btnApple} onPress={handleNotifications}>
-            <Ionicons name="notifications" size={18} color="#0B1220" />
+            <Ionicons name="notifications" size={18} color="#0a0a3a" />
             <Text style={bs.btnAppleText}>Allow Notifications</Text>
           </Pressable>
           <Pressable style={bs.btnSkip} onPress={() => setPermStep('saving')}>
@@ -861,7 +861,7 @@ const bs = StyleSheet.create({
     backgroundColor: ACCENT, borderRadius: 14,
     paddingVertical: 15,
   },
-  btnAppleText: { fontSize: 16, fontWeight: '600', color: '#0B1220' },
+  btnAppleText: { fontSize: 16, fontWeight: '600', color: '#0a0a3a' },
   btnGoogle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: 'transparent', borderRadius: 14,

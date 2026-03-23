@@ -18,13 +18,13 @@ import { useTheme } from '../lib/theme-context';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const BG      = '#0B1220';
-const SURFACE = '#1A2436';
-const BORDER  = '#243046';
+const BG      = '#0a0a3a';
+const SURFACE = '#141466';
+const BORDER  = '#1c1c7a';
 const TEXT    = '#E6EDF7';
 const SUB     = '#9FB0C5';
 const MUTED   = '#6B7F99';
-const ACCENT  = '#33C8E8';
+const ACCENT  = '#1c9fda';
 const GREEN   = '#4ADE80';
 const ORANGE  = '#F97171';
 
@@ -70,7 +70,7 @@ const WEARABLES: WearableConfig[] = [
     id:          'garmin',
     name:        'Garmin',
     icon:        'fitness-outline',
-    color:       '#4DA3FF',
+    color:       '#1c9fda',
     description: 'Sleep, body battery, stress, training load',
     available:   false,
     comingSoon:  true,
@@ -214,7 +214,7 @@ export default function WearablesScreen() {
                 style={s.btnPrimary}
                 onPress={w.id === 'oura' ? handleOuraConnect : handleAppleHealth}
               >
-                <Ionicons name="link-outline" size={14} color="#0B1220" />
+                <Ionicons name="link-outline" size={14} color="#0a0a3a" />
                 <Text style={s.btnPrimaryText}>Connect</Text>
               </Pressable>
             )}
@@ -276,7 +276,7 @@ const s = StyleSheet.create({
   badgeText:    { fontSize: 11, fontWeight: '600', color: MUTED },
   cardActions:  { flexDirection: 'row', gap: 8, alignItems: 'center' },
   btnPrimary:   { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: ACCENT, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
-  btnPrimaryText: { fontSize: 13, fontWeight: '600', color: '#0B1220' },
+  btnPrimaryText: { fontSize: 13, fontWeight: '600', color: '#0a0a3a' },
   btnSecondary: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: ACCENT, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   btnSecondaryText: { fontSize: 13, fontWeight: '500', color: ACCENT },
   btnDanger:    { borderWidth: 1, borderColor: ORANGE, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },

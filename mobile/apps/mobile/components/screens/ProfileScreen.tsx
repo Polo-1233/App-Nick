@@ -52,11 +52,11 @@ import { GoogleCalendarConnect } from '../GoogleCalendarConnect';
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
 const C = {
-  bg:        '#0B1220',
-  card:      '#1A2436',
-  surface2:  '#243046',
-  accent:          '#4DA3FF',
-  accentSecondary: '#4DA3FF',
+  bg:        '#0a0a3a',
+  card:      '#141466',
+  surface2:  '#1c1c7a',
+  accent:          '#1c9fda',
+  accentSecondary: '#1c9fda',
   text:      '#E6EDF7',
   textSub:   '#9FB0C5',
   textMuted: '#6B7F99',
@@ -303,7 +303,7 @@ const sm = StyleSheet.create({
   expandLabel: { fontSize: 14, color: C.textSub },
   footer:      { padding: 16, paddingBottom: 28 },
   saveBtn:     { borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0B1220' },
+  saveBtnText: { fontSize: 16, fontWeight: '700', color: '#0a0a3a' },
 });
 
 // ─── Premium Card ─────────────────────────────────────────────────────────────
@@ -365,7 +365,7 @@ const pc = StyleSheet.create({
   featureDot: { width: 6, height: 6, borderRadius: 3 },
   featureText:{ fontSize: 14, color: C.textSub },
   btn:        { backgroundColor: C.accent, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 16 },
-  btnText:    { fontSize: 15, fontWeight: '700', color: '#0B1220' },
+  btnText:    { fontSize: 15, fontWeight: '700', color: '#0a0a3a' },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -587,7 +587,7 @@ const s = StyleSheet.create({
   // Identity
   identity: { alignItems: 'center', paddingTop: 40, paddingBottom: 32, gap: 8 },
   avatar:   { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28, fontWeight: '700', color: '#0B1220' },
+  avatarText: { fontSize: 28, fontWeight: '700', color: '#0a0a3a' },
   name:     { fontSize: 22, fontWeight: '700', color: C.text },
   nameSub:  { fontSize: 13, color: C.textMuted },
 

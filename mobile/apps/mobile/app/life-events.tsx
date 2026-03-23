@@ -22,15 +22,15 @@ import {
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg: '#0B1220', card: '#1A2436', surface2: '#243046',
-  accent: '#4DA3FF', text: '#E6EDF7', sub: '#9FB0C5',
+  bg: '#0a0a3a', card: '#141466', surface2: '#1c1c7a',
+  accent: '#1c9fda', text: '#E6EDF7', sub: '#9FB0C5',
   muted: '#6B7F99', border: 'rgba(255,255,255,0.06)',
   success: '#3DDC97', warning: '#F5A623', error: '#F87171',
 };
 
 // ─── Event type config ────────────────────────────────────────────────────────
 const EVENT_TYPES: Record<string, { label: string; icon: string; color: string }> = {
-  travel:       { label: 'Travel',        icon: 'airplane-outline',      color: '#4DA3FF' },
+  travel:       { label: 'Travel',        icon: 'airplane-outline',      color: '#1c9fda' },
   illness:      { label: 'Illness',       icon: 'medical-outline',       color: '#F87171' },
   high_stress:  { label: 'High stress',   icon: 'warning-outline',       color: '#F5A623' },
   late_night:   { label: 'Late night',    icon: 'moon-outline',          color: '#9B59B6' },

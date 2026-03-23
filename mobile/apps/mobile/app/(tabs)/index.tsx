@@ -130,7 +130,7 @@ const ti = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius:   BUBBLE_SIZE / 2,
     borderWidth:    2,
-    borderColor:    '#4DA3FF',
+    borderColor:    '#1c9fda',
   },
 });
 

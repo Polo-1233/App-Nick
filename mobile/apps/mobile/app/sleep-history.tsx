@@ -31,10 +31,10 @@ import {
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:       '#0B1220',
-  card:     '#1A2436',
-  surface2: '#243046',
-  accent:   '#4DA3FF',
+  bg:       '#0a0a3a',
+  card:     '#141466',
+  surface2: '#1c1c7a',
+  accent:   '#1c9fda',
   text:     '#E6EDF7',
   textSub:  '#9FB0C5',
   textMuted:'#6B7F99',

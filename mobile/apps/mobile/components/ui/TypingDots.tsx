@@ -6,7 +6,7 @@
 import { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 
-const SURFACE  = '#1A2436';
+const SURFACE  = '#141466';
 const TEXT_SUB = '#9FB0C5';
 
 export function TypingDots() {

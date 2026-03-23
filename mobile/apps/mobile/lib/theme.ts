@@ -51,26 +51,33 @@ export interface Theme {
   colors: ThemeColors;
 }
 
-// ─── Dark theme (current app palette — zero regression) ───────────────────────
+// ─── R90 Brand tokens ─────────────────────────────────────────────────────────
+// Source: Nick Littlehales brand identity
+//   Accent (claire)  #1c9fda — bleu clair R90
+//   Deep (fore)      #141466 — bleu marine foncé
+//   Text             #002060 — bleu écriture
+//   Background       #ffffff — fond blanc
+
+// ─── Dark theme — R90 navy brand ──────────────────────────────────────────────
 
 export const darkTheme: Theme = {
   dark: true,
   colors: {
-    background:      '#0B1220',
-    surface:         '#1A2436',
-    surface2:        '#243046',
-    text:            '#E6EDF7',
-    textSub:         '#9FB0C5',
-    textMuted:       '#6B7F99',
-    textFaint:       '#2A3A50',
-    border:          '#243046',
-    borderSub:       '#1E2D42',
-    tabBarBg:        '#0B1220',
-    tabBarBorder:    '#1A2436',
-    tabBarBubble:    'rgba(51,200,232,0.15)',
-    tabBarIcon:      '#E6EDF7',
-    accent:          '#33C8E8',
-    accentSecondary: '#4DA3FF',
+    background:      '#0a0a3a',   // navy très foncé dérivé de #141466
+    surface:         '#141466',   // bleu marine R90
+    surface2:        '#1c1c7a',   // navy légèrement plus clair
+    text:            '#FFFFFF',
+    textSub:         '#A8C4E0',
+    textMuted:       '#6B8CAE',
+    textFaint:       '#1e1e70',
+    border:          '#1c1c7a',
+    borderSub:       '#141466',
+    tabBarBg:        '#0a0a3a',
+    tabBarBorder:    '#141466',
+    tabBarBubble:    'rgba(28,159,218,0.18)',  // accent alpha
+    tabBarIcon:      '#FFFFFF',
+    accent:          '#1c9fda',   // bleu clair R90
+    accentSecondary: '#4DC3F0',   // accent plus clair
     success:         '#3DDC97',
     warning:         '#F5A623',
     error:           '#F87171',
@@ -78,26 +85,26 @@ export const darkTheme: Theme = {
   },
 };
 
-// ─── Light theme ──────────────────────────────────────────────────────────────
+// ─── Light theme — R90 blanc/bleu ─────────────────────────────────────────────
 
 export const lightTheme: Theme = {
   dark: false,
   colors: {
-    background:     '#FFFFFF',
-    surface:        '#F9FAFB',
-    surface2:       '#F3F4F6',
-    text:           '#111827',
-    textSub:        '#6B7280',
-    textMuted:      '#9CA3AF',
-    textFaint:      '#D1D5DB',
-    border:         '#E5E7EB',
-    borderSub:      '#F3F4F6',
-    tabBarBg:       '#FFFFFF',
-    tabBarBorder:   '#E5E7EB',
-    tabBarBubble:   'rgba(0,0,0,0.08)',
-    tabBarIcon:     '#374151',
-    accent:          '#22C55E',
-    accentSecondary: '#2563EB',
+    background:      '#FFFFFF',   // fond blanc R90
+    surface:         '#F0F6FB',   // bleu très pâle
+    surface2:        '#E0EEF8',
+    text:            '#002060',   // bleu écriture R90
+    textSub:         '#1c4a8a',
+    textMuted:       '#5B7A9D',
+    textFaint:       '#C8DDEF',
+    border:          '#CCE3F4',
+    borderSub:       '#E8F3FB',
+    tabBarBg:        '#FFFFFF',
+    tabBarBorder:    '#CCE3F4',
+    tabBarBubble:    'rgba(28,159,218,0.12)',
+    tabBarIcon:      '#002060',
+    accent:          '#1c9fda',   // bleu clair R90
+    accentSecondary: '#141466',   // bleu marine R90
     success:         '#16A34A',
     warning:         '#D97706',
     error:           '#DC2626',

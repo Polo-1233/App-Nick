@@ -25,10 +25,10 @@ import { Analytics } from '../../lib/analytics';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const BG        = '#0B1220';
-const CARD      = '#1A2436';
-const SURFACE   = '#243046';
-const ACCENT    = '#4DA3FF';
+const BG        = '#0a0a3a';
+const CARD      = '#141466';
+const SURFACE   = '#1c1c7a';
+const ACCENT    = '#1c9fda';
 const TEXT      = '#F0F4FF';
 const TEXT_SUB  = '#A0B0CC';
 const TEXT_MUTED= '#7A8FAA';

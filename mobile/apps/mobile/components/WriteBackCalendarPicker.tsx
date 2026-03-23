@@ -223,7 +223,7 @@ const s = StyleSheet.create({
     marginTop:  2,
   },
   checkmark: {
-    color:      '#22C55E',
+    color:      '#1c9fda',
     fontSize:   17,
     fontWeight: '700',
   },

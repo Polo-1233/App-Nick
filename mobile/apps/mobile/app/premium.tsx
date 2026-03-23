@@ -23,10 +23,10 @@ import { MascotImage }      from '../components/ui/MascotImage';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
-  bg:      '#0B1220',
-  card:    '#1A2436',
+  bg:      '#0a0a3a',
+  card:    '#141466',
   cardHL:  '#0D1D32',
-  accent:  '#4DA3FF',
+  accent:  '#1c9fda',
   gold:    '#F5A623',
   success: '#3DDC97',
   text:    '#E6EDF7',
@@ -205,5 +205,5 @@ const s = StyleSheet.create({
   upsellTitle: { fontSize: 26, fontWeight: '800', color: C.text, textAlign: 'center', marginBottom: 12 },
   upsellSub:   { fontSize: 15, color: C.sub, textAlign: 'center', lineHeight: 24, marginBottom: 32 },
   ctaBtn:      { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 40 },
-  ctaTxt:      { fontSize: 16, fontWeight: '800', color: '#0B1220' },
+  ctaTxt:      { fontSize: 16, fontWeight: '800', color: '#0a0a3a' },
 });

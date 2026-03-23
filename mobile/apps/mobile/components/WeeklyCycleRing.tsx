@@ -27,7 +27,7 @@ interface Props {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ZONE_COLOR: Record<ReadinessZone, string> = {
-  green:  '#22C55E',
+  green:  '#1c9fda',
   yellow: '#EAB308',
   orange: '#F97316',
 };

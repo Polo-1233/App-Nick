@@ -52,10 +52,10 @@ const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
 const HOME_STAT_WIDTHS    = [88, 56, 72] as const;
 
-const ACCENT  = '#33C8E8';   // turquoise brand accent
-const BG      = '#0B1220';
-const SURFACE = '#1A2436';
-const BORDER  = '#243046';
+const ACCENT  = '#1c9fda';   // turquoise brand accent
+const BG      = '#0a0a3a';
+const SURFACE = '#141466';
+const BORDER  = '#1c1c7a';
 const TEXT    = '#E6EDF7';
 const TEXT_SUB  = '#9FB0C5';
 const TEXT_MUTED = '#6B7F99';
@@ -678,7 +678,7 @@ const s = StyleSheet.create({
     paddingBottom: 16,
   },
   bubble: {
-    backgroundColor:  '#1A2436',
+    backgroundColor:  '#141466',
     borderRadius:     20,
     paddingVertical:  20,
     paddingHorizontal: 28,   // slightly narrower padding → bubble ~10% narrower
@@ -706,7 +706,7 @@ const s = StyleSheet.create({
     borderTopWidth:   10,
     borderLeftColor:  'transparent',
     borderRightColor: 'transparent',
-    borderTopColor:   '#1A2436',
+    borderTopColor:   '#141466',
   },
   slide0Mascot: {
     width:  200,   // up from 160 (+25%)
