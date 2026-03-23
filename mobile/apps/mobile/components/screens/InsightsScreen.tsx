@@ -1,36 +1,38 @@
 /**
- * InsightsScreen — Recovery analysis + actionable coaching
+ * InsightsScreen — Rhythm Flow
  *
- * Layout:
- *   1. Rhythm Strength card — insight message (no raw score)
- *   2. Cycles + Rhythm Balance — positive language
- *   3. Sleep Consistency    — elevated prominence (R90 key metric)
- *   4. Weekly Trend chart   — cycles under each day + coaching insight below
+ * Structure (spec 1.3) :
+ *   1. Rhythm Flow — grand nombre de jours + phrase R-Lo
+ *   2. Cette semaine — 7 dots (vert/ambre/gris), phrase contextuelle
+ *   3. [En savoir plus ↓] — section expandable avec détails en phrases
  *
- * Language rules: no "debt", "deficit", "behind", "energy score" visible to user.
+ * Principes :
+ *   - Pas de score numérique brut visible
+ *   - Pas de rouge (rhythmLow = ambre)
+ *   - Pas de "debt", "deficit", "behind"
  */
 
 import { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
+  View, Text, ScrollView, StyleSheet,
+  Pressable, ActivityIndicator, Animated,
 } from 'react-native';
-import { SafeAreaView }           from 'react-native-safe-area-context';
-import { Ionicons }               from '@expo/vector-icons';
-import { MascotImage }            from '../ui/MascotImage';
+import { SafeAreaView }    from 'react-native-safe-area-context';
+import { Ionicons }        from '@expo/vector-icons';
+import { MascotImage }     from '../ui/MascotImage';
+import { useFocusEffect }  from 'expo-router';
+import { useCallback, useRef } from 'react';
+
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
-import { getWeeklySummaries, getWearableLatest, getWearableHistory, type WeeklySummaryResponse } from '../../lib/api';
+import { getWeeklySummaries, getWearableHistory, type WeeklySummaryResponse } from '../../lib/api';
 import {
   computeInsights,
   getRhythmInsightMessage,
   consistencyLabel,
   type InsightsData,
-  type DayTrend,
 } from '../../lib/insights';
-
+import { Analytics } from '../../lib/analytics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -40,199 +42,179 @@ const C = {
   surface2:  '#1c1c7a',
   accent:    '#1c9fda',
   success:   '#3DDC97',
-  warning:   '#F5A623',
-  error:     '#F87171',
-  text:      '#E6EDF7',
-  textSub:   '#9FB0C5',
-  textMuted: '#6B7F99',
-  border:    'rgba(255,255,255,0.06)',
+  rhythmLow: '#E8A020',  // ambre — jamais rouge pour le rythme
+  text:      '#FFFFFF',
+  textSub:   '#A8C4E0',
+  textMuted: '#6B8CAE',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function rhythmStrengthColor(score: number): string {
-  if (score >= 75) return C.success;
-  if (score >= 50) return C.warning;
-  return C.warning; // amber — never red for rhythm indicators
-}
-
-function cyclesHelper(cycles: number, target: number): string {
-  const diff = target - cycles;
-  if (diff <= 0)  return '✓ Objectif atteint';
-  if (diff === 1) return '1 cycle de plus ce soir';
-  if (diff <= 3)  return 'Presque à l\'objectif';
-  return `${diff} cycles restants`;
-}
-
-function balanceLabel(balance: number): string {
-  if (balance === 0) return 'En équilibre';
-  if (balance > 0)   return `${balance} cycle${balance > 1 ? 's' : ''} d'avance`;
-  return `${Math.abs(balance)} cycle${Math.abs(balance) > 1 ? 's' : ''} à récupérer`;
-}
-
-function balanceHelper(balance: number): string {
-  if (balance >= 2)  return 'Belle avance — ton rythme est solide';
-  if (balance === 1) return 'Légèrement en avance — bonne position';
-  if (balance === 0) return 'Parfaitement en phase';
-  if (balance === -1) return 'Un cycle de plus ce soir rééquilibre tout';
-  if (balance >= -3)  return 'Un coucher plus tôt ce soir suffit';
-  return 'Semaine chargée. R-Lo est là pour t\'aider.';
-}
-
-function predictiveInsight(balance: number, target: number, cycles: number, nightlyTarget: number): string {
-  const remaining = target - cycles;
-  if (remaining <= 0) return 'Tu as atteint ton objectif hebdomadaire. Bien joué.';
-  if (remaining <= nightlyTarget) {
-    return `${remaining} cycle${remaining > 1 ? 's' : ''} ce soir et tu atteins ton objectif de la semaine.`;
+function getRhythmFlowDays(history: NightRecord[], target: number): number {
+  // Compte les jours consécutifs récents avec cycles ≥ target - 1
+  let streak = 0;
+  const sorted = [...history].sort((a, b) => b.date.localeCompare(a.date));
+  for (const n of sorted) {
+    if (n.cyclesCompleted >= target - 1) streak++;
+    else break;
   }
-  return `${remaining} cycles restants cette semaine. Des nuits de ${nightlyTarget} cycles t'y amènent régulièrement.`;
+  return streak;
 }
 
-function consistencyAdvice(pct: number): string {
-  if (pct >= 80) return 'Ton heure d\'ancrage est solide. La méthode R90 fonctionne.';
-  if (pct >= 65) return 'Essaie de garder ton heure de réveil à ±15 min chaque jour.';
-  return 'Une heure de réveil constante est la base de la récupération R90.';
+function getWeekDots(history: NightRecord[], target: number): Array<'green' | 'amber' | 'grey'> {
+  const today  = new Date();
+  const dots: Array<'green' | 'amber' | 'grey'> = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const night   = history.find(n => n.date === dateStr);
+    if (!night) {
+      dots.push('grey');
+    } else if (night.cyclesCompleted >= target) {
+      dots.push('green');
+    } else if (night.cyclesCompleted >= target - 1) {
+      dots.push('amber');
+    } else {
+      dots.push('grey');
+    }
+  }
+  return dots;
 }
 
-// ─── 1. Rhythm Strength card (no raw score shown) ────────────────────────────
-function RhythmStrengthCard({ score, consistency, balance }: { score: number; consistency: number; balance: number }) {
-  const color   = rhythmStrengthColor(score);
-  const insight = getRhythmInsightMessage(score);
+function getAlignedCount(dots: Array<'green' | 'amber' | 'grey'>): number {
+  return dots.filter(d => d === 'green' || d === 'amber').length;
+}
+
+function getWeekMessage(aligned: number, total: number): string {
+  if (aligned === total) return 'Semaine parfaite. Ton rythme est solide.';
+  if (aligned >= 5) return `${aligned}/7 jours alignés. En bonne voie.`;
+  if (aligned >= 3) return `${aligned}/7 jours alignés. Le rythme se construit.`;
+  return `${aligned}/7 jours. Chaque cycle compte — continue.`;
+}
+
+// ─── 7 Dots semaine ───────────────────────────────────────────────────────────
+
+const DAYS_FR = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+
+function WeekDots({ dots }: { dots: Array<'green' | 'amber' | 'grey'> }) {
+  const colorMap = { green: C.success, amber: C.rhythmLow, grey: '#444' };
   return (
-    <View style={s.energyCard}>
-      <Text style={s.cardLabel}>Ton rythme</Text>
-      <View style={s.energyBarBg}>
-        <View style={[s.energyBarFill, { width: `${score}%`, backgroundColor: color }]} />
-      </View>
-      {/* Insight message — human readable, positive */}
-      <View style={s.insightRow}>
-        <Ionicons name="bulb-outline" size={14} color={color} />
-        <Text style={[s.insightText, { color }]}>{insight}</Text>
-      </View>
-    </View>
-  );
-}
-
-// ─── 2. Small metric card ─────────────────────────────────────────────────────
-function MetricCard({
-  label, value, sub, helper, color,
-}: {
-  label: string; value: string; sub?: string; helper?: string; color?: string;
-}) {
-  return (
-    <View style={s.metricCard}>
-      <Text style={s.metricLabel}>{label}</Text>
-      <Text style={[s.metricValue, color ? { color } : {}]}>{value}</Text>
-      {sub    ? <Text style={s.metricSub}>{sub}</Text>    : null}
-      {helper ? <Text style={s.metricHelper}>{helper}</Text> : null}
-    </View>
-  );
-}
-
-// ─── 3. Consistency card (elevated) ──────────────────────────────────────────
-function ConsistencyCard({ pct }: { pct: number }) {
-  // amber for low consistency — never red for rhythm indicators
-  const color  = pct >= 80 ? C.success : C.warning;
-  const label  = consistencyLabel(pct);
-  const advice = consistencyAdvice(pct);
-  return (
-    <View style={s.consistencyCard}>
-      <View style={s.consistencyTop}>
-        <View>
-          <Text style={s.cardLabel}>Sleep Consistency</Text>
-          <Text style={[s.consistencyPct, { color }]}>{pct}%</Text>
-          <Text style={[s.consistencyLabel, { color }]}>{label}</Text>
+    <View style={wd.row}>
+      {dots.map((d, i) => (
+        <View key={i} style={wd.col}>
+          <View style={[wd.dot, { backgroundColor: colorMap[d] }]} />
+          <Text style={wd.day}>{DAYS_FR[i]}</Text>
         </View>
-        {/* Circular badge */}
-        <View style={[s.consistencyBadge, { borderColor: `${color}50`, backgroundColor: `${color}12` }]}>
-          <Ionicons
-            name={pct >= 80 ? 'checkmark-circle' : pct >= 65 ? 'time-outline' : 'alert-circle-outline'}
-            size={28}
-            color={color}
-          />
-        </View>
-      </View>
-      <View style={s.consistencyBarBg}>
-        <View style={[s.consistencyBarFill, { width: `${pct}%`, backgroundColor: color }]} />
-      </View>
-      <Text style={s.consistencyAdvice}>{advice}</Text>
+      ))}
     </View>
   );
 }
 
-// ─── 4. Weekly Trend chart ────────────────────────────────────────────────────
-const TREND_MAX_HEIGHT = 60;
+const wd = StyleSheet.create({
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8 },
+  col: { alignItems: 'center', gap: 6 },
+  dot: { width: 24, height: 24, borderRadius: 12 },
+  day: { fontSize: 10, color: C.textMuted, fontWeight: '600' },
+});
 
-function TrendChart({
-  trend, target, nightlyTarget, weeklyCycles, weeklyTarget,
+// ─── Expandable details ────────────────────────────────────────────────────────
+
+function ExpandableDetails({
+  insights, profile,
 }: {
-  trend: DayTrend[];
-  target: number;
-  nightlyTarget: number;
-  weeklyCycles: number;
-  weeklyTarget: number;
+  insights: InsightsData;
+  profile:  UserProfile;
 }) {
-  const maxCycles = Math.max(...trend.map(d => d.cycles), target, 1);
-  const balance   = weeklyCycles - weeklyTarget;
-  const insight   = predictiveInsight(balance, weeklyTarget, weeklyCycles, nightlyTarget);
+  const [open, setOpen] = useState(false);
+  const anim = useRef(new Animated.Value(0)).current;
 
-  function dayLabel(dateStr: string): string {
-    try { return new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'narrow' }); }
-    catch { return ''; }
+  function toggle() {
+    setOpen(v => {
+      Animated.timing(anim, {
+        toValue: v ? 0 : 1,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+      return !v;
+    });
   }
 
+  const consistPct = insights.sleepConsistency;
+  const consist    = consistencyLabel(consistPct);
+  const balanceAbs = Math.abs(insights.rhythmBalance);
+  const balanceTxt = insights.rhythmBalance >= 0
+    ? `${insights.rhythmBalance} cycle${insights.rhythmBalance !== 1 ? 's' : ''} d'avance sur l'objectif`
+    : `${balanceAbs} cycle${balanceAbs !== 1 ? 's' : ''} à récupérer — un coucher tôt ce soir suffit`;
+
   return (
-    <View style={s.trendCard}>
-      <Text style={s.cardLabel}>Weekly Trend</Text>
+    <View style={ed.wrap}>
+      <Pressable onPress={toggle} style={ed.toggle}>
+        <Text style={ed.toggleLabel}>{open ? 'Moins de détails ↑' : 'En savoir plus ↓'}</Text>
+      </Pressable>
 
-      <View style={s.trendBars}>
-        {trend.map((d, i) => {
-          const h     = Math.max(4, Math.round((d.cycles / maxCycles) * TREND_MAX_HEIGHT));
-          // amber for below-target — never red for rhythm bars
-          const color = d.cycles >= target ? C.success : C.warning;
-          return (
-            <View key={i} style={s.trendCol}>
-              <View style={[s.trendBarBg, { height: TREND_MAX_HEIGHT }]}>
-                <View style={[s.trendBarFill, { height: h, backgroundColor: color }]} />
-              </View>
-              <Text style={s.trendDay}>{dayLabel(d.date)}</Text>
-              <Text style={[s.trendCycles, { color }]}>{d.cycles}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <Text style={s.trendTargetNote}>Target: {target} cycles/night</Text>
-
-      {/* Predictive insight */}
-      <View style={s.predictiveBox}>
-        <Ionicons name="trending-up-outline" size={15} color={C.accent} />
-        <Text style={s.predictiveText}>{insight}</Text>
-      </View>
+      {open && (
+        <View style={ed.details}>
+          <View style={ed.row}>
+            <Ionicons name="moon-outline" size={14} color={C.accent} />
+            <Text style={ed.txt}>
+              <Text style={ed.bold}>Cycles cette semaine :</Text>{' '}
+              {insights.weeklyCycles} sur {insights.weeklyTarget} objectif
+            </Text>
+          </View>
+          <View style={ed.row}>
+            <Ionicons name="sync-outline" size={14} color={C.accent} />
+            <Text style={ed.txt}>
+              <Text style={ed.bold}>Consistance :</Text> {consist}
+            </Text>
+          </View>
+          <View style={ed.row}>
+            <Ionicons name="trending-up-outline" size={14} color={C.accent} />
+            <Text style={ed.txt}>
+              <Text style={ed.bold}>Rythme :</Text> {balanceTxt}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
-// ─── Loading / empty ──────────────────────────────────────────────────────────
+const ed = StyleSheet.create({
+  wrap:        { marginTop: 8 },
+  toggle:      { paddingVertical: 12, alignItems: 'center' },
+  toggleLabel: { fontSize: 13, color: C.accent, fontWeight: '600' },
+  details:     { backgroundColor: C.surface2, borderRadius: 12, padding: 14, gap: 10 },
+  row:         { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  txt:         { flex: 1, fontSize: 13, color: C.textSub, lineHeight: 19 },
+  bold:        { fontWeight: '700', color: C.text },
+});
+
+// ─── Empty state ───────────────────────────────────────────────────────────────
+
 function EmptyState() {
   return (
     <View style={s.emptyState}>
       <MascotImage emotion="Reflexion" size="md" />
-      <Text style={s.emptyTitle}>Your insights are building</Text>
+      <Text style={s.emptyTitle}>Ton rythme se construit</Text>
       <Text style={s.emptySub}>
-        {"R-Lo needs a few nights of data to calculate your sleep score, consistency, and recovery trends.\n\nStart by logging your first night or connecting a wearable."}
+        {"R-Lo a besoin de quelques nuits pour calculer ton Rhythm Flow.\n\nCommence par loguer ta première nuit ou connecte un wearable."}
       </Text>
     </View>
   );
 }
 
-// ─── Screen ───────────────────────────────────────────────────────────────────
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
 export default function InsightsScreen() {
-  const [loading,  setLoading]  = useState(true);
-  const [insights, setInsights] = useState<InsightsData | null>(null);
-  const [profile,  setProfile]  = useState<UserProfile | null>(null);
-  const [weekSummary, setWeekSummary] = useState<WeeklySummaryResponse | null>(null);
-  const [prevWeekSummary, setPrevWeekSummary] = useState<WeeklySummaryResponse | null>(null);
+  const [loading,         setLoading]         = useState(true);
+  const [insights,        setInsights]        = useState<InsightsData | null>(null);
+  const [profile,         setProfile]         = useState<UserProfile | null>(null);
+  const [weekSummary,     setWeekSummary]      = useState<WeeklySummaryResponse | null>(null);
+  const [rawHistory,      setRawHistory]       = useState<NightRecord[]>([]);
+
+  useFocusEffect(useCallback(() => { Analytics.screenViewed('insights'); }, []));
 
   useEffect(() => {
     async function load() {
@@ -243,35 +225,26 @@ export default function InsightsScreen() {
       ]);
       if (p) setProfile(p);
 
-      // Build NightRecord array from wearable backend data if local history is empty
       let history = h;
       if ((!history || history.length === 0) && wearableRes?.ok && wearableRes.data?.data) {
-        const wearableEntries = wearableRes.data.data as any[];
-        history = wearableEntries.map((w: any) => ({
+        const entries = wearableRes.data.data as any[];
+        history = entries.map((w: any) => ({
           date:            w.collected_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
           cyclesCompleted: w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4,
           anchorTime:      p?.anchorTime ?? 390,
         }));
       }
 
-      if (p && history && history.length > 0) {
-        setInsights(computeInsights(history, p));
-      }
+      if (history) setRawHistory(history);
+      if (p && history && history.length > 0) setInsights(computeInsights(history, p));
       setLoading(false);
     }
     void load();
-    // Fetch weekly summaries from backend
-    (async () => {
-      try {
-        const res = await getWeeklySummaries(2);
-        if (res.ok && res.data?.summaries) {
-          if (res.data.summaries.length > 0) setWeekSummary(res.data.summaries[0]);
-          if (res.data.summaries.length > 1) setPrevWeekSummary(res.data.summaries[1]);
-        }
-      } catch {
-        // Non-critical
-      }
-    })();
+
+    // Weekly summary from backend
+    getWeeklySummaries(1).then(res => {
+      if (res.ok && res.data?.summaries?.[0]) setWeekSummary(res.data.summaries[0]);
+    }).catch(() => {});
   }, []);
 
   if (loading) {
@@ -282,7 +255,25 @@ export default function InsightsScreen() {
     );
   }
 
-  const nightlyTarget = profile?.idealCyclesPerNight ?? 5;
+  if (!insights || !profile) {
+    return (
+      <SafeAreaView style={s.root} edges={['top']}>
+        <ScrollView contentContainerStyle={s.scroll}>
+          <View style={s.header}>
+            <Text style={s.headerTitle}>Insights</Text>
+          </View>
+          <EmptyState />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  const target      = profile.idealCyclesPerNight;
+  const flowDays    = getRhythmFlowDays(rawHistory, target);
+  const dots        = getWeekDots(rawHistory, target);
+  const aligned     = getAlignedCount(dots);
+  const weekMsg     = getWeekMessage(aligned, 7);
+  const rloMsg      = getRhythmInsightMessage(insights.rhythmStrength);
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
@@ -290,84 +281,43 @@ export default function InsightsScreen() {
 
         <View style={s.header}>
           <Text style={s.headerTitle}>Insights</Text>
-          <Text style={s.headerSub}>Your recovery at a glance</Text>
         </View>
 
-        {/* This week summary from backend */}
-        {weekSummary && (
-          <View style={s.weekCard}>
-            <Text style={s.cardLabel}>This week</Text>
-            <View style={s.weekRow}>
-              <Text style={[s.weekAvg, { color: weekSummary.on_track ? C.success : C.warning }]}>
-                {weekSummary.avg_cycles !== null ? weekSummary.avg_cycles.toFixed(1) : '—'}
-              </Text>
-              <Text style={s.weekAvgUnit}> avg cycles</Text>
-              {prevWeekSummary?.avg_cycles !== null && weekSummary.avg_cycles !== null && prevWeekSummary && (
-                <Text style={[s.weekDelta, {
-                  color: weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? C.success : C.warning,
-                }]}>
-                  {weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? ' ↑' : ' ↓'}
-                </Text>
-              )}
+        {/* ── 1. Rhythm Flow ── */}
+        <View style={s.flowCard}>
+          <Text style={s.flowLabel}>Rhythm Flow</Text>
+          <Text style={s.flowNumber}>{flowDays}</Text>
+          <Text style={s.flowSub}>jours de rythme</Text>
+
+          {/* Phrase R-Lo */}
+          <View style={s.rloRow}>
+            <View style={s.rloAvatar}>
+              <MascotImage emotion="encourageant" size="sm" />
             </View>
-            {weekSummary.on_track !== null && (
-              <View style={[s.weekBadge, { backgroundColor: weekSummary.on_track ? `${C.success}20` : `${C.warning}20` }]}>
-                <Text style={[s.weekBadgeText, { color: weekSummary.on_track ? C.success : C.warning }]}>
-                  {weekSummary.on_track ? 'En rythme' : 'En construction'}
-                </Text>
-              </View>
-            )}
-            {weekSummary.patterns_detected.length > 0 && (
-              <View style={s.weekPatterns}>
-                {weekSummary.patterns_detected.slice(0, 2).map((p, i) => (
-                  <Text key={i} style={s.weekPattern}>• {p}</Text>
-                ))}
-              </View>
-            )}
+            <Text style={s.rloMsg}>{rloMsg}</Text>
           </View>
-        )}
+        </View>
 
-        {!insights ? <EmptyState /> : (
-          <>
-            {/* 1. Rhythm Strength (no raw score) */}
-            <RhythmStrengthCard
-              score={insights.rhythmStrength}
-              consistency={insights.sleepConsistency}
-              balance={insights.rhythmBalance}
-            />
+        {/* ── 2. Cette semaine ── */}
+        <View style={s.weekCard}>
+          <Text style={s.sectionLabel}>Cette semaine</Text>
+          <WeekDots dots={dots} />
+          <Text style={s.weekMsg}>{weekMsg}</Text>
 
-            {/* 2. Cycles + Rhythm Balance */}
-            <View style={s.row}>
-              <MetricCard
-                label="Cycles cette semaine"
-                value={`${insights.weeklyCycles}`}
-                sub={`sur ${insights.weeklyTarget} objectif`}
-                helper={cyclesHelper(insights.weeklyCycles, insights.weeklyTarget)}
-                color={insights.weeklyCycles >= insights.weeklyTarget ? C.success : C.accent}
-              />
-              <MetricCard
-                label="Équilibre de rythme"
-                value={balanceLabel(insights.rhythmBalance)}
-                helper={balanceHelper(insights.rhythmBalance)}
-                color={insights.rhythmBalance >= 0 ? C.success : C.warning}
-              />
+          {/* Weekly summary de backend si dispo */}
+          {weekSummary?.on_track !== null && weekSummary && (
+            <View style={[s.badge, { backgroundColor: weekSummary.on_track ? `${C.success}20` : `${C.rhythmLow}20` }]}>
+              <Text style={[s.badgeText, { color: weekSummary.on_track ? C.success : C.rhythmLow }]}>
+                {weekSummary.on_track ? 'En rythme' : 'En construction'}
+              </Text>
             </View>
+          )}
+        </View>
 
-            {/* 3. Consistency — elevated */}
-            <ConsistencyCard pct={insights.sleepConsistency} />
-
-            {/* 4. Weekly chart + prediction */}
-            {insights.weeklyTrend.length > 0 && (
-              <TrendChart
-                trend={insights.weeklyTrend}
-                target={nightlyTarget}
-                nightlyTarget={nightlyTarget}
-                weeklyCycles={insights.weeklyCycles}
-                weeklyTarget={insights.weeklyTarget}
-              />
-            )}
-          </>
-        )}
+        {/* ── 3. En savoir plus ── */}
+        <View style={s.detailsCard}>
+          <ExpandableDetails insights={insights} profile={profile} />
+        </View>
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -376,72 +326,35 @@ export default function InsightsScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: C.bg },
   scroll: { paddingHorizontal: 16, paddingBottom: 32 },
 
   header:      { paddingTop: 16, paddingBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: '700', color: C.text },
-  headerSub:   { fontSize: 14, color: C.textSub, marginTop: 4 },
 
-  // Energy card
-  energyCard: { backgroundColor: C.card, borderRadius: 20, padding: 24, marginBottom: 12, gap: 12 },
-  energyRow:  { flexDirection: 'row', alignItems: 'baseline' },
-  energyScore:{ fontSize: 64, fontWeight: '900', lineHeight: 72 },
-  energyOf:   { fontSize: 22, fontWeight: '600', color: C.textSub },
-  energyBarBg:{ height: 6, borderRadius: 3, backgroundColor: C.surface2, overflow: 'hidden' },
-  energyBarFill: { height: '100%', borderRadius: 3 },
-  insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginTop: 2 },
-  insightText:{ fontSize: 14, fontWeight: '500', lineHeight: 20, flex: 1 },
+  // Rhythm Flow card
+  flowCard:   { backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14 },
+  flowLabel:  { fontSize: 12, fontWeight: '700', color: C.accent, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  flowNumber: { fontSize: 80, fontWeight: '900', color: C.text, lineHeight: 88 },
+  flowSub:    { fontSize: 16, color: C.textSub, marginBottom: 20 },
+  rloRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface2, borderRadius: 14, padding: 12, width: '100%' },
+  rloAvatar:  { width: 32, height: 32, borderRadius: 16, overflow: 'hidden' },
+  rloMsg:     { flex: 1, fontSize: 13, color: C.text, lineHeight: 19 },
 
-  cardLabel: { fontSize: 12, fontWeight: '600', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 },
+  // Cette semaine card
+  weekCard:    { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 14 },
+  sectionLabel:{ fontSize: 12, fontWeight: '700', color: C.textMuted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 },
+  weekMsg:     { fontSize: 14, color: C.textSub, marginTop: 14, lineHeight: 20, textAlign: 'center' },
+  badge:       { alignSelf: 'center', marginTop: 10, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  badgeText:   { fontSize: 12, fontWeight: '700' },
 
-  // Row of two metric cards
-  row: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  // Details card
+  detailsCard: { backgroundColor: C.card, borderRadius: 20, paddingHorizontal: 16, paddingBottom: 8 },
 
-  metricCard:  { flex: 1, backgroundColor: C.card, borderRadius: 16, padding: 18, gap: 4 },
-  metricLabel: { fontSize: 11, fontWeight: '600', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.7 },
-  metricValue: { fontSize: 20, fontWeight: '800', color: C.text, lineHeight: 26 },
-  metricSub:   { fontSize: 12, color: C.textMuted },
-  metricHelper:{ fontSize: 12, color: C.textSub, fontWeight: '500', marginTop: 2 },
-
-  // Consistency card — elevated
-  consistencyCard: { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 12, gap: 12 },
-  consistencyTop:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  consistencyPct:  { fontSize: 44, fontWeight: '900', lineHeight: 50, marginTop: 4 },
-  consistencyLabel:{ fontSize: 14, fontWeight: '600', marginTop: 2 },
-  consistencyBadge:{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  consistencyBarBg:{ height: 8, borderRadius: 4, backgroundColor: C.surface2, overflow: 'hidden' },
-  consistencyBarFill: { height: '100%', borderRadius: 4 },
-  consistencyAdvice: { fontSize: 13, color: C.textSub, lineHeight: 20 },
-
-  // Trend chart
-  trendCard: { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 12, gap: 16 },
-  trendBars: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 },
-  trendCol:  { flex: 1, alignItems: 'center', gap: 5 },
-  trendBarBg:{ width: '100%', borderRadius: 6, backgroundColor: C.surface2, justifyContent: 'flex-end', overflow: 'hidden' },
-  trendBarFill: { width: '100%', borderRadius: 6 },
-  trendDay:  { fontSize: 11, color: C.textMuted, fontWeight: '700', marginTop: 2 },
-  trendCycles: { fontSize: 12, fontWeight: '800' },
-  trendTargetNote: { fontSize: 12, color: C.textMuted, textAlign: 'center', marginTop: -4 },
-
-  // Predictive insight
-  predictiveBox:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: `${C.accent}12`, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: `${C.accent}25` },
-  predictiveText: { fontSize: 13, color: C.textSub, lineHeight: 20, flex: 1 },
-
-  // This week card
-  weekCard:      { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 12, gap: 10 },
-  weekRow:       { flexDirection: 'row', alignItems: 'baseline' },
-  weekAvg:       { fontSize: 36, fontWeight: '900', lineHeight: 42 },
-  weekAvgUnit:   { fontSize: 14, color: C.textSub, fontWeight: '600' },
-  weekDelta:     { fontSize: 18, fontWeight: '800', marginLeft: 4 },
-  weekBadge:     { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  weekBadgeText: { fontSize: 12, fontWeight: '700' },
-  weekPatterns:  { marginTop: 4, gap: 4 },
-  weekPattern:   { fontSize: 13, color: C.textSub, lineHeight: 19 },
-
-  // Empty
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.text },
+  // Empty state
+  emptyState: { alignItems: 'center', paddingTop: 60, gap: 16, paddingHorizontal: 24 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.text, textAlign: 'center' },
   emptySub:   { fontSize: 14, color: C.textSub, textAlign: 'center', lineHeight: 22 },
 });
