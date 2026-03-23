@@ -17,7 +17,7 @@ const MUTED    = '#6B8CAE';
 interface RLoMessageBarProps {
   text:     string;
   onTap:    () => void;
-  emotion?: 'rassurante' | 'encourageant' | 'Fiere' | 'Reflexion' | 'Enthousisate';
+  emotion?: import('./ui/MascotImage').MascotEmotion;
 }
 
 export const RLoMessageBar = memo(function RLoMessageBar({

@@ -39,11 +39,11 @@ const MANAGE_URL = 'https://apps.apple.com/account/subscriptions';
 
 // ─── Unlocked features ────────────────────────────────────────────────────────
 const FEATURES = [
-  { icon: 'moon-outline',           label: 'Personalized sleep planning'  },
-  { icon: 'analytics-outline',      label: 'Advanced recovery insights'   },
-  { icon: 'chatbubble-outline',     label: 'Priority AI coaching'         },
-  { icon: 'airplane-outline',       label: 'Jet lag adaptation'           },
-  { icon: 'pulse-outline',          label: 'Fatigue analysis'             },
+  { icon: 'moon-outline',       label: 'Wind-down avec sleep stories'   },
+  { icon: 'chatbubble-outline', label: 'Coaching R-Lo approfondi'       },
+  { icon: 'headset-outline',    label: 'Bibliothèque MRM & CRP'         },
+  { icon: 'calendar-outline',   label: 'Calendrier intelligent'         },
+  { icon: 'map-outline',        label: 'Programmes guidés'              },
 ];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────

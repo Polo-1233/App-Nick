@@ -39,6 +39,19 @@ import { RhythmTimeline }       from '../RhythmTimeline';
 import { ActionCard }           from '../ActionCard';
 import { RLoMessageBar }        from '../RLoMessageBar';
 import { SleepFooter }          from '../SleepFooter';
+import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
+import { getFlow }              from '../../lib/rhythm-points';
+import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
+import type { ReadinessState }  from '@r90/types';
+import type { MascotEmotion }   from '../ui/MascotImage';
+
+function getRLoMood(streak: number, readiness: ReadinessState | null | undefined): MascotEmotion {
+  if (streak >= 7) return 'Enthousisate';
+  if (streak >= 3) return 'encourageant';
+  if (readiness?.zone === 'green') return 'Fiere';
+  if (streak === 0) return 'rassurante';
+  return 'Reflexion';
+}
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
   loadOnboardingData, saveOnboardingData,
@@ -87,8 +100,10 @@ function getMissedCycleInfo(
   return { missed: true, nextWindow: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, cyclesRemaining: remaining };
 }
 
-// ─── HomeHeader (local — time + profile icon) ─────────────────────────────────
-function HomeHeader({ topInset, onProfilePress }: { topInset: number; onProfilePress: () => void }) {
+// ─── HomeHeader (time + streak badge + profile) ────────────────────────────────
+function HomeHeader({
+  topInset, onProfilePress, streak,
+}: { topInset: number; onProfilePress: () => void; streak: number }) {
   const [time, setTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -104,6 +119,12 @@ function HomeHeader({ topInset, onProfilePress }: { topInset: number; onProfileP
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: topInset + 12, paddingBottom: 10 }}>
       <Text style={{ fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 }}>{time}</Text>
+      {streak > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(245,166,35,0.15)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 14 }}>🔥</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#F5A623' }}>{streak}</Text>
+        </View>
+      )}
       <Pressable onPress={onProfilePress} hitSlop={12}>
         <Ionicons name="person-circle-outline" size={28} color={TEXT} />
       </Pressable>
@@ -206,7 +227,10 @@ export default function HomeScreen() {
   const [userName,       setUserName]      = useState<string | null>(null);
   const [bannerEvent,    setBannerEvent]   = useState<CalendarEventResponse | null>(null);
   const [bannerDismissed,setBannerDismissed] = useState(false);
-  const [chatOpen,       setChatOpen]      = useState(false);
+  const [chatOpen,          setChatOpen]       = useState(false);
+  const [showMorningConfirm, setShowMorningConfirm] = useState(false);
+  const [streak,             setStreak]             = useState(0);
+  const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
   const [input,          setInput]         = useState('');
   const scrollRef        = useRef<ScrollView>(null);
   const hasMountedFocus  = useRef(false);
@@ -227,6 +251,9 @@ export default function HomeScreen() {
       const [p, onboarding] = await Promise.all([loadProfile(), loadOnboardingData()]);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
       if (p) setProfile(p);
+      getFlow().then(f => setStreak(f.currentStreak)).catch(() => {});
+      void ensureSignupDate();
+      getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
   }, []);
 
@@ -336,6 +363,21 @@ export default function HomeScreen() {
     }).catch(() => {});
   }, [isOnboarding]);
 
+  // ── Morning confirmation ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (isOnboarding || !profile) return;
+    (async () => {
+      const lastConfirm = await AsyncStorage.getItem(CONFIRM_DATE_KEY);
+      const today       = new Date().toISOString().slice(0, 10);
+      if (lastConfirm === today) return;
+      const now     = new Date();
+      const nowMin  = now.getHours() * 60 + now.getMinutes();
+      const arp     = profile.anchorTime;
+      const isMorning = nowMin >= arp && nowMin <= arp + 120;
+      if (isMorning) setShowMorningConfirm(true);
+    })();
+  }, [isOnboarding, profile]);
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const bedtime     = dayPlan?.cycleWindow?.bedtime  ?? null;
   const wakeTime    = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
@@ -418,7 +460,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         >
           {/* 1. Header */}
-          <HomeHeader topInset={0} onProfilePress={() => goToPage(3)} />
+          <HomeHeader topInset={0} onProfilePress={() => goToPage(3)} streak={streak} />
 
           {/* 2. Rhythm Timeline */}
           {profile && bedtime && wakeTime ? (
@@ -438,7 +480,11 @@ export default function HomeScreen() {
           <ActionCard action={nextAction} missedCycle={missedCycle} onPress={handleActionPress} />
 
           {/* 4. R-Lo Message */}
-          <RLoMessageBar text={rloText} onTap={() => setChatOpen(true)} />
+          <RLoMessageBar
+            text={rloText}
+            onTap={() => setChatOpen(true)}
+            emotion={getRLoMood(streak, dayPlan?.readiness)}
+          />
 
           {/* 5. Secondary Cards */}
           {bannerEvent && !bannerDismissed && (
@@ -456,12 +502,59 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
+          {/* Coach Insight card — max 1/jour */}
+          {coachInsight && (
+            <View style={{ backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10, gap: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT, letterSpacing: 0.8 }}>💡 LE SAVAIS-TU ?</Text>
+              <Text style={{ fontSize: 13, color: TEXT, lineHeight: 20 }}>{coachInsight.message}</Text>
+              <Pressable
+                onPress={async () => {
+                  await markInsightSeen(coachInsight.id);
+                  setCoachInsight(null);
+                }}
+                style={{ alignSelf: 'flex-start', backgroundColor: `${ACCENT}20`, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT }}>Compris ✓</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Weekly Report card — dimanche soir ou lundi matin */}
+          {(() => {
+            const d = new Date();
+            const dow = d.getDay();
+            const h   = d.getHours();
+            const showWeekly = (dow === 0 && h >= 18) || (dow === 1 && h < 12);
+            if (!showWeekly) return null;
+            return (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}>
+                <Text style={{ fontSize: 18 }}>📊</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT }}>Bilan de la semaine</Text>
+                  <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+                    {streak > 0 ? `Rhythm Flow : ${streak} jours` : 'Consulte tes Insights'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={MUTED} />
+              </View>
+            );
+          })()}
+
           {/* 6. Sleep Footer */}
           <View style={{ marginTop: 12 }}>
             <SleepFooter bedtime={bedtime} />
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Morning confirmation modal */}
+      <MorningConfirmation
+        visible={showMorningConfirm}
+        firstName={userName}
+        wakeTime={wakeTime !== null ? `${String(Math.floor(wakeTime / 60)).padStart(2,'0')}:${String(wakeTime % 60).padStart(2,'0')}` : '--:--'}
+        onConfirm={() => setShowMorningConfirm(false)}
+        onDismiss={() => setShowMorningConfirm(false)}
+      />
     </View>
   );
 }
