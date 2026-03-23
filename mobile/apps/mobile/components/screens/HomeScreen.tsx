@@ -35,6 +35,10 @@ import { CircadianBackground }  from '../CircadianBackground';
 import { Analytics }            from '../../lib/analytics';
 import { usePager }             from '../../lib/pager-context';
 import { useTour }              from '../../lib/tour-context';
+import { RhythmTimeline }       from '../RhythmTimeline';
+import { ActionCard }           from '../ActionCard';
+import { RLoMessageBar }        from '../RLoMessageBar';
+import { SleepFooter }          from '../SleepFooter';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
   loadOnboardingData, saveOnboardingData,
@@ -51,337 +55,34 @@ const TEXT    = '#FFFFFF';
 const SUB     = '#A8C4E0';
 const MUTED   = '#6B8CAE';
 
-function fmt(m: number): string {
-  const h = Math.floor(m / 60) % 24;
-  const min = m % 60;
-  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-}
 function nowMin(): number {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
 }
 
-// ─── 1. HEADER ─────────────────────────────────────────────────────────────────
-
-const Header = memo(function Header({
-  topInset,
-  onProfilePress,
-}: {
-  topInset: number;
-  onProfilePress: () => void;
-}) {
+// ─── HomeHeader (local — time + profile icon) ─────────────────────────────────
+function HomeHeader({ topInset, onProfilePress }: { topInset: number; onProfilePress: () => void }) {
   const [time, setTime] = useState(() => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   });
-
   useEffect(() => {
     const tick = () => {
       const d = new Date();
       setTime(`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`);
     };
-    tick();
     const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, []);
-
   return (
-    <View style={[hdr.row, { paddingTop: topInset + 12 }]}>
-      <Text style={hdr.time}>{time}</Text>
-      <Pressable onPress={onProfilePress} hitSlop={12} style={hdr.profileBtn}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: topInset + 12, paddingBottom: 10 }}>
+      <Text style={{ fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 }}>{time}</Text>
+      <Pressable onPress={onProfilePress} hitSlop={12}>
         <Ionicons name="person-circle-outline" size={28} color={TEXT} />
       </Pressable>
     </View>
   );
-});
-
-const hdr = StyleSheet.create({
-  row:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 10 },
-  time:       { fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 },
-  profileBtn: { padding: 2 },
-});
-
-// ─── 2. RHYTHM TIMELINE ────────────────────────────────────────────────────────
-
-const TIMELINE_H = 64;
-
-const RhythmTimeline = memo(function RhythmTimeline({
-  blocks,
-  wakeTime,
-  bedtime,
-  anchorTime,
-}: {
-  blocks:     TimeBlock[];
-  wakeTime:   number;
-  bedtime:    number;
-  anchorTime: number;
-}) {
-  const { width: W } = Dimensions.get('window');
-  const PAD = 20;
-  const TW  = W - PAD * 2;
-
-  const now     = nowMin();
-  const dayLen  = 24 * 60;
-
-  // Span from ARP to sleep window (can cross midnight)
-  const spanStart = anchorTime;
-  const spanEnd   = bedtime < anchorTime ? bedtime + dayLen : bedtime;
-  const spanTotal = spanEnd - spanStart;
-
-  function xOf(min: number): number {
-    let m = min;
-    if (m < spanStart) m += dayLen;
-    return Math.max(0, Math.min(TW, ((m - spanStart) / spanTotal) * TW));
-  }
-
-  const nowX = xOf(now);
-  const nowPct = Math.max(0, Math.min(1, (now < spanStart ? now + dayLen : now - spanStart) / spanTotal));
-
-  // Pulse animation for "you are here"
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.3, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1.0, duration: 900, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [pulse]);
-
-  // Filter meaningful blocks
-  const cycleBlocks  = blocks.filter(b => b.type === 'sleep_cycle');
-  const crpBlocks    = blocks.filter(b => b.type === 'crp');
-  const mrmBlocks    = blocks.filter(b => b.type === 'down_period');
-  const preSleep     = blocks.find(b => b.type === 'pre_sleep');
-
-  return (
-    <View style={tl.wrap}>
-      {/* Track */}
-      <View style={[tl.track, { width: TW }]}>
-        {/* Sleep cycles */}
-        {cycleBlocks.map((b, i) => {
-          const x1 = xOf(b.start);
-          const x2 = xOf(b.end);
-          return (
-            <View key={i} style={[tl.cycleBar, { left: x1, width: Math.max(4, x2 - x1) }]} />
-          );
-        })}
-
-        {/* Pre-sleep zone */}
-        {preSleep && (
-          <View style={[tl.preSleepBar, {
-            left:  xOf(preSleep.start),
-            width: Math.max(4, xOf(preSleep.end) - xOf(preSleep.start)),
-          }]} />
-        )}
-
-        {/* CRP markers */}
-        {crpBlocks.map((b, i) => (
-          <View key={`crp-${i}`} style={[tl.markerCRP, { left: xOf(b.start) - 6 }]}>
-            <Ionicons name="flash" size={10} color="#FFD700" />
-          </View>
-        ))}
-
-        {/* MRM markers */}
-        {mrmBlocks.map((b, i) => (
-          <View key={`mrm-${i}`} style={[tl.markerDot, { left: xOf(b.start) - 3 }]} />
-        ))}
-
-        {/* Sleep window end */}
-        <View style={[tl.markerSleep, { left: Math.min(TW - 16, xOf(bedtime) - 8) }]}>
-          <Ionicons name="moon" size={12} color={ACCENT} />
-        </View>
-
-        {/* ARP (start) */}
-        <View style={tl.markerARP}>
-          <Ionicons name="sunny" size={12} color="#FFD700" />
-        </View>
-      </View>
-
-      {/* "You are here" cursor */}
-      <View style={[tl.cursorWrap, { width: TW }]} pointerEvents="none">
-        <Animated.View style={[tl.cursor, { left: nowX - 6, transform: [{ scale: pulse }] }]} />
-      </View>
-
-      {/* Labels */}
-      <View style={[tl.labelRow, { width: TW }]}>
-        <Text style={tl.labelL}>{fmt(anchorTime)}</Text>
-        <Text style={tl.labelR}>{fmt(bedtime)}</Text>
-      </View>
-    </View>
-  );
-});
-
-const tl = StyleSheet.create({
-  wrap:       { paddingHorizontal: 20, marginTop: 4 },
-  track:      { height: TIMELINE_H * 0.5, backgroundColor: `${ACCENT}22`, borderRadius: 8, position: 'relative', overflow: 'visible', marginBottom: 4 },
-  cycleBar:   { position: 'absolute', top: 4, bottom: 4, backgroundColor: `${ACCENT}55`, borderRadius: 4 },
-  preSleepBar:{ position: 'absolute', top: 4, bottom: 4, backgroundColor: 'rgba(255,200,100,0.25)', borderRadius: 4 },
-  markerDot:  { position: 'absolute', top: '50%', width: 6, height: 6, borderRadius: 3, backgroundColor: SUB, marginTop: -3 },
-  markerCRP:  { position: 'absolute', top: -6, width: 12, height: 12, alignItems: 'center', justifyContent: 'center' },
-  markerSleep:{ position: 'absolute', top: -6, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  markerARP:  { position: 'absolute', left: -6, top: -6, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  cursorWrap: { position: 'relative', height: 0 },
-  cursor:     { position: 'absolute', top: -26, width: 12, height: 12, borderRadius: 6, backgroundColor: TEXT, borderWidth: 2, borderColor: ACCENT },
-  labelRow:   { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  labelL:     { fontSize: 11, color: MUTED },
-  labelR:     { fontSize: 11, color: MUTED },
-});
-
-// ─── 3. ACTION CARD ────────────────────────────────────────────────────────────
-
-function getActionDisplay(action: NextAction | null, now: number): {
-  title:    string;
-  subtitle: string;
-  icon:     string;
-  urgent:   boolean;
-} {
-  if (!action) {
-    return { title: 'Your rhythm is on track', subtitle: 'Rest well tonight', icon: 'checkmark-circle-outline', urgent: false };
-  }
-  const at = action.scheduledAt;
-  const diff = at !== undefined ? at - now : null;
-  const diffStr = diff !== null && diff > 0 ? ` in ${diff}min` : '';
-
-  switch (action.type) {
-    case 'wake_up':
-      return { title: action.title, subtitle: 'Tap to confirm your wake-up', icon: 'sunny-outline', urgent: false };
-    case 'take_crp':
-      return { title: action.title, subtitle: `Recovery window${diffStr} — 20 min`, icon: 'flash-outline', urgent: diff !== null && diff < 15 };
-    case 'crp_reminder':
-      return { title: action.title, subtitle: action.description, icon: 'flash-outline', urgent: true };
-    case 'start_pre_sleep':
-      return { title: action.title, subtitle: `Wind-down${diffStr}`, icon: 'moon-outline', urgent: diff !== null && diff < 30 };
-    case 'go_to_sleep':
-      return { title: action.title, subtitle: action.description, icon: 'bed-outline', urgent: true };
-    case 'anchor_reminder':
-      return { title: action.title, subtitle: action.description, icon: 'alarm-outline', urgent: false };
-    default:
-      return { title: action.title, subtitle: action.description, icon: 'navigate-circle-outline', urgent: false };
-  }
 }
-
-const ActionCard = memo(function ActionCard({
-  action,
-  onPress,
-}: {
-  action:  NextAction | null;
-  onPress: () => void;
-}) {
-  const now  = nowMin();
-  const disp = getActionDisplay(action, now);
-  const scale = useRef(new Animated.Value(1)).current;
-
-  function handlePress() {
-    Animated.sequence([
-      Animated.timing(scale, { toValue: 0.97, duration: 80, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1.00, duration: 120, useNativeDriver: true }),
-    ]).start(() => onPress());
-  }
-
-  return (
-    <Pressable onPress={handlePress}>
-      <Animated.View style={[ac.card, disp.urgent && ac.urgent, { transform: [{ scale }] }]}>
-        <View style={[ac.iconWrap, disp.urgent && { backgroundColor: 'rgba(255,160,50,0.2)' }]}>
-          <Ionicons name={disp.icon as any} size={24} color={disp.urgent ? '#F5A623' : ACCENT} />
-        </View>
-        <View style={ac.text}>
-          <Text style={ac.title} numberOfLines={1}>{disp.title}</Text>
-          <Text style={ac.sub}   numberOfLines={1}>{disp.subtitle}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={MUTED} />
-      </Animated.View>
-    </Pressable>
-  );
-});
-
-const ac = StyleSheet.create({
-  card:    { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 20, marginTop: 16, borderWidth: 1, borderColor: `${ACCENT}30` },
-  urgent:  { borderColor: 'rgba(245,166,35,0.4)', backgroundColor: 'rgba(245,166,35,0.06)' },
-  iconWrap:{ width: 44, height: 44, borderRadius: 12, backgroundColor: `${ACCENT}18`, alignItems: 'center', justifyContent: 'center' },
-  text:    { flex: 1, gap: 3 },
-  title:   { fontSize: 15, fontWeight: '700', color: TEXT },
-  sub:     { fontSize: 13, color: SUB },
-});
-
-// ─── 4. R-LO MESSAGE ──────────────────────────────────────────────────────────
-
-const RLoMessage = memo(function RLoMessage({
-  text,
-  onTap,
-}: {
-  text:  string;
-  onTap: () => void;
-}) {
-  return (
-    <Pressable onPress={onTap} style={rl.wrap}>
-      <View style={rl.avatar}>
-        <MascotImage emotion="rassurante" size="sm" />
-      </View>
-      <View style={rl.bubble}>
-        <Text style={rl.text} numberOfLines={2}>{text}</Text>
-        <Text style={rl.cta}>Tap to chat →</Text>
-      </View>
-    </Pressable>
-  );
-});
-
-const rl = StyleSheet.create({
-  wrap:   { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginHorizontal: 20, marginTop: 14, backgroundColor: SURFACE2, borderRadius: 16, padding: 14 },
-  avatar: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden' },
-  bubble: { flex: 1, gap: 4 },
-  text:   { fontSize: 13, color: TEXT, lineHeight: 19 },
-  cta:    { fontSize: 11, color: ACCENT, fontWeight: '600' },
-});
-
-// ─── 5. SECONDARY CARDS ────────────────────────────────────────────────────────
-
-const SecondaryCard = memo(function SecondaryCard({
-  icon,
-  title,
-  subtitle,
-  onPress,
-}: {
-  icon:     string;
-  title:    string;
-  subtitle: string;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={sc2.card}>
-      <Ionicons name={icon as any} size={18} color={ACCENT} style={sc2.icon} />
-      <View style={sc2.text}>
-        <Text style={sc2.title}>{title}</Text>
-        <Text style={sc2.sub}   numberOfLines={1}>{subtitle}</Text>
-      </View>
-    </Pressable>
-  );
-});
-
-const sc2 = StyleSheet.create({
-  card:  { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: CARD, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 },
-  icon:  {},
-  text:  { flex: 1 },
-  title: { fontSize: 13, fontWeight: '600', color: TEXT },
-  sub:   { fontSize: 12, color: MUTED, marginTop: 2 },
-});
-
-// ─── 6. SLEEP FOOTER ──────────────────────────────────────────────────────────
-
-const SleepFooter = memo(function SleepFooter({ bedtime }: { bedtime: number | null }) {
-  if (!bedtime) return null;
-  return (
-    <View style={sf.wrap}>
-      <Ionicons name="moon-outline" size={13} color={ACCENT} />
-      <Text style={sf.text}>Tonight: {fmt(bedtime)}</Text>
-    </View>
-  );
-});
-
-const sf = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingVertical: 12 },
-  text: { fontSize: 12, color: MUTED, fontWeight: '600' },
-});
 
 // ─── ONBOARDING (guided chat) — preserved from previous implementation ──────────
 
@@ -689,7 +390,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         >
           {/* 1. Header */}
-          <Header topInset={0} onProfilePress={() => goToPage(3)} />
+          <HomeHeader topInset={0} onProfilePress={() => goToPage(3)} />
 
           {/* 2. Rhythm Timeline */}
           {profile && bedtime && wakeTime ? (
@@ -700,7 +401,7 @@ export default function HomeScreen() {
               anchorTime={profile.anchorTime}
             />
           ) : (
-            <View style={{ height: TIMELINE_H, marginHorizontal: 20, backgroundColor: `${ACCENT}10`, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ height: 64, marginHorizontal: 20, backgroundColor: `${ACCENT}10`, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ color: MUTED, fontSize: 12 }}>Setting up your rhythm…</Text>
             </View>
           )}
@@ -709,16 +410,22 @@ export default function HomeScreen() {
           <ActionCard action={nextAction} onPress={handleActionPress} />
 
           {/* 4. R-Lo Message */}
-          <RLoMessage text={rloText} onTap={() => goToPage(0)} />
+          <RLoMessageBar text={rloText} onTap={() => setChatOpen(true)} />
 
           {/* 5. Secondary Cards */}
           {bannerEvent && !bannerDismissed && (
-            <SecondaryCard
-              icon="calendar-outline"
-              title={bannerEvent.title}
-              subtitle={`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`}
+            <Pressable
               onPress={() => setBannerDismissed(true)}
-            />
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}
+            >
+              <Ionicons name="calendar-outline" size={18} color={ACCENT} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: TEXT }}>{bannerEvent.title}</Text>
+                <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }} numberOfLines={1}>
+                  {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Événement'}`}
+                </Text>
+              </View>
+            </Pressable>
           )}
 
           {/* 6. Sleep Footer */}

@@ -37,10 +37,10 @@ import { useTheme } from "../lib/theme-context";
 // ─── Suggested prompts (shown when history is empty) ─────────────────────────
 
 const SUGGESTED = [
-  "How many cycles did I get this week?",
-  "What should I do before bed tonight?",
-  "Explain what CRP means",
-  "Why does my wake time matter so much?",
+  "Comment gérer une soirée tardive ?",
+  "Explique-moi les cycles de 90 min",
+  "J'ai du mal à m'endormir",
+  "C'est quoi le CRP ?",
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
