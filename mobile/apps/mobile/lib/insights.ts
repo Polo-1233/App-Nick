@@ -5,6 +5,7 @@
  * UI imports these functions; they can be improved independently.
  *
  * All values are expressed in CYCLES, not hours.
+ * Language: positive, actionable — never anxiogenic.
  */
 
 import type { NightRecord, UserProfile } from '@r90/types';
@@ -12,11 +13,11 @@ import type { NightRecord, UserProfile } from '@r90/types';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface InsightsData {
-  energyScore:      number;        // 0–100
+  rhythmStrength:   number;        // 0–100 (internal — not shown as raw number in UI)
   weeklyCycles:     number;        // completed cycles this week
   weeklyTarget:     number;        // target cycles this week
   sleepConsistency: number;        // 0–100 %
-  sleepDebt:        number;        // signed: negative = behind, positive = ahead
+  rhythmBalance:    number;        // signed: negative = building, positive = ahead
   weeklyTrend:      DayTrend[];    // one entry per day in history
 }
 
@@ -25,51 +26,55 @@ export interface DayTrend {
   cycles: number;
 }
 
-// ─── Energy Score ─────────────────────────────────────────────────────────────
+// ─── Rhythm Strength (internal score) ────────────────────────────────────────
 /**
- * computeEnergyScore — Temporary formula, structured for future replacement.
+ * computeRhythmStrength — Internal score (was: computeEnergyScore).
+ * NOT exposed as a raw number in the UI — use getRhythmInsightMessage() instead.
  *
  * Weights:
  *   40% — recent cycles vs target (last 3 nights)
  *   30% — weekly progress (cycles / target)
  *   20% — consistency (regularity of anchor time)
- *   10% — no debt bonus
- *
- * Returns 0–100 (integer).
+ *   10% — balance bonus
  */
-export function computeEnergyScore(
-  history:   NightRecord[],
-  profile:   UserProfile,
+export function computeRhythmStrength(
+  history: NightRecord[],
+  profile: UserProfile,
 ): number {
   if (history.length === 0) return 0;
 
-  const target      = profile.idealCyclesPerNight ?? 5;
-  const weekTarget  = profile.weeklyTarget ?? 35;
+  const target     = profile.idealCyclesPerNight ?? 5;
+  const weekTarget = profile.weeklyTarget ?? 35;
 
-  // Recent (last 3 nights)
-  const recent      = history.slice(-3);
-  const recentAvg   = recent.reduce((s, n) => s + n.cyclesCompleted, 0) / recent.length;
+  const recent     = history.slice(-3);
+  const recentAvg  = recent.reduce((s, n) => s + n.cyclesCompleted, 0) / recent.length;
   const recentScore = Math.min(recentAvg / target, 1) * 100;
 
-  // Weekly progress
-  const weekDone    = history.reduce((s, n) => s + n.cyclesCompleted, 0);
-  const weekPct     = Math.min(weekDone / weekTarget, 1);
-  const weekScore   = weekPct * 100;
+  const weekDone   = history.reduce((s, n) => s + n.cyclesCompleted, 0);
+  const weekScore  = Math.min(weekDone / weekTarget, 1) * 100;
 
-  // Consistency
   const consistencyScore = computeSleepConsistency(history, profile);
 
-  // Debt (0 = no debt bonus, positive debt = deduct)
-  const debt       = computeSleepDebt(history, profile);
-  const debtPenalty = debt < 0 ? Math.min(Math.abs(debt) * 5, 20) : 0;
+  const balance    = computeRhythmBalance(history, profile);
+  const balancePenalty = balance < 0 ? Math.min(Math.abs(balance) * 5, 20) : 0;
 
   const raw =
     recentScore      * 0.40 +
     weekScore        * 0.30 +
     consistencyScore * 0.20 +
-    (100 - debtPenalty) * 0.10;
+    (100 - balancePenalty) * 0.10;
 
   return Math.round(Math.min(Math.max(raw, 0), 100));
+}
+
+/**
+ * getRhythmInsightMessage — Human-readable message from internal score.
+ * This is what the UI displays instead of the raw number.
+ */
+export function getRhythmInsightMessage(score: number): string {
+  if (score >= 75) return 'Ton rythme est solide. Continue comme ça.';
+  if (score >= 50) return 'Ton rythme se construit. Chaque cycle compte.';
+  return 'Semaine chargée. R-Lo est là pour t\'aider.';
 }
 
 // ─── Weekly Cycles ────────────────────────────────────────────────────────────
@@ -79,49 +84,46 @@ export function computeWeeklyCycles(history: NightRecord[]): number {
 }
 
 // ─── Sleep Consistency ────────────────────────────────────────────────────────
-/**
- * computeSleepConsistency — Temporary formula.
- *
- * Measures how close each night's cycles are to the nightly target.
- * A night hitting the target = 100%. Less = proportionally lower.
- *
- * Returns 0–100 (integer).
- */
+
 export function computeSleepConsistency(
   history: NightRecord[],
   profile: UserProfile,
 ): number {
   if (history.length === 0) return 0;
-
   const target = profile.idealCyclesPerNight ?? 5;
   const scores = history.map(n => Math.min(n.cyclesCompleted / target, 1) * 100);
   const avg    = scores.reduce((s, v) => s + v, 0) / scores.length;
-
   return Math.round(avg);
 }
 
-// ─── Sleep Debt ───────────────────────────────────────────────────────────────
 /**
- * computeSleepDebt — expressed in cycles (not hours).
+ * consistencyLabel — positive, constructive language only.
+ */
+export function consistencyLabel(pct: number): string {
+  if (pct >= 90) return 'Excellent consistency';
+  if (pct >= 80) return 'Strong rhythm';
+  if (pct >= 65) return 'En progression';
+  if (pct >= 50) return 'En construction';
+  return 'En construction';
+}
+
+// ─── Rhythm Balance (was: Sleep Debt) ────────────────────────────────────────
+/**
+ * computeRhythmBalance — expressed in cycles.
  *
  * Positive = ahead of target.
- * Negative = behind target (in debt).
- *
- * Compares total cycles completed vs what you should have done by now
- * (days elapsed × daily target).
+ * Negative = building (was: "in debt" — never use that language).
  */
-export function computeSleepDebt(
+export function computeRhythmBalance(
   history: NightRecord[],
   profile: UserProfile,
 ): number {
   if (history.length === 0) return 0;
-
   const target = profile.idealCyclesPerNight ?? 5;
   const days   = history.length;
   const ideal  = days * target;
   const actual = computeWeeklyCycles(history);
-
-  return actual - ideal; // negative = in debt
+  return actual - ideal;
 }
 
 // ─── Weekly Trend ─────────────────────────────────────────────────────────────
@@ -137,11 +139,11 @@ export function computeInsights(
   profile: UserProfile,
 ): InsightsData {
   return {
-    energyScore:      computeEnergyScore(history, profile),
+    rhythmStrength:   computeRhythmStrength(history, profile),
     weeklyCycles:     computeWeeklyCycles(history),
     weeklyTarget:     profile.weeklyTarget ?? 35,
     sleepConsistency: computeSleepConsistency(history, profile),
-    sleepDebt:        computeSleepDebt(history, profile),
+    rhythmBalance:    computeRhythmBalance(history, profile),
     weeklyTrend:      computeWeeklyTrend(history),
   };
 }

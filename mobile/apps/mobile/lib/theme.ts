@@ -38,9 +38,10 @@ export interface ThemeColors {
   accentSecondary: string;   // secondary brand accent (blue)
 
   // ── Semantic ──────────────────────────────────────────────────────────────
-  success: string;
-  warning: string;
-  error:   string;
+  success:    string;
+  warning:    string;
+  error:      string;   // ONLY for technical errors (network, login) — not for rhythm/sleep
+  rhythmLow:  string;   // amber — for below-target rhythm indicators (never red)
 
   // ── System ────────────────────────────────────────────────────────────────
   statusBarStyle: 'light' | 'dark';
@@ -80,7 +81,8 @@ export const darkTheme: Theme = {
     accentSecondary: '#4DC3F0',   // accent plus clair
     success:         '#3DDC97',
     warning:         '#F5A623',
-    error:           '#F87171',
+    error:           '#F87171',   // technical errors only
+    rhythmLow:       '#E8A020',   // warm amber — below-target rhythm (not anxiety-inducing)
     statusBarStyle:  'light',
   },
 };
@@ -107,7 +109,8 @@ export const lightTheme: Theme = {
     accentSecondary: '#141466',   // bleu marine R90
     success:         '#16A34A',
     warning:         '#D97706',
-    error:           '#DC2626',
+    error:           '#DC2626',   // technical errors only
+    rhythmLow:       '#C47F17',   // warm amber for below-target rhythm
     statusBarStyle:  'dark',
   },
 };

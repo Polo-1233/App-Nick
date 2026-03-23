@@ -2,10 +2,12 @@
  * InsightsScreen — Recovery analysis + actionable coaching
  *
  * Layout:
- *   1. Energy Score card    — score + interpretation message
- *   2. Cycles + Sleep Debt  — clearer labels + helper text
+ *   1. Rhythm Strength card — insight message (no raw score)
+ *   2. Cycles + Rhythm Balance — positive language
  *   3. Sleep Consistency    — elevated prominence (R90 key metric)
  *   4. Weekly Trend chart   — cycles under each day + coaching insight below
+ *
+ * Language rules: no "debt", "deficit", "behind", "energy score" visible to user.
  */
 
 import { useState, useEffect } from 'react';
@@ -23,6 +25,8 @@ import { loadProfile, loadWeekHistory } from '../../lib/storage';
 import { getWeeklySummaries, getWearableLatest, getWearableHistory, type WeeklySummaryResponse } from '../../lib/api';
 import {
   computeInsights,
+  getRhythmInsightMessage,
+  consistencyLabel,
   type InsightsData,
   type DayTrend,
 } from '../../lib/insights';
@@ -45,82 +49,62 @@ const C = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function scoreColor(score: number): string {
+
+function rhythmStrengthColor(score: number): string {
   if (score >= 75) return C.success;
   if (score >= 50) return C.warning;
-  return C.error;
-}
-
-function energyInsight(score: number, consistency: number, debt: number): string {
-  if (score >= 85) return 'Your recovery is excellent. Keep the rhythm going.';
-  if (score >= 75) return 'Strong recovery. Your rhythm is working well.';
-  if (consistency >= 80 && score >= 60) return 'Your rhythm is very consistent this week.';
-  if (debt < -3)   return `You're behind on cycles. An early night tonight will help.`;
-  if (score >= 50) return 'Your recovery is building. Stay consistent tonight.';
-  return 'Your body needs more rest. Prioritise sleep this week.';
+  return C.warning; // amber — never red for rhythm indicators
 }
 
 function cyclesHelper(cycles: number, target: number): string {
   const diff = target - cycles;
-  if (diff <= 0)  return '✓ Target reached';
-  if (diff === 1) return '1 cycle to go';
-  if (diff <= 3)  return 'Almost on target';
-  return `${diff} cycles to go`;
+  if (diff <= 0)  return '✓ Objectif atteint';
+  if (diff === 1) return '1 cycle de plus ce soir';
+  if (diff <= 3)  return 'Presque à l\'objectif';
+  return `${diff} cycles restants`;
 }
 
-function debtLabel(debt: number): string {
-  if (debt === 0)  return 'On target';
-  if (debt > 0)    return `${debt} ${debt === 1 ? 'cycle' : 'cycles'} ahead`;
-  return `${Math.abs(debt)} ${Math.abs(debt) === 1 ? 'cycle' : 'cycles'} behind`;
+function balanceLabel(balance: number): string {
+  if (balance === 0) return 'En équilibre';
+  if (balance > 0)   return `${balance} cycle${balance > 1 ? 's' : ''} d'avance`;
+  return `${Math.abs(balance)} cycle${Math.abs(balance) > 1 ? 's' : ''} à récupérer`;
 }
 
-function debtHelper(debt: number): string {
-  if (debt >= 2)  return 'Great buffer — well ahead of target';
-  if (debt === 1) return 'Slightly ahead — good position';
-  if (debt === 0) return 'Perfectly on track';
-  if (debt === -1) return 'One extra cycle tonight gets you back';
-  if (debt >= -3) return 'An earlier bedtime will recover this quickly';
-  return 'Prioritise sleep this week to recover';
+function balanceHelper(balance: number): string {
+  if (balance >= 2)  return 'Belle avance — ton rythme est solide';
+  if (balance === 1) return 'Légèrement en avance — bonne position';
+  if (balance === 0) return 'Parfaitement en phase';
+  if (balance === -1) return 'Un cycle de plus ce soir rééquilibre tout';
+  if (balance >= -3)  return 'Un coucher plus tôt ce soir suffit';
+  return 'Semaine chargée. R-Lo est là pour t\'aider.';
 }
 
-function predictiveInsight(debt: number, target: number, cycles: number, nightlyTarget: number): string {
+function predictiveInsight(balance: number, target: number, cycles: number, nightlyTarget: number): string {
   const remaining = target - cycles;
-  if (remaining <= 0) return 'You have already reached your weekly cycle target. Well done.';
+  if (remaining <= 0) return 'Tu as atteint ton objectif hebdomadaire. Bien joué.';
   if (remaining <= nightlyTarget) {
-    return `If you reach ${remaining} cycles tonight, you will hit your weekly target.`;
+    return `${remaining} cycle${remaining > 1 ? 's' : ''} ce soir et tu atteins ton objectif de la semaine.`;
   }
-  return `${remaining} cycles remain this week. Consistent nights of ${nightlyTarget} cycles will get you there.`;
-}
-
-function consistencyLabel(pct: number): string {
-  if (pct >= 90) return 'Excellent consistency';
-  if (pct >= 80) return 'Strong rhythm';
-  if (pct >= 65) return 'Building consistency';
-  if (pct >= 50) return 'Room to improve';
-  return 'Irregular rhythm';
+  return `${remaining} cycles restants cette semaine. Des nuits de ${nightlyTarget} cycles t'y amènent régulièrement.`;
 }
 
 function consistencyAdvice(pct: number): string {
-  if (pct >= 80) return 'Your anchor time is solid. The R90 method is working.';
-  if (pct >= 65) return 'Try to keep your wake time within 15 minutes each day.';
-  return 'A consistent anchor wake time is the foundation of R90 recovery.';
+  if (pct >= 80) return 'Ton heure d\'ancrage est solide. La méthode R90 fonctionne.';
+  if (pct >= 65) return 'Essaie de garder ton heure de réveil à ±15 min chaque jour.';
+  return 'Une heure de réveil constante est la base de la récupération R90.';
 }
 
-// ─── 1. Energy Score card ─────────────────────────────────────────────────────
-function EnergyCard({ score, consistency, debt }: { score: number; consistency: number; debt: number }) {
-  const color   = scoreColor(score);
-  const insight = energyInsight(score, consistency, debt);
+// ─── 1. Rhythm Strength card (no raw score shown) ────────────────────────────
+function RhythmStrengthCard({ score, consistency, balance }: { score: number; consistency: number; balance: number }) {
+  const color   = rhythmStrengthColor(score);
+  const insight = getRhythmInsightMessage(score);
   return (
     <View style={s.energyCard}>
-      <Text style={s.cardLabel}>Energy Score</Text>
-      <View style={s.energyRow}>
-        <Text style={[s.energyScore, { color }]}>{score}</Text>
-        <Text style={s.energyOf}> / 100</Text>
-      </View>
+      <Text style={s.cardLabel}>Ton rythme</Text>
       <View style={s.energyBarBg}>
         <View style={[s.energyBarFill, { width: `${score}%`, backgroundColor: color }]} />
       </View>
-      {/* Insight message */}
+      {/* Insight message — human readable, positive */}
       <View style={s.insightRow}>
         <Ionicons name="bulb-outline" size={14} color={color} />
         <Text style={[s.insightText, { color }]}>{insight}</Text>
@@ -147,7 +131,8 @@ function MetricCard({
 
 // ─── 3. Consistency card (elevated) ──────────────────────────────────────────
 function ConsistencyCard({ pct }: { pct: number }) {
-  const color  = pct >= 80 ? C.success : pct >= 65 ? C.warning : C.error;
+  // amber for low consistency — never red for rhythm indicators
+  const color  = pct >= 80 ? C.success : C.warning;
   const label  = consistencyLabel(pct);
   const advice = consistencyAdvice(pct);
   return (
@@ -188,7 +173,8 @@ function TrendChart({
   weeklyTarget: number;
 }) {
   const maxCycles = Math.max(...trend.map(d => d.cycles), target, 1);
-  const insight   = predictiveInsight(weeklyTarget - weeklyCycles, weeklyTarget, weeklyCycles, nightlyTarget);
+  const balance   = weeklyCycles - weeklyTarget;
+  const insight   = predictiveInsight(balance, weeklyTarget, weeklyCycles, nightlyTarget);
 
   function dayLabel(dateStr: string): string {
     try { return new Date(dateStr).toLocaleDateString('en-GB', { weekday: 'narrow' }); }
@@ -202,7 +188,8 @@ function TrendChart({
       <View style={s.trendBars}>
         {trend.map((d, i) => {
           const h     = Math.max(4, Math.round((d.cycles / maxCycles) * TREND_MAX_HEIGHT));
-          const color = d.cycles >= target ? C.success : d.cycles >= target * 0.7 ? C.warning : C.error;
+          // amber for below-target — never red for rhythm bars
+          const color = d.cycles >= target ? C.success : C.warning;
           return (
             <View key={i} style={s.trendCol}>
               <View style={[s.trendBarBg, { height: TREND_MAX_HEIGHT }]}>
@@ -317,7 +304,7 @@ export default function InsightsScreen() {
               <Text style={s.weekAvgUnit}> avg cycles</Text>
               {prevWeekSummary?.avg_cycles !== null && weekSummary.avg_cycles !== null && prevWeekSummary && (
                 <Text style={[s.weekDelta, {
-                  color: weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? C.success : C.error,
+                  color: weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? C.success : C.warning,
                 }]}>
                   {weekSummary.avg_cycles >= (prevWeekSummary.avg_cycles ?? 0) ? ' ↑' : ' ↓'}
                 </Text>
@@ -326,7 +313,7 @@ export default function InsightsScreen() {
             {weekSummary.on_track !== null && (
               <View style={[s.weekBadge, { backgroundColor: weekSummary.on_track ? `${C.success}20` : `${C.warning}20` }]}>
                 <Text style={[s.weekBadgeText, { color: weekSummary.on_track ? C.success : C.warning }]}>
-                  {weekSummary.on_track ? 'On track' : 'Behind target'}
+                  {weekSummary.on_track ? 'En rythme' : 'En construction'}
                 </Text>
               </View>
             )}
@@ -342,27 +329,27 @@ export default function InsightsScreen() {
 
         {!insights ? <EmptyState /> : (
           <>
-            {/* 1. Energy Score + insight */}
-            <EnergyCard
-              score={insights.energyScore}
+            {/* 1. Rhythm Strength (no raw score) */}
+            <RhythmStrengthCard
+              score={insights.rhythmStrength}
               consistency={insights.sleepConsistency}
-              debt={insights.sleepDebt}
+              balance={insights.rhythmBalance}
             />
 
-            {/* 2. Cycles + Debt */}
+            {/* 2. Cycles + Rhythm Balance */}
             <View style={s.row}>
               <MetricCard
-                label="Cycles this week"
+                label="Cycles cette semaine"
                 value={`${insights.weeklyCycles}`}
-                sub={`of ${insights.weeklyTarget} target`}
+                sub={`sur ${insights.weeklyTarget} objectif`}
                 helper={cyclesHelper(insights.weeklyCycles, insights.weeklyTarget)}
                 color={insights.weeklyCycles >= insights.weeklyTarget ? C.success : C.accent}
               />
               <MetricCard
-                label="Sleep debt"
-                value={debtLabel(insights.sleepDebt)}
-                helper={debtHelper(insights.sleepDebt)}
-                color={insights.sleepDebt >= 0 ? C.success : insights.sleepDebt >= -2 ? C.warning : C.error}
+                label="Équilibre de rythme"
+                value={balanceLabel(insights.rhythmBalance)}
+                helper={balanceHelper(insights.rhythmBalance)}
+                color={insights.rhythmBalance >= 0 ? C.success : C.warning}
               />
             </View>
 
