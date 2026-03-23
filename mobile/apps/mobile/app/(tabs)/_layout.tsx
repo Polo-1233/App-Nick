@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
 import { Slot, useRouter } from "expo-router";
 import { DayPlanProvider }         from "../../lib/day-plan-context";
+import { AudioProvider }           from "../../lib/audio-context";
 import { ChatProvider }            from "../../lib/chat-context";
 import { RLoChat }             from "../../components/RLoChat";
 import { OfflineBanner }           from "../../components/OfflineBanner";
@@ -74,6 +75,7 @@ export default function TabsLayout() {
   const tabsLocked = phase === 'guided_chat';
 
   return (
+    <AudioProvider>
     <OnboardingPhaseProvider phase={phase} advance={advance}>
       <DayPlanProvider>
         <ChatProvider onOpenChat={openChat}>
@@ -116,6 +118,7 @@ export default function TabsLayout() {
         </ChatProvider>
       </DayPlanProvider>
     </OnboardingPhaseProvider>
+    </AudioProvider>
   );
 }
 

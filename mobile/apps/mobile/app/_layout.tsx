@@ -190,6 +190,12 @@ function RootLayoutInner() {
       const route = typeof data?.route === 'string' ? data.route : null;
       if (type === 'morning' || type === 'evening') {
         router.push('/(tabs)');
+      } else if (type === 'mrm') {
+        router.push('/mrm-player');
+      } else if (type === 'crp') {
+        router.push('/crp-player');
+      } else if (type === 'wind_down') {
+        router.push('/wind-down');
       } else if (route) {
         router.push(route as `/${string}`);
       }
@@ -219,7 +225,9 @@ function RootLayoutInner() {
         <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
         <Stack.Screen name="onboarding"   options={{ headerShown: false }} />
         <Stack.Screen name="log-night"    options={{ headerShown: false }} />
-        <Stack.Screen name="wind-down"   options={{ headerShown: false }} />
+        <Stack.Screen name="wind-down"    options={{ headerShown: false }} />
+        <Stack.Screen name="mrm-player"  options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="crp-player"  options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="login"       options={{ headerShown: false }} />
         <Stack.Screen name="checkin"     options={{ headerShown: false }} />
         <Stack.Screen name="subscription"     options={{ headerShown: false }} />
