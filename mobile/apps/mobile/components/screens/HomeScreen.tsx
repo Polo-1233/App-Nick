@@ -60,6 +60,33 @@ function nowMin(): number {
   return d.getHours() * 60 + d.getMinutes();
 }
 
+// ─── Missed cycle detection ────────────────────────────────────────────────────
+export interface MissedCycleInfo {
+  missed:          boolean;
+  nextWindow:      string;
+  cyclesRemaining: number;
+}
+
+function getMissedCycleInfo(
+  bedtime:    number | null,
+  cycleCount: number,
+  anchorTime: number | null,
+): MissedCycleInfo | null {
+  if (!bedtime || !anchorTime) return null;
+  const now = nowMin();
+  const bedtimeAdj = bedtime < anchorTime ? bedtime + 1440 : bedtime;
+  const nowAdj     = now < anchorTime     ? now + 1440     : now;
+  if (nowAdj <= bedtimeAdj) return null;
+  const minutesPast  = nowAdj - bedtimeAdj;
+  const cyclesMissed = Math.ceil(minutesPast / 90);
+  const remaining    = cycleCount - cyclesMissed;
+  if (remaining < 3) return null;
+  const nextWindowMin = (bedtime + cyclesMissed * 90) % 1440;
+  const h   = Math.floor(nextWindowMin / 60);
+  const m   = nextWindowMin % 60;
+  return { missed: true, nextWindow: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, cyclesRemaining: remaining };
+}
+
 // ─── HomeHeader (local — time + profile icon) ─────────────────────────────────
 function HomeHeader({ topInset, onProfilePress }: { topInset: number; onProfilePress: () => void }) {
   const [time, setTime] = useState(() => {
@@ -310,11 +337,12 @@ export default function HomeScreen() {
   }, [isOnboarding]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const bedtime    = dayPlan?.cycleWindow?.bedtime  ?? null;
-  const wakeTime   = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
-  const blocks     = dayPlan?.blocks ?? [];
-  const nextAction = dayPlan?.nextAction ?? null;
-  const rloText    = dayPlan?.rloMessage?.text ?? (userName ? `Good to see you, ${userName}.` : 'Your rhythm is being calculated...');
+  const bedtime     = dayPlan?.cycleWindow?.bedtime  ?? null;
+  const wakeTime    = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
+  const blocks      = dayPlan?.blocks ?? [];
+  const nextAction  = dayPlan?.nextAction ?? null;
+  const rloText     = dayPlan?.rloMessage?.text ?? (userName ? `Bon à te revoir, ${userName}.` : 'Ton rythme se calcule…');
+  const missedCycle = getMissedCycleInfo(bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null);
 
   const handleActionPress = useCallback(() => {
     if (!nextAction) return;
@@ -407,7 +435,7 @@ export default function HomeScreen() {
           )}
 
           {/* 3. Action Card */}
-          <ActionCard action={nextAction} onPress={handleActionPress} />
+          <ActionCard action={nextAction} missedCycle={missedCycle} onPress={handleActionPress} />
 
           {/* 4. R-Lo Message */}
           <RLoMessageBar text={rloText} onTap={() => setChatOpen(true)} />

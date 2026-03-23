@@ -112,3 +112,45 @@ export async function cancelDailyNotifications(): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(EVENING_ID).catch(() => null);
   await AsyncStorage.removeItem(LAST_SCHED);
 }
+
+// ─── N5 — Missed cycle notification ──────────────────────────────────────────
+const MISSED_CYCLE_ID  = 'r90-missed-cycle';
+const MISSED_CYCLE_KEY = '@r90:notif:missedCycle:v1';
+
+/**
+ * scheduleN5MissedCycle — triggered 15 min after ideal bedtime if no wind-down started.
+ * Shows positive message about next cycle window.
+ */
+export async function scheduleN5MissedCycle(
+  bedtimeMin: number,   // minutes from midnight
+  nextWindowTime: string, // "00:30"
+  cyclesRemaining: number,
+): Promise<void> {
+  try {
+    const alreadyScheduled = await AsyncStorage.getItem(MISSED_CYCLE_KEY);
+    const today = new Date().toISOString().slice(0, 10);
+    if (alreadyScheduled === today) return;
+
+    await Notifications.cancelScheduledNotificationAsync(MISSED_CYCLE_ID).catch(() => {});
+
+    const triggerMin = bedtimeMin + 15;
+    const h   = Math.floor((triggerMin % 1440) / 60);
+    const m   = (triggerMin % 1440) % 60;
+
+    await Notifications.scheduleNotificationAsync({
+      identifier: MISSED_CYCLE_ID,
+      content: {
+        title: 'Pas de stress 🌙',
+        body:  `Ta prochaine fenêtre est à ${nextWindowTime}. ${cyclesRemaining} cycles, c'est très bien.`,
+        data:  { type: 'missed_cycle', route: '/(tabs)' },
+      },
+      trigger: {
+        type:    Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour:    h,
+        minute:  m,
+      },
+    });
+
+    await AsyncStorage.setItem(MISSED_CYCLE_KEY, today);
+  } catch {}
+}
