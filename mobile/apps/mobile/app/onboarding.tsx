@@ -46,7 +46,7 @@ import { Button } from '../components/ui/Button';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 4;
+const TOTAL_PAGES = 3;
 
 const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
@@ -288,9 +288,9 @@ export default function OnboardingScreen() {
   const isNextDisabled = saving;
 
   const nextLabel =
-    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Create my plan') :
-    page === 0 ? "Let's fix it" :
-    'Continue';
+    page === TOTAL_PAGES - 1 ? (saving ? 'Configuration…' : 'Commencer →') :
+    page === 0 ? "Voyons ça →" :
+    'Suivant →';
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -432,85 +432,6 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>}
 
-            {/* ── Slide 3: Meet R-Lo ───────────────────────────────────── */}
-            {/* ── Slide 4: Plan mockup ──────────────────────────────────── */}
-            {page === 3 && <View style={s.slidePlan}>
-              <Animated.View style={[s.slidePlanContent, { opacity: fadeAnim3 }]}>
-
-                {/* ── TOP: Titre ── */}
-                <Text style={s.planSlideTitle}>
-                  {"Every day you receive\na personalized plan"}
-                </Text>
-
-                {/* ── MIDDLE: Plan card centré ── */}
-                <View style={s.planCardWrap}>
-                  <View style={s.planMockCard}>
-                    {/* Header */}
-                    <View style={s.planMockHeader}>
-                      <Text style={s.planMockTitle}>Tonight's plan</Text>
-                      <View style={s.planMockBadge}><Text style={s.planMockBadgeText}>5 cycles</Text></View>
-                    </View>
-
-                    {/* Timeline */}
-                    <View style={s.planTimeline}>
-                      {/* Wind-down */}
-                      <View style={s.planTimelineRow}>
-                        <View style={s.planTrack}>
-                          <View style={[s.planDot, { backgroundColor: '#A78BFA' }]} />
-                          <View style={s.planConnector} />
-                        </View>
-                        <View style={s.planInfo}>
-                          <Text style={s.planTime}>22:30</Text>
-                          <Text style={s.planLabel}>Wind-down</Text>
-                        </View>
-                      </View>
-                      {/* Bedtime */}
-                      <View style={s.planTimelineRow}>
-                        <View style={s.planTrack}>
-                          <View style={[s.planDot, { backgroundColor: ACCENT }]} />
-                          <View style={s.planConnector} />
-                        </View>
-                        <View style={s.planInfo}>
-                          <Text style={[s.planTime, { color: ACCENT }]}>23:00</Text>
-                          <Text style={s.planLabel}>Ideal bedtime · 5 cycles</Text>
-                        </View>
-                      </View>
-                      {/* Wake */}
-                      <View style={s.planTimelineRow}>
-                        <View style={s.planTrack}>
-                          <View style={[s.planDot, { backgroundColor: '#4ADE80' }]} />
-                        </View>
-                        <View style={s.planInfo}>
-                          <Text style={[s.planTime, { color: '#4ADE80' }]}>06:30</Text>
-                          <Text style={s.planLabel}>Wake up · ARP anchor</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* R-Lo bubble */}
-                    <View style={s.planMockBubble}>
-                      <View style={s.planMockAvatar}><Text style={s.planMockAvatarText}>R</Text></View>
-                      <Text style={s.planMockBubbleText}>Go to sleep at 23:00 for optimal recovery tonight.</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* ── BOTTOM: Features ── */}
-                <View style={s.planFeatures}>
-                  {[
-                    'Your optimal bedtime',
-                    'Your energy prediction',
-                    'Your recovery strategy',
-                  ].map((f, i) => (
-                    <View key={i} style={s.planFeatureRow}>
-                      <Text style={s.planChevron}>›</Text>
-                      <Text style={s.planFeatureText}>{f}</Text>
-                    </View>
-                  ))}
-                </View>
-
-              </Animated.View>
-            </View>}
 
 
 

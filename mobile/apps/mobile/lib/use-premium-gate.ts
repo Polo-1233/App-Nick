@@ -53,7 +53,8 @@ export type PremiumFeature =
   | 'chat_history'      // full conversation history
   | 'llm_coaching'      // AI coaching (future)
   | 'calendar_advanced' // multi-source calendar
-  | 'export';           // data export
+  | 'export'            // data export
+  | 'audio_content';    // MRM/CRP/wind-down premium audio
 
 /** Features that are always free (never gated). */
 const FREE_FEATURES = new Set<PremiumFeature>([]);
@@ -64,4 +65,23 @@ const FREE_FEATURES = new Set<PremiumFeature>([]);
 export function canAccess(feature: PremiumFeature, isPremium: boolean): boolean {
   if (FREE_FEATURES.has(feature)) return true;
   return isPremium;
+}
+
+/**
+ * shouldShowPremiumGate — règles de déclenchement du paywall.
+ *
+ * Ne JAMAIS déclencher :
+ *   - pendant le wind-down en cours
+ *   - pendant l'onboarding
+ */
+export function shouldShowPremiumGate(opts: {
+  isPremium:    boolean;
+  isOnboarding: boolean;
+  isWindDown:   boolean;
+  contentPremium: boolean;
+}): boolean {
+  if (opts.isPremium)    return false;
+  if (opts.isOnboarding) return false;
+  if (opts.isWindDown)   return false;
+  return opts.contentPremium;
 }
