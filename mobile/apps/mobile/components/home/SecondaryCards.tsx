@@ -8,7 +8,7 @@
  * Types: calendar, insight, weekly.
  */
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,6 +23,35 @@ export interface CalendarCard  { type: 'calendar';  title: string; subtitle: str
 export interface InsightCard   { type: 'insight';   id: string; message: string; onDismiss: () => void }
 export interface WeeklyCard    { type: 'weekly';    streakDays: number }
 export type SecondaryCardData  = CalendarCard | InsightCard | WeeklyCard;
+
+// ─── Insight card with expand/collapse ───────────────────────────────────────
+function InsightCardItem({ card }: { card: InsightCard }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Pressable onPress={() => setExpanded(e => !e)} style={sc.card}>
+      <View style={sc.iconWrap}>
+        <Ionicons name="bulb-outline" size={16} color={GOLD} />
+      </View>
+      <View style={sc.body}>
+        <Text style={sc.label}>DID YOU KNOW?</Text>
+        <Text style={sc.title} numberOfLines={expanded ? undefined : 2}>
+          {card.message}
+        </Text>
+        {!expanded && (
+          <Text style={sc.readMore}>Read more</Text>
+        )}
+      </View>
+      {expanded ? (
+        <Pressable onPress={card.onDismiss} hitSlop={10}>
+          <Ionicons name="checkmark-circle" size={20} color={ACCENT} />
+        </Pressable>
+      ) : (
+        <Ionicons name="chevron-down" size={16} color={ACCENT} />
+      )}
+    </Pressable>
+  );
+}
 
 interface SecondaryCardsProps { cards: SecondaryCardData[] }
 
@@ -46,18 +75,7 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
         );
 
         if (card.type === 'insight') return (
-          <View key={i} style={sc.card}>
-            <View style={sc.iconWrap}>
-              <Ionicons name="bulb-outline" size={16} color={GOLD} />
-            </View>
-            <View style={sc.body}>
-              <Text style={sc.label}>DID YOU KNOW?</Text>
-              <Text style={sc.title} numberOfLines={2}>{card.message}</Text>
-            </View>
-            <Pressable onPress={card.onDismiss} hitSlop={10}>
-              <Ionicons name="checkmark" size={16} color={ACCENT} />
-            </Pressable>
-          </View>
+          <InsightCardItem key={i} card={card} />
         );
 
         if (card.type === 'weekly') return (
@@ -115,5 +133,6 @@ const sc = StyleSheet.create({
   label:   { fontSize: 10, fontWeight: '800', color: GOLD,       letterSpacing: 1.0, marginBottom: 3 },
   title:   { fontSize: 13, fontWeight: '700', color: TEXT_MAIN,  lineHeight: 18 },
   sub:     { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
-  dismiss: { fontSize: 14, color: ACCENT, fontWeight: '700' },
+  dismiss:  { fontSize: 14, color: ACCENT, fontWeight: '700' },
+  readMore: { fontSize: 11, color: ACCENT, fontWeight: '600', marginTop: 4 },
 });
