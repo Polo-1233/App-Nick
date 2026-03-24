@@ -43,6 +43,102 @@ const SUGGESTED = [
   "What is the CRP?",
 ];
 
+// ─── Scrolling suggestion chips ──────────────────────────────────────────────
+
+const ALL_SUGGESTIONS = [
+  "Reset in 12 min — what should I do?",
+  "How to handle a late night?",
+  "Explain 90-minute cycles",
+  "I have trouble falling asleep",
+  "What is the CRP?",
+  "How many cycles do I need tonight?",
+  "I feel tired, what's wrong?",
+  "How do I prepare for a long trip?",
+  "What happens if I miss my sleep window?",
+  "Is a nap good or bad?",
+  "How does MRM help my focus?",
+  "My sleep quality is low — why?",
+  "Can I catch up on sleep on weekends?",
+  "What's the ideal wake time?",
+  "How do I manage jet lag?",
+  "Is coffee affecting my sleep?",
+  "What does my rhythm score mean?",
+  "How to fall asleep faster?",
+  "What is R90 exactly?",
+  "How long is a perfect wind-down?",
+];
+
+function ScrollingSuggestions({
+  onSelect,
+  accent,
+  surface,
+  text,
+  border,
+}: {
+  onSelect:  (s: string) => void;
+  accent:    string;
+  surface:   string;
+  text:      string;
+  border:    string;
+}) {
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<any>(null);
+  // Duplicate list for seamless loop
+  const items = [...ALL_SUGGESTIONS, ...ALL_SUGGESTIONS];
+
+  useEffect(() => {
+    let offset = 0;
+    const SPEED = 0.6; // px per frame
+    const ITEM_W = 180;
+    const TOTAL_W = ALL_SUGGESTIONS.length * (ITEM_W + 10);
+
+    const id = setInterval(() => {
+      offset += SPEED;
+      if (offset >= TOTAL_W) offset = 0;
+      scrollRef.current?.scrollTo({ x: offset, animated: false });
+    }, 16);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <Animated.ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      scrollEnabled={true}
+      style={sq.wrap}
+      contentContainerStyle={sq.content}
+    >
+      {items.map((s, i) => (
+        <Pressable
+          key={i}
+          onPress={() => onSelect(s)}
+          style={[sq.chip, { backgroundColor: surface, borderColor: border }]}
+        >
+          <Text style={[sq.chipText, { color: text }]} numberOfLines={1}>{s}</Text>
+        </Pressable>
+      ))}
+    </Animated.ScrollView>
+  );
+}
+
+const sq = StyleSheet.create({
+  wrap:    { height: 38, flexShrink: 0 },
+  content: { paddingHorizontal: 14, gap: 8, alignItems: 'center' },
+  chip: {
+    height:          32,
+    borderRadius:    16,
+    borderWidth:     1,
+    paddingHorizontal: 14,
+    justifyContent:  'center',
+  },
+  chipText: {
+    fontSize:   12,
+    fontWeight: '500',
+    maxWidth:   170,
+  },
+});
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -223,6 +319,15 @@ export function RLoChat({ visible, onClose }: Props) {
               }
             />
           )}
+
+          {/* Scrolling suggestion chips */}
+          <ScrollingSuggestions
+            onSelect={text => { setInput(text); }}
+            accent={c.accent}
+            surface={c.surface2}
+            text={c.textSub}
+            border={c.border}
+          />
 
           {/* Input bar */}
           <View style={[s.inputBar, { backgroundColor: c.surface, borderTopColor: c.borderSub }]}>
