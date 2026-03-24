@@ -15,6 +15,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { MascotImage } from '../ui/MascotImage';
 import { getRLoMessage, type RLoMessage as RLoMsg } from '../../lib/rlo-message';
+import { getRLoMood, type MoodInput } from '../../lib/rlo-mood';
 import type { ActionState } from '../../lib/action-state';
 import { nowMin } from '../../lib/time-utils';
 
@@ -28,11 +29,13 @@ interface RLoMessageProps {
   actionState: ActionState;
   wakeMin:     number;
   onChatTap:   () => void;
+  mood?:       MoodInput;  // streak + zone → R-LO emotion
 }
 
 export const RLoMessage = memo(function RLoMessage({
-  actionState, wakeMin, onChatTap,
+  actionState, wakeMin, onChatTap, mood,
 }: RLoMessageProps) {
+  const emotion = mood ? getRLoMood(mood) : 'rassurante';
   const now        = new Date();
   const hourOfDay  = now.getHours();
   const dayOfWeek  = now.getDay();
@@ -78,7 +81,7 @@ export const RLoMessage = memo(function RLoMessage({
       >
         {/* Avatar */}
         <View style={rl.avatarWrap}>
-          <MascotImage emotion="rassurante" size="sm" style={rl.avatarImg} />
+          <MascotImage emotion={emotion} size="sm" style={rl.avatarImg} />
         </View>
 
         {/* Message */}

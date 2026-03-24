@@ -10,7 +10,9 @@ import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticsSuccess } from '../utils/haptics';
-import { addPoints, POINTS, updateFlow } from '../lib/rhythm-points';
+import { addPoints, POINTS, updateFlow, getFlow } from '../lib/rhythm-points';
+import { isMilestone, getMilestoneMessage } from '../lib/rlo-mood';
+import { MascotImage } from './ui/MascotImage';
 
 const BG     = '#0a0a3a';
 const CARD   = '#141466';
@@ -39,7 +41,8 @@ interface Props {
 export const MorningConfirmation = memo(function MorningConfirmation({
   visible, firstName, wakeTime, onConfirm, onDismiss,
 }: Props) {
-  const [mood, setMood] = useState<Mood | null>(null);
+  const [mood,         setMood]         = useState<Mood | null>(null);
+  const [milestone,    setMilestone]    = useState<string | null>(null);
 
   async function handleConfirm() {
     HapticsSuccess();
@@ -47,7 +50,32 @@ export const MorningConfirmation = memo(function MorningConfirmation({
     await updateFlow(true).catch(() => {});
     const today = new Date().toISOString().slice(0, 10);
     await AsyncStorage.setItem(CONFIRM_DATE_KEY, today);
+
+    // Check milestone after streak update
+    const flow = await getFlow().catch(() => null);
+    if (flow && isMilestone(flow.currentStreak)) {
+      const msg = getMilestoneMessage(flow.currentStreak);
+      if (msg) { setMilestone(msg); return; } // show milestone screen first
+    }
     onConfirm(mood);
+  }
+
+  // ── Milestone celebration screen ────────────────────────────────────────────
+  if (milestone) {
+    return (
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => { setMilestone(null); onConfirm(mood); }}>
+        <View style={s.overlay}>
+          <View style={[s.card, s.milestoneCard]}>
+            <MascotImage emotion="celebration" size="md" />
+            <Text style={s.milestoneTitle}>Milestone!</Text>
+            <Text style={s.milestoneMsg}>{milestone}</Text>
+            <Pressable style={s.confirmBtn} onPress={() => { setMilestone(null); onConfirm(mood); }}>
+              <Text style={s.confirmTxt}>Keep going →</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    );
   }
 
   return (
@@ -96,6 +124,9 @@ const s = StyleSheet.create({
   moodSelected: { borderColor: ACCENT },
   moodEmoji:    { fontSize: 22 },
   moodTxt:      { fontSize: 12, color: MUTED, fontWeight: '600' },
-  confirmBtn:   { backgroundColor: ACCENT, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 4 },
-  confirmTxt:   { fontSize: 15, fontWeight: '700', color: '#fff' },
+  confirmBtn:     { backgroundColor: ACCENT, borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 4 },
+  confirmTxt:     { fontSize: 15, fontWeight: '700', color: '#fff' },
+  milestoneCard:  { alignItems: 'center', gap: 16, borderRadius: 24 },
+  milestoneTitle: { fontSize: 26, fontWeight: '800', color: TEXT, letterSpacing: -0.5 },
+  milestoneMsg:   { fontSize: 15, color: MUTED, textAlign: 'center', lineHeight: 22 },
 });

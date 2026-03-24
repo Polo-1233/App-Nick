@@ -11,8 +11,8 @@
  *   5. SecondaryCards — optional, only if useful data exists
  *   6. SleepFooter    — tonight's bedtime, subtle
  *
- * Onboarding mode (phase === 'guided_chat'):
- *   → delegates entirely to OnboardingChatFlow
+ * Note: guided_chat onboarding was removed.
+ * Data collection now happens in the onboarding pager (onboarding.tsx).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -44,10 +44,11 @@ import {
 // ─── Shared components ─────────────────────────────────────────────────────────
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
-import { OnboardingChatFlow }   from '../OnboardingChatFlow';
+// OnboardingChatFlow removed — data collection moved to onboarding pager
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
 import { getFlow }              from '../../lib/rhythm-points';
+import { isMilestone, getMilestoneMessage } from '../../lib/rlo-mood';
 // getMissedCycleInfo now handled inside action-state.ts
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import {
@@ -55,16 +56,8 @@ import {
 } from '../../lib/storage';
 import { getUpcomingEvents } from '../../lib/api';
 import type { UserProfile, ReadinessState } from '@r90/types';
-import type { MascotEmotion } from '../ui/MascotImage';
 
-// ─── Helper: R-Lo emotion from streak / readiness ──────────────────────────────
-function getRLoMood(streak: number, readiness: ReadinessState | null | undefined): MascotEmotion {
-  if (streak >= 7) return 'Enthousisate';
-  if (streak >= 3) return 'encourageant';
-  if (readiness?.zone === 'green') return 'Fiere';
-  if (streak === 0) return 'rassurante';
-  return 'Reflexion';
-}
+
 
 // ─── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
@@ -94,7 +87,8 @@ export default function HomeScreen() {
   const hasRedirected    = useRef(false);
   const hasGreetedPhase  = useRef<string | null>(null);
 
-  const isOnboarding = phase === 'guided_chat';
+  // guided_chat phase removed — data collection now happens in onboarding pager
+  const isOnboarding = false;
 
   // ── Load profile + streak + insights on mount ──────────────────────────────
   useEffect(() => {
@@ -246,18 +240,7 @@ export default function HomeScreen() {
     },
   });
 
-  // ─── ONBOARDING: full-screen chat ─────────────────────────────────────────
-  if (isOnboarding) {
-    return (
-      <OnboardingChatFlow
-        messages={messages}
-        isThinking={isThinking}
-        isStreaming={isStreaming}
-        injectMessage={injectMessage}
-        advance={advance}
-      />
-    );
-  }
+  // ─── ONBOARDING: removed (data collection moved to onboarding pager) ──────
 
   // ─── NORMAL MODE ──────────────────────────────────────────────────────────
   return (
@@ -289,6 +272,7 @@ export default function HomeScreen() {
             actionState={actionState}
             wakeMin={profile?.anchorTime ?? 390}
             onChatTap={openChat}
+            mood={{ streak, zone: dayPlan?.readiness?.zone ?? null }}
           />
 
           {/* 5. Secondary Cards — only rendered if data exists */}
