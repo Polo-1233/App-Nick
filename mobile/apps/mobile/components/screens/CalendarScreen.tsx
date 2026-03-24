@@ -727,13 +727,7 @@ export default function CalendarScreen() {
             ))}
           </ScrollView>
 
-          {/* R90 note */}
-          <View style={s.r90Note}>
-            <Ionicons name="information-circle-outline" size={13} color={TEXT_MUTED} />
-            <Text style={s.r90NoteText}>
-              R90 varies cycles across the week. Recovery nights (4 cycles) are planned — not failures.
-            </Text>
-          </View>
+
         </View>
 
         {/* ── R-Lo — même card que la homepage ── */}
