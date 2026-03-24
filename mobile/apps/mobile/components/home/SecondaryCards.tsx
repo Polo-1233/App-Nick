@@ -13,10 +13,11 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const ACCENT     = '#1c9fda';
-const GOLD       = '#F5A623';
-const CARD_BG    = '#EAF4FB';   // soft blue on white bg
+const GOLD       = '#D97706';
+const CARD_BG    = '#DCF0FB';   // bleu R90 pâle mais visible en light mode
+const CARD_BORDER= 'rgba(28,159,218,0.25)';
 const TEXT_MAIN  = '#002060';
-const TEXT_MUTED = '#5A7A9A';
+const TEXT_MUTED = '#3A5A7A';
 
 export interface CalendarCard  { type: 'calendar';  title: string; subtitle: string; onDismiss: () => void }
 export interface InsightCard   { type: 'insight';   id: string; message: string; onDismiss: () => void }
@@ -90,27 +91,29 @@ const sc = StyleSheet.create({
     alignItems:        'center',
     gap:               12,
     marginHorizontal:  20,
-    paddingVertical:   12,
-    paddingHorizontal: 14,
-    borderRadius:      14,
+    paddingVertical:   14,
+    paddingHorizontal: 16,
+    borderRadius:      16,
     backgroundColor:   CARD_BG,
-    shadowColor:       '#002060',
-    shadowOffset:      { width: 0, height: 2 },
-    shadowOpacity:     0.05,
-    shadowRadius:      8,
-    elevation:         1,
+    borderWidth:       1,
+    borderColor:       CARD_BORDER,
+    shadowColor:       '#1c9fda',
+    shadowOffset:      { width: 0, height: 3 },
+    shadowOpacity:     0.12,
+    shadowRadius:      10,
+    elevation:         3,
   },
   iconWrap: {
-    width:           34,
-    height:          34,
+    width:           36,
+    height:          36,
     borderRadius:    10,
-    backgroundColor: `${ACCENT}18`,
+    backgroundColor: `${ACCENT}28`,
     alignItems:      'center',
     justifyContent:  'center',
   },
   body:    { flex: 1 },
-  label:   { fontSize: 10, fontWeight: '700', color: GOLD,       letterSpacing: 0.8, marginBottom: 2 },
-  title:   { fontSize: 13, fontWeight: '600', color: TEXT_MAIN,  lineHeight: 18 },
-  sub:     { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
+  label:   { fontSize: 10, fontWeight: '800', color: GOLD,       letterSpacing: 1.0, marginBottom: 3 },
+  title:   { fontSize: 13, fontWeight: '700', color: TEXT_MAIN,  lineHeight: 18 },
+  sub:     { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
   dismiss: { fontSize: 14, color: ACCENT, fontWeight: '700' },
 });
