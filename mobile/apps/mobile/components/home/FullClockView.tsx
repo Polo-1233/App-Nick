@@ -97,6 +97,16 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
   const remaining  = isActive ? Math.max(0, CYCLE - elapsed) : 0;
   const sleepStart = N - idealCycles;
 
+  // ── Sleep mode: 3 optimal bedtime windows + 30-min pre-sleep zones ──────────
+  // R90 rule: bedtime = ARP - (cycles × 90min), so 3 options = ±1 cycle
+  // Each option = 1 segment. Pre-sleep = 30min before = 1/3 of a segment.
+  const SLEEP_DEG = 360 / N;  // = SDEG
+  const bedtimeSegments = [sleepStart - 1, sleepStart, sleepStart + 1].filter(
+    i => i >= 0 && i < N,
+  );
+  // Pre-sleep = 30min = (30/90) × SDEG = 1/3 segment before each bedtime
+  const PRE_SLEEP_SPAN = (30 / CYCLE) * SDEG;
+
   // ── Overlay: current time dot position ──────────────────────────────────────
   const curDeg = isActive ? currentIdx * SDEG + pct * SDEG : Math.max(0, currentIdx) * SDEG;
   const curRad = (curDeg - 90) * (Math.PI / 180);
@@ -151,15 +161,22 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
               const y = CY + R1 * Math.sin(midRad);
               const w = segW(R1);
 
-              // Sleep layer — highlight sleep segments
-              const sleepHighlight = layer === 'sleep' && isSleep;
+              // Sleep layer — highlight sleep + optimal bedtime windows
+              const sleepHighlight    = layer === 'sleep' && isSleep;
+              const isBedtimeOpt      = layer === 'sleep' && bedtimeSegments.includes(i);
               // Recovery layer — highlight CRP segment
               const seg = segments[i];
               const recHighlight   = layer === 'recovery' && seg?.isCRP && !isSleep;
 
               const baseOpacity = isSleep ? 0.12 : 0.08;
-              const opacity     = sleepHighlight ? 0.75 : recHighlight ? 0.80 : baseOpacity;
-              const color       = sleepHighlight ? NAVY : recHighlight ? '#D97706' : NAVY;
+              const opacity     = sleepHighlight  ? 0.80
+                : isBedtimeOpt  ? 0.80
+                : recHighlight  ? 0.80
+                : baseOpacity;
+              const color       = sleepHighlight ? NAVY
+                : isBedtimeOpt  ? NAVY
+                : recHighlight  ? '#D97706'
+                : NAVY;
 
               return (
                 <View
@@ -176,6 +193,51 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                     transform:       [{ rotate: `${midDeg}deg` }],
                   }}
                 />
+              );
+            })}
+
+            {/* ═══ LAYER 1b — Sleep mode: pre-sleep zones + bedtime markers ═══ */}
+            {layer === 'sleep' && bedtimeSegments.map(bi => {
+              // Pre-sleep zone: thin segment, 30min before this bedtime option
+              const preDeg   = bi * SDEG - PRE_SLEEP_SPAN;
+              const preRad   = (preDeg - 90) * (Math.PI / 180);
+              const px       = CX + R1 * Math.cos(preRad);
+              const py       = CY + R1 * Math.sin(preRad);
+              const pw       = segW(R1) * (PRE_SLEEP_SPAN / SDEG);
+
+              // Bedtime marker: small bright tick at the boundary
+              const tickDeg  = bi * SDEG;
+              const tickRad  = (tickDeg - 90) * (Math.PI / 180);
+              const tx       = CX + (R1) * Math.cos(tickRad);
+              const ty       = CY + (R1) * Math.sin(tickRad);
+
+              return (
+                <View key={`pre${bi}`}>
+                  {/* Pre-sleep arc — same color as sleep, 50% opacity */}
+                  <View style={{
+                    position:        'absolute',
+                    width:           pw,
+                    height:          H1,
+                    borderRadius:    H1 / 2,
+                    backgroundColor: NAVY,
+                    opacity:         0.40,
+                    left:            px - pw / 2,
+                    top:             py - H1 / 2,
+                    transform:       [{ rotate: `${preDeg}deg` }],
+                  }} />
+                  {/* Optimal bedtime tick — thin bright line */}
+                  <View style={{
+                    position:        'absolute',
+                    width:           4,
+                    height:          H1 + 12,
+                    borderRadius:    2,
+                    backgroundColor: CYAN,
+                    opacity:         1,
+                    left:            tx - 2,
+                    top:             ty - (H1 + 12) / 2,
+                    transform:       [{ rotate: `${tickDeg}deg` }],
+                  }} />
+                </View>
               );
             })}
 
@@ -273,7 +335,9 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
             <Text style={s.descText}>Inner ring shows your energy level across 90-min cycles. Brighter = higher energy.</Text>
           )}
           {layer === 'sleep' && (
-            <Text style={s.descText}>Highlighted segments = your {idealCycles} planned sleep cycles tonight.</Text>
+            <Text style={s.descText}>
+              Navy = sleep window ({idealCycles} cycles). Cyan ticks = 3 optimal bedtimes. Faded zones = 30-min wind-down before each.
+            </Text>
           )}
           {layer === 'recovery' && (
             <Text style={s.descText}>Your CRP recovery window — the best moment to rest during the day.</Text>
