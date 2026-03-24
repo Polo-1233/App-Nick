@@ -28,16 +28,17 @@ import { useTheme } from "../../lib/theme-context";
 import { PagerContext } from "../../lib/pager-context";
 import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
 import { useTour } from "../../lib/tour-context";
-import HomeScreen     from "../../components/screens/HomeScreen";
-import CalendarScreen from "../../components/screens/CalendarScreen";
+import HomeScreen          from "../../components/screens/HomeScreen";
+import CalendarScreen      from "../../components/screens/CalendarScreen";
+import InsightsScreen      from "../../components/screens/InsightsScreen";
 import CoachInsightsScreen from "../../components/screens/CoachInsightsScreen";
-import ProfileScreen  from "../../components/screens/ProfileScreen";
+import ProfileScreen       from "../../components/screens/ProfileScreen";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ICON_SIZE        = 20;
 const BUBBLE_SIZE      = 36;
-const PAGE_COUNT       = 4;
+const PAGE_COUNT       = 5; // 0:Home 1:Planning 2:Insights(hidden) 3:Coach 4:Profile
 
 // ─── TabIcon ──────────────────────────────────────────────────────────────────
 
@@ -160,10 +161,12 @@ export default function PagerLayout() {
   );
 
   // Per-icon triangle interpolations (peaks at own page, fades to neighbours)
-  const anim0 = scrollX.interpolate({ inputRange: [0, screenW],                  outputRange: [1, 0], extrapolate: "clamp" });
-  const anim1 = scrollX.interpolate({ inputRange: [0, screenW, 2 * screenW],     outputRange: [0, 1, 0], extrapolate: "clamp" });
-  const anim2 = scrollX.interpolate({ inputRange: [screenW, 2 * screenW, 3 * screenW], outputRange: [0, 1, 0], extrapolate: "clamp" });
-  const anim3 = scrollX.interpolate({ inputRange: [2 * screenW, 3 * screenW],   outputRange: [0, 1], extrapolate: "clamp" });
+  // Tab anims — pages: 0=Home 1=Planning 2=Insights(hidden) 3=Coach 4=Profile
+  // Tab bar only shows 4 tabs: Home(0) Planning(1) Coach(3) Profile(4)
+  const anim0 = scrollX.interpolate({ inputRange: [0, screenW],                          outputRange: [1, 0], extrapolate: "clamp" });
+  const anim1 = scrollX.interpolate({ inputRange: [0, screenW, 2 * screenW],             outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim3 = scrollX.interpolate({ inputRange: [2 * screenW, 3 * screenW, 4 * screenW], outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim4 = scrollX.interpolate({ inputRange: [3 * screenW, 4 * screenW],            outputRange: [0, 1], extrapolate: "clamp" });
 
   const { tabBarBg, tabBarBorder, tabBarBubble, tabBarIcon } = theme.colors;
 
@@ -189,15 +192,23 @@ export default function PagerLayout() {
         contentContainerStyle={{ width: screenW * PAGE_COUNT }}
         style={styles.pager}
       >
+        {/* Page 0 — Home */}
         <View style={[styles.page, { width: screenW }]}>
           <HomeScreen />
         </View>
+        {/* Page 1 — Planning */}
         <View style={[styles.page, { width: screenW }]}>
           <CalendarScreen />
         </View>
+        {/* Page 2 — Insights (hidden from tab bar, accessible via Planning shortcut) */}
+        <View style={[styles.page, { width: screenW }]}>
+          <InsightsScreen />
+        </View>
+        {/* Page 3 — Coach */}
         <View style={[styles.page, { width: screenW }]}>
           <CoachInsightsScreen />
         </View>
+        {/* Page 4 — Profile */}
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
         </View>
@@ -236,21 +247,7 @@ export default function PagerLayout() {
           />
         </Pressable>
 
-        {/* Insights */}
-        <Pressable
-          style={[styles.tabItem, isOnboarding && styles.tabLocked]}
-          onPress={() => goToPage(2)}
-          disabled={isOnboarding}
-        >
-          <TabIcon anim={anim2} bubbleColor={tabBarBubble}
-            iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
-            label="Coach"
-            showTourRing={tourStep === 2}
-            icon={<Ionicons name={activeIndex === 2 ? "book" : "book-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
-          />
-        </Pressable>
-
-        {/* Profile */}
+        {/* Coach (page 3) */}
         <Pressable
           style={[styles.tabItem, isOnboarding && styles.tabLocked]}
           onPress={() => goToPage(3)}
@@ -258,9 +255,23 @@ export default function PagerLayout() {
         >
           <TabIcon anim={anim3} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
+            label="Coach"
+            showTourRing={tourStep === 2}
+            icon={<Ionicons name={activeIndex === 3 ? "book" : "book-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
+          />
+        </Pressable>
+
+        {/* Profile (page 4) */}
+        <Pressable
+          style={[styles.tabItem, isOnboarding && styles.tabLocked]}
+          onPress={() => goToPage(4)}
+          disabled={isOnboarding}
+        >
+          <TabIcon anim={anim4} bubbleColor={tabBarBubble}
+            iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
             label="Profile"
             showTourRing={tourStep === 3}
-            icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 4 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
           />
         </Pressable>
       </View>
