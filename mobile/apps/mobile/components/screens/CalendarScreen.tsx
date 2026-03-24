@@ -675,31 +675,27 @@ export default function CalendarScreen() {
     loadProfile().then(p => { if (p) setProfile(p); });
   }, []);
 
-  // Guard — profile not yet loaded: show setup prompt
-  if (!profile) {
-    return (
-      <SafeAreaView style={[s.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
-          <MascotImage emotion="rassurante" size="md" />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff', textAlign: 'center' }}>
-            Your plan is being built
-          </Text>
-          <Text style={{ fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 }}>
-            {"Complete your sleep profile so R-Lo can calculate your anchor time, bedtime windows, and weekly target."}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // SMOKE fallback — always show the screen even without real profile
+  const SMOKE_PROFILE: UserProfile = {
+    anchorTime:          390,   // 06:30
+    idealCyclesPerNight: 5,
+    chronotype:          'Neither',
+    weeklyTarget:        35,
+  };
 
-  const activeProfile: UserProfile = profile;
+  const activeProfile: UserProfile = profile ?? SMOKE_PROFILE;
 
-  const recentCycles  = dayPlan?.readiness?.recentCycles ?? [5, 4, 5];
+  // ── SMOKE DATA — remove before production ────────────────────────────────
+  const SMOKE_RECENT_CYCLES = [5, 4, 5, 5, 3, 5, 4];
+  const SMOKE_ZONE: 'green' | 'yellow' | 'orange' = 'yellow';
+  const SMOKE_WEARABLE = true;
+  // ──────────────────────────────────────────────────────────────────────────
+
+  const recentCycles  = dayPlan?.readiness?.recentCycles ?? SMOKE_RECENT_CYCLES;
   const target        = activeProfile.idealCyclesPerNight;
-  // Wearable-adjusted cycles: if readiness zone is orange, recommend +1
-  const zone            = dayPlan?.readiness?.zone ?? null;
+  const zone            = dayPlan?.readiness?.zone ?? SMOKE_ZONE;
   const adjustedCycles  = zone === 'orange' ? Math.min(target + 1, 6) : target;
-  const wearableActive  = !!dayPlan?.readiness;
+  const wearableActive  = dayPlan?.readiness ? true : SMOKE_WEARABLE;
 
   // Week
   const week       = buildWeek(activeProfile);
