@@ -49,7 +49,6 @@ import {
   saveWindDownMusicEnabled,
 } from '../../lib/wind-down';
 import { GoogleCalendarConnect } from '../GoogleCalendarConnect';
-import { updateLifestyle, type LifestyleInput } from '../../lib/api';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -385,13 +384,7 @@ export default function ProfileScreen() {
   const [windDownEnabled,      setWindDownEnabled]      = useState(false);
   const [windDownMusicEnabled, setWindDownMusicEnabled] = useState(false);
 
-  // ── Lifestyle inline state ────────────────────────────────────────────────
-  const [showLifestyle,  setShowLifestyle]  = useState(false);
-  const [lsStress,       setLsStress]       = useState('medium');
-  const [lsEnv,          setLsEnv]          = useState('moderate');
-  const [lsExercise,     setLsExercise]     = useState('light');
-  const [lsAlcohol,      setLsAlcohol]      = useState('none');
-  const [lsSaving,       setLsSaving]       = useState(false);
+
 
   useEffect(() => { void loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -412,19 +405,6 @@ export default function ProfileScreen() {
     const updated = { ...profile, ...updates };
     setProfile(updated);
     await saveProfile(updated);
-  }
-
-  async function handleSaveLifestyle() {
-    setLsSaving(true);
-    const input: LifestyleInput = {
-      stress_level:       lsStress,
-      sleep_environment:  lsEnv,
-      exercise_frequency: lsExercise,
-      alcohol_use:        lsAlcohol,
-    };
-    await updateLifestyle(input).catch(() => {});
-    setLsSaving(false);
-    setShowLifestyle(false);
   }
 
   function handleSignOut() {
@@ -478,7 +458,7 @@ export default function ProfileScreen() {
           icon:    'fitness-outline',
           label:   'Lifestyle',
           sub:     'Stress, environment, exercise, alcohol',
-          onPress: () => setShowLifestyle(v => !v),
+          onPress: () => router.push('/lifestyle'),
         },
       ],
     },
@@ -571,43 +551,6 @@ export default function ProfileScreen() {
         ))}
 
         {/* ── Lifestyle inline section ── */}
-        {showLifestyle && (
-          <View style={s.lifestyleSection}>
-            <Text style={s.sectionTitle}>Lifestyle</Text>
-
-            <Text style={s.lsLabel}>Stress level</Text>
-            <View style={s.lsRow}>
-              {(['low','medium','high','variable'] as const).map(v => (
-                <Pressable key={v} style={[s.lsChip, lsStress === v && { backgroundColor: C.accent }]} onPress={() => setLsStress(v)}>
-                  <Text style={[s.lsChipTxt, lsStress === v && { color: '#fff' }]}>{v === 'low' ? 'Low' : v === 'medium' ? 'Medium' : v === 'high' ? 'High' : 'Variable'}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={s.lsLabel}>Exercise</Text>
-            <View style={s.lsRow}>
-              {(['none','light','moderate','heavy'] as const).map(v => (
-                <Pressable key={v} style={[s.lsChip, lsExercise === v && { backgroundColor: C.accent }]} onPress={() => setLsExercise(v)}>
-                  <Text style={[s.lsChipTxt, lsExercise === v && { color: '#fff' }]}>{v === 'none' ? 'None' : v === 'light' ? 'Light' : v === 'moderate' ? 'Moderate' : 'Intense'}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={s.lsLabel}>Alcohol</Text>
-            <View style={s.lsRow}>
-              {(['none','occasional','regular'] as const).map(v => (
-                <Pressable key={v} style={[s.lsChip, lsAlcohol === v && { backgroundColor: C.accent }]} onPress={() => setLsAlcohol(v)}>
-                  <Text style={[s.lsChipTxt, lsAlcohol === v && { color: '#fff' }]}>{v === 'none' ? 'None' : v === 'occasional' ? 'Occasional' : 'Regular'}</Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Pressable style={s.lsSaveBtn} onPress={() => { HapticsLight(); void handleSaveLifestyle(); }} disabled={lsSaving}>
-              <Text style={s.lsSaveTxt}>{lsSaving ? 'Saving…' : 'Save'}</Text>
-            </Pressable>
-          </View>
-        )}
-
         <Text style={[s.version, { color: theme.colors.textMuted }]}>R-Lo · Sleep Coach v1.0.0</Text>
       </ScrollView>
 
@@ -665,11 +608,5 @@ const s = StyleSheet.create({
 
   version: { textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 24 },
 
-  lifestyleSection: { marginHorizontal: 16, marginTop: 8, backgroundColor: C.card, borderRadius: 16, padding: 16, gap: 4 },
-  lsLabel:   { fontSize: 12, fontWeight: '700', color: C.textMuted, marginTop: 10, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.8 },
-  lsRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  lsChip:    { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: C.surface2, borderWidth: 1, borderColor: C.border },
-  lsChipTxt: { fontSize: 12, fontWeight: '600', color: C.text },
-  lsSaveBtn: { marginTop: 14, backgroundColor: C.accent, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  lsSaveTxt: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
 });
