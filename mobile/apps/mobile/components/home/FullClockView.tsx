@@ -49,20 +49,20 @@ const R        = D / 2;
 const CX       = R;
 const CY       = R;
 
-// Main ring
-const R1_O  = R - 6;                    // outer radius
-const R1_I  = R - 50;                   // inner radius (44px thick)
+// Outer ring (thick)
+const R1_O  = R - 4;
+const R1_I  = R - 42;
 const R1_M  = (R1_O + R1_I) / 2;
 
-// Energy ring (thin, just inside main ring)
-const R2_O  = R - 58;
-const R2_I  = R - 66;
+// Inner ring (thinner, concentric)
+const R2_O  = R - 50;
+const R2_I  = R - 78;
 const R2_M  = (R2_O + R2_I) / 2;
 
 const DAY_CYCLES  = 16;
 const SEG_DEG     = 360 / DAY_CYCLES;  // 22.5°
-const GAP_DEG     = 8;                 // clean gap
-const ARC_DEG     = SEG_DEG - GAP_DEG; // 14.5° arc
+const GAP_DEG     = 7;                 // gap between segments
+const ARC_DEG     = SEG_DEG - GAP_DEG; // 15.5° arc
 
 // ─── Arc renderer — smooth fill + rounded caps ────────────────────────────────
 
@@ -211,34 +211,34 @@ export function FullClockView({
     y: CY + R1_M * Math.sin(cursorRad),
   };
 
-  // Pre-compute all arc chunks (main ring)
-  const allChunks = segments.map((seg, i) => {
-    const start    = i * SEG_DEG + GAP_DEG / 2;
-    const isSleep  = i >= sleepStart;
-    const isCurr   = seg.isCurrent && isActive;
-    const isPast   = seg.isPast || (!isActive && currentIdx >= DAY_CYCLES);
-    const energy   = energyMap[i];
-
-    const color    = isCurr ? ACCENT : isSleep ? C_SLEEP : C_WAKE;
-    const opacity  = isCurr   ? 1
-      : isPast    ? 0.45
-      : isSleep   ? 0.65
-      : energy?.level === 'high'    ? 0.85
-      : energy?.level === 'neutral' ? 0.65
-      : 0.35;
-
+  // Pre-compute chunks for both rings — same segments, same alignment
+  const outerChunks = segments.map((seg, i) => {
+    const start   = i * SEG_DEG + GAP_DEG / 2;
+    const isSleep = i >= sleepStart;
+    const isCurr  = seg.isCurrent && isActive;
+    const isPast  = seg.isPast || (!isActive && currentIdx >= DAY_CYCLES);
+    const color   = isCurr ? ACCENT : isSleep ? ACCENT : C_WAKE;
+    const opacity = isCurr   ? 1
+      : isSleep   ? 0.85
+      : isPast    ? 0.40
+      : 0.75;
     return arcChunks(start, ARC_DEG, R1_O, R1_I, color, opacity);
   });
 
-  // Energy outer ring chunks
-  const energyChunks = segments.map((seg, i) => {
+  const innerChunks = segments.map((seg, i) => {
     const start   = i * SEG_DEG + GAP_DEG / 2;
     const isSleep = i >= sleepStart;
-    const energy  = energyMap[i];
-    if (isSleep) return [];
-    const op = energy?.level === 'high' ? 0.55 : energy?.level === 'neutral' ? 0.25 : 0.08;
-    return arcChunks(start, ARC_DEG, R2_O, R2_I, C_ENERGY, op);
+    const isCurr  = seg.isCurrent && isActive;
+    const isPast  = seg.isPast || (!isActive && currentIdx >= DAY_CYCLES);
+    const color   = isCurr ? ACCENT : isSleep ? ACCENT : C_WAKE;
+    const opacity = isCurr   ? 1
+      : isSleep   ? 0.85
+      : isPast    ? 0.40
+      : 0.75;
+    return arcChunks(start, ARC_DEG, R2_O, R2_I, color, opacity);
   });
+
+  const energyChunks = segments.map(() => [] as ReturnType<typeof arcChunks>);
 
   // MRM marker positions
   const mrmMarkers = segments
@@ -282,30 +282,33 @@ export function FullClockView({
           <Pressable onPress={() => setTip(null)}>
             <View style={{ width: D, height: D }}>
 
-              {/* ── Background ring (faint) ── */}
+              {/* ── Background rings (faint) ── */}
               <View style={[s.ringBase, {
                 width: R1_O * 2, height: R1_O * 2,
                 borderRadius: R1_O, borderWidth: R1_O - R1_I,
                 left: CX - R1_O, top: CY - R1_O,
               }]} />
+              <View style={[s.ringBase, {
+                width: R2_O * 2, height: R2_O * 2,
+                borderRadius: R2_O, borderWidth: R2_O - R2_I,
+                left: CX - R2_O, top: CY - R2_O,
+              }]} />
 
 
 
-              {/* ── Main ring segments ── */}
-              {allChunks.map((chunks, i) => {
-                const seg     = segments[i]!;
+              {/* ── Outer + inner rings per segment ── */}
+              {segments.map((seg, i) => {
                 const isSleep = i >= sleepStart;
                 const isCurr  = seg.isCurrent && isActive;
 
-                // Layer filter — hide non-relevant segments
-                if (active === 'sleep'  && !isSleep)  return null;
-                if (active === 'mrm'    && isSleep)   return null;
+                if (active === 'sleep'  && !isSleep)   return null;
+                if (active === 'mrm'    && isSleep)    return null;
                 if (active === 'crp'    && !seg.isCRP) return null;
-                if (active === 'energy' && isSleep)   return null;
-                const midDeg  = i * SEG_DEG + SEG_DEG / 2;
-                const midRad  = (midDeg - 90) * Math.PI / 180;
-                const tx      = CX + R1_M * Math.cos(midRad);
-                const ty      = CY + R1_M * Math.sin(midRad);
+
+                const midDeg = i * SEG_DEG + SEG_DEG / 2;
+                const midRad = (midDeg - 90) * Math.PI / 180;
+                const tx     = CX + R1_M * Math.cos(midRad);
+                const ty     = CY + R1_M * Math.sin(midRad);
 
                 return (
                   <Pressable
@@ -317,7 +320,8 @@ export function FullClockView({
                       tx, ty,
                     )}
                   >
-                    <StaticArc chunks={chunks} />
+                    <StaticArc chunks={outerChunks[i]!} />
+                    <StaticArc chunks={innerChunks[i]!} />
                   </Pressable>
                 );
               })}
