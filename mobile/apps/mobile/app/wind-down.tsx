@@ -23,6 +23,7 @@ import { AudioPlayer }   from '../components/AudioPlayer';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
+import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
 import type { ContentItem } from '../lib/content-registry';
 
@@ -123,6 +124,7 @@ function ContentPhase({
     if (!content) return;
     await markContentPlayed('winddown', content.id);
     await addPoints(POINTS.WINDDOWN_CONTENT, 'winddown_content').catch(() => {});
+    await addSignal(SIGNAL.WINDDOWN_COMPLETE).catch(() => {});
     onComplete();
   }
 
@@ -151,6 +153,7 @@ function ContentPhase({
       </View>
       <Pressable style={ph.mainBtn} onPress={async () => {
         await addPoints(POINTS.WINDDOWN_START, 'winddown_start').catch(() => {});
+        await addSignal(SIGNAL.WINDDOWN_START).catch(() => {});
         setPlaying(true);
       }}>
         <Text style={ph.mainBtnTxt}>Listen →</Text>

@@ -49,6 +49,7 @@ import {
   saveWindDownMusicEnabled,
 } from '../../lib/wind-down';
 import { GoogleCalendarConnect } from '../GoogleCalendarConnect';
+import { RhythmDepthCard }       from '../RhythmDepthCard';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
@@ -514,7 +515,12 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── 2. Premium card ── */}
+        {/* ── 2. Rhythm Depth — Cycle Mastery ── */}
+        <View style={{ marginHorizontal: 16 }}>
+          <RhythmDepthCard />
+        </View>
+
+        {/* ── 3. Premium card ── */}
         <PremiumCard
           isPremium={isPremium}
           onPress={() => { HapticsLight(); router.push(isPremium ? '/premium' : '/subscription'); }}

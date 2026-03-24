@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticsSuccess } from '../utils/haptics';
 import { addPoints, POINTS, updateFlow, getFlow } from '../lib/rhythm-points';
+import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { isMilestone, getMilestoneMessage } from '../lib/rlo-mood';
 import { MascotImage } from './ui/MascotImage';
 
@@ -48,6 +49,7 @@ export const MorningConfirmation = memo(function MorningConfirmation({
     HapticsSuccess();
     await addPoints(POINTS.ARP_CONFIRM, 'arp_confirm').catch(() => {});
     await updateFlow(true).catch(() => {});
+    await addSignal(SIGNAL.ARP_CONFIRM).catch(() => {});
     const today = new Date().toISOString().slice(0, 10);
     await AsyncStorage.setItem(CONFIRM_DATE_KEY, today);
 

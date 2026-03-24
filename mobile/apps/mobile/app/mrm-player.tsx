@@ -14,6 +14,7 @@ import { MascotImage } from '../components/ui/MascotImage';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
+import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import type { ContentItem } from '../lib/content-registry';
 
 const BG     = '#0a0a3a';
@@ -39,6 +40,7 @@ export default function MrmPlayerScreen() {
     if (!content) return;
     await markContentPlayed('mrm', content.id);
     await addPoints(POINTS.MRM_COMPLETE, 'mrm_done').catch(() => {});
+    await addSignal(SIGNAL.MRM_COMPLETE).catch(() => {});
     setCompleted(true);
   }
 

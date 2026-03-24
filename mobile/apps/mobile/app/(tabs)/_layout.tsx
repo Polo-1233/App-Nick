@@ -16,6 +16,7 @@ import {
 } from "../../lib/storage";
 import { useAuth } from "../../lib/auth-context";
 import { initAppleHealth } from "../../lib/apple-health";
+import { applyWeeklyDecay } from "../../lib/rhythm-depth";
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -33,8 +34,8 @@ export default function TabsLayout() {
   useEffect(() => {
     if (authLoading) return; // wait for auth to settle
     getOnboardingPhase().then(p => {
-      // Allow 'calendar' phase through — it's the post-login permission flow
-    // Only force 'done' for phases that shouldn't persist after auth (plan, guided_chat)
+      // Allow 'calendar' and 'plan' phases through when relevant
+    // Force 'done' for any stale phase after auth
     if (isAuthenticated && p !== 'done' && p !== 'calendar') {
         setOnboardingPhase('done');
         setPhaseState('done');
@@ -46,6 +47,7 @@ export default function TabsLayout() {
     // Sync Apple Health after auth — background, non-blocking
     if (isAuthenticated) {
       void initAppleHealth();
+      void applyWeeklyDecay();
     }
   }, [authLoading, isAuthenticated]);
 
@@ -72,7 +74,8 @@ export default function TabsLayout() {
   // Don't render until both auth + phase are known
   if (authLoading || !phaseReady) return null;
 
-  const tabsLocked = phase === 'guided_chat';
+  // Lock tabs during plan overlay (pre-login)
+  const tabsLocked = phase === 'plan' && !isAuthenticated;
 
   return (
     <AudioProvider>
@@ -82,7 +85,7 @@ export default function TabsLayout() {
           <View style={st.root}>
             <Slot />
 
-            {/* Tab bar lock — blocks ALL touch events on bottom nav during onboarding */}
+            {/* Tab bar lock — blocks touch events on bottom nav during onboarding overlays */}
             {tabsLocked && (
               <View
                 style={st.tabLock}
