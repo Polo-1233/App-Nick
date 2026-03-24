@@ -47,16 +47,18 @@ export function useTheme(): ThemeContextValue {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme          = useColorScheme(); // 'light' | 'dark' | null
-  const [mode, setModeState]  = useState<ThemeMode>('system');
+  const [mode, setModeState]  = useState<ThemeMode>('light'); // default: light (white bg per R90 brand)
   const [immersiveMode, setImmersiveModeState] = useState<boolean>(true); // default ON
 
   // Restore both persisted preferences on mount
   useEffect(() => {
     AsyncStorage.multiGet([THEME_STORAGE_KEY, IMMERSIVE_STORAGE_KEY]).then(
       ([[, storedTheme], [, storedImmersive]]) => {
+        // Only override if user explicitly chose a mode
         if (storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system') {
           setModeState(storedTheme);
         }
+        // No stored preference → keep default 'light'
         if (storedImmersive !== null) {
           setImmersiveModeState(storedImmersive !== 'false');
         }
