@@ -50,6 +50,50 @@ interface Props {
   onClose: () => void;
 }
 
+// ─── Typing dots (3 dots animés pendant que R-Lo réfléchit) ──────────────────
+
+function TypingDots() {
+  const dots = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ];
+
+  useEffect(() => {
+    const anims = dots.map((dot, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 160),
+          Animated.timing(dot, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 300, useNativeDriver: true }),
+          Animated.delay((2 - i) * 160),
+        ])
+      )
+    );
+    anims.forEach(a => a.start());
+    return () => anims.forEach(a => a.stop());
+  }, []);
+
+  return (
+    <View style={td.row}>
+      {dots.map((dot, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            td.dot,
+            { opacity: dot, transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+const td = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 2 },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#FFFFFF' },
+});
+
 // ─── Animated cursor ──────────────────────────────────────────────────────────
 
 function BlinkingCursor({ color }: { color: string }) {
@@ -170,6 +214,13 @@ export function RLoChat({ visible, onClose }: Props) {
               contentContainerStyle={s.listContent}
               renderItem={({ item }) => <ChatBubble message={item} />}
               showsVerticalScrollIndicator={false}
+              ListFooterComponent={
+                isThinking ? (
+                  <View style={s.thinkingBubble}>
+                    <TypingDots />
+                  </View>
+                ) : null
+              }
             />
           )}
 
@@ -294,7 +345,18 @@ const s = StyleSheet.create({
   suggestionText: { fontSize: 14, lineHeight: 20, flex: 1 },
 
   // Messages
-  listContent:   { padding: 16, paddingBottom: 8, gap: 12 },
+  listContent:     { padding: 16, paddingBottom: 8, gap: 12 },
+  thinkingBubble:  {
+    alignSelf:       'flex-start',
+    backgroundColor: '#141466',
+    borderRadius:    18,
+    borderBottomLeftRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical:   12,
+    marginLeft:        36, // aligns with bot bubbles
+    marginTop:         4,
+    marginBottom:      8,
+  },
   bubbleRow:     { flexDirection: "row", alignItems: "flex-end", gap: 8, maxWidth: "85%" },
   bubbleRowUser: { alignSelf: "flex-end", flexDirection: "row-reverse" },
 
