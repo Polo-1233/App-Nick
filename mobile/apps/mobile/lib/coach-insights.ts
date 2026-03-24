@@ -50,7 +50,7 @@ export async function getTodayInsight(): Promise<CoachInsight | null> {
   const shown: string[] = rawShown ? JSON.parse(rawShown) : [];
 
   const eligible = COACH_INSIGHTS
-    .filter(ci => ci.triggerDay <= daysSince && !shown.includes(ci.id))
+    .filter(ci => !shown.includes(ci.id))  // show all unseen insights regardless of day
     .sort((a, b) => a.triggerDay - b.triggerDay);
 
   return eligible[0] ?? null;
