@@ -24,11 +24,9 @@ import type { UserProfile } from '@r90/types';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Analytics } from '../../lib/analytics';
-import { fmtMin as minToHHMM, nowMin as getNowMin } from '../../lib/time-utils';
+import { fmtMin as minToHHMM } from '../../lib/time-utils';
 import { useTheme } from '../../lib/theme-context';
-import { useChatContext } from '../../lib/chat-context';
-import { getCurrentActionState } from '../../lib/action-state';
-import { RLoMessage } from '../home/RLoMessage';
+import { usePager } from '../../lib/pager-context';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -625,6 +623,70 @@ const pt = StyleSheet.create({
   },
 });
 
+// ─── Insights Shortcut Card ───────────────────────────────────────────────────
+
+function InsightsShortcutCard({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [is.card, pressed && is.pressed]}>
+      <View style={is.left}>
+        <View style={is.iconWrap}>
+          <Ionicons name="analytics-outline" size={18} color={ACCENT} />
+        </View>
+        <View style={is.body}>
+          <Text style={is.title}>Your rhythm insights</Text>
+          <Text style={is.sub}>Flow days, weekly dots, trend analysis</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
+    </Pressable>
+  );
+}
+
+const is = StyleSheet.create({
+  card: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    backgroundColor: CARD,
+    borderRadius:    18,
+    padding:         16,
+    borderWidth:     1,
+    borderColor:     `${ACCENT}25`,
+  },
+  pressed: {
+    opacity: 0.75,
+  },
+  left: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           12,
+    flex:          1,
+  },
+  iconWrap: {
+    width:           36,
+    height:          36,
+    borderRadius:    10,
+    backgroundColor: `${ACCENT}18`,
+    alignItems:      'center',
+    justifyContent:  'center',
+    flexShrink:      0,
+  },
+  body: {
+    flex: 1,
+    gap:  3,
+  },
+  title: {
+    fontSize:   14,
+    fontWeight: '700',
+    color:      TEXT,
+  },
+  sub: {
+    fontSize:   12,
+    color:      TEXT_MUTED,
+    lineHeight: 16,
+  },
+});
+
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
@@ -643,7 +705,7 @@ const sh = StyleSheet.create({
 export default function CalendarScreen() {
   const { theme }    = useTheme();
   const { dayPlan }  = useDayPlanContext();
-  const { openChat } = useChatContext();
+  const { goToPage } = usePager();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useFocusEffect(useCallback(() => { Analytics.screenViewed('planning'); }, []));
@@ -688,12 +750,7 @@ export default function CalendarScreen() {
   const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
   const r90Score      = calcR90Score(recentCycles, target);
 
-  // R-Lo message — same engine as home
-  const actionState = getCurrentActionState(
-    getNowMin(),
-    activeProfile.anchorTime,
-    activeProfile.idealCyclesPerNight,
-  ).state;
+
 
   return (
     <AmbientBackground wakeMin={activeProfile.anchorTime} style={{ flex: 1 }}>
@@ -732,16 +789,6 @@ export default function CalendarScreen() {
 
         </View>
 
-        {/* ── R-Lo — même card que la homepage ── */}
-        {/* marginHorizontal: -20 annule le padding interne du composant pour aligner avec les autres cards */}
-        <View style={{ marginHorizontal: -20 }}>
-          <RLoMessage
-            actionState={actionState}
-            wakeMin={activeProfile.anchorTime}
-            onChatTap={openChat}
-          />
-        </View>
-
         {/* ── Tips & Advice ── */}
         <PlanningTipsCard
           profile={activeProfile}
@@ -749,6 +796,9 @@ export default function CalendarScreen() {
           zone={zone}
           recentCycles={recentCycles}
         />
+
+        {/* ── Insights shortcut ── */}
+        <InsightsShortcutCard onPress={() => goToPage(2)} />
 
       </ScrollView>
     </SafeAreaView>
