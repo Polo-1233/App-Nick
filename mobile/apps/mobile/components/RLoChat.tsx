@@ -254,20 +254,25 @@ export function RLoChat({ visible, onClose }: Props) {
             }
           />
 
-          {/* ── Suggestion chips — always visible, wrap layout ── */}
-          <View style={s.chips}>
-            {CHIPS.map((chip, i) => (
+          {/* ── Suggestion chips — carousel horizontal ── */}
+          <FlatList
+            data={CHIPS}
+            keyExtractor={(_, i) => String(i)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.chips}
+            style={s.chipsRow}
+            renderItem={({ item }) => (
               <Pressable
-                key={i}
-                onPress={() => setInput(chip)}
+                onPress={() => setInput(item)}
                 style={[s.chip, { borderColor: chipBorder }]}
               >
                 <Text style={[s.chipTxt, { color: chipText }]} numberOfLines={1}>
-                  {chip}
+                  {item}
                 </Text>
               </Pressable>
-            ))}
-          </View>
+            )}
+          />
 
           {/* ── Input bar ── */}
           <View style={[s.bar, { borderTopColor: c.borderSub }]}>
@@ -332,19 +337,21 @@ const s = StyleSheet.create({
     marginLeft: 36, marginTop: 2, marginBottom: 4,
   },
 
-  // Suggestion chips — wrap
+  // Suggestion chips — horizontal carousel
+  chipsRow: { flexShrink: 0, height: 44 },
   chips: {
-    flexDirection:    'row',
-    flexWrap:         'wrap',
-    gap:              8,
     paddingHorizontal: 14,
-    paddingVertical:   10,
+    paddingVertical:    6,
+    gap:                8,
+    alignItems:        'center',
   },
   chip: {
     borderWidth:       1,
     borderRadius:      20,
     paddingHorizontal: 14,
     paddingVertical:    7,
+    height:            32,
+    justifyContent:   'center',
   },
   chipTxt: { fontSize: 13, fontWeight: '500' },
 
