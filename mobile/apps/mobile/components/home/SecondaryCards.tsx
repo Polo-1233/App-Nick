@@ -47,14 +47,14 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
         if (card.type === 'insight') return (
           <View key={i} style={sc.card}>
             <View style={sc.iconWrap}>
-              <Text style={{ fontSize: 16 }}>🔆</Text>
+              <Ionicons name="bulb-outline" size={16} color={GOLD} />
             </View>
             <View style={sc.body}>
               <Text style={sc.label}>DID YOU KNOW?</Text>
               <Text style={sc.title} numberOfLines={2}>{card.message}</Text>
             </View>
             <Pressable onPress={card.onDismiss} hitSlop={10}>
-              <Text style={sc.dismiss}>✓</Text>
+              <Ionicons name="checkmark" size={16} color={ACCENT} />
             </Pressable>
           </View>
         );
@@ -62,7 +62,7 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
         if (card.type === 'weekly') return (
           <View key={i} style={sc.card}>
             <View style={sc.iconWrap}>
-              <Text style={{ fontSize: 16 }}>📊</Text>
+              <Ionicons name="stats-chart-outline" size={16} color={ACCENT} />
             </View>
             <View style={sc.body}>
               <Text style={sc.title}>Weekly report</Text>
