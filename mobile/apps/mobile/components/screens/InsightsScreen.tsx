@@ -35,6 +35,7 @@ import { Analytics } from '../../lib/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../lib/theme-context';
 import { AmbientBackground } from '../ui/AmbientBackground';
+import { usePager } from '../../lib/pager-context';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -210,7 +211,8 @@ function EmptyState() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InsightsScreen() {
-  const { theme } = useTheme();
+  const { theme }    = useTheme();
+  const { goToPage } = usePager();
   const [loading,         setLoading]         = useState(true);
   const [insights,        setInsights]        = useState<InsightsData | null>(null);
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
@@ -250,10 +252,22 @@ export default function InsightsScreen() {
     }).catch(() => {});
   }, []);
 
+  const BackHeader = () => (
+    <View style={s.backHeader}>
+      <Pressable onPress={() => goToPage(1)} style={s.backBtn} hitSlop={12}>
+        <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+        <Text style={[s.backLabel, { color: theme.colors.text }]}>Planning</Text>
+      </Pressable>
+      <Text style={[s.headerTitle, { color: theme.colors.text }]}>Insights</Text>
+      <View style={{ width: 80 }} />
+    </View>
+  );
+
   if (loading) {
     return (
       <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <BackHeader />
           <ActivityIndicator color={C.accent} style={{ marginTop: 80 }} />
         </SafeAreaView>
       </AmbientBackground>
@@ -264,10 +278,8 @@ export default function InsightsScreen() {
     return (
       <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <BackHeader />
           <ScrollView contentContainerStyle={s.scroll}>
-            <View style={s.header}>
-              <Text style={s.headerTitle}>Insights</Text>
-            </View>
             <EmptyState />
           </ScrollView>
         </SafeAreaView>
@@ -285,11 +297,8 @@ export default function InsightsScreen() {
   return (
     <AmbientBackground wakeMin={profile.anchorTime} style={s.root}>
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <BackHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-
-        <View style={s.header}>
-          <Text style={s.headerTitle}>Insights</Text>
-        </View>
 
         {/* ── 1. Rhythm Flow ── */}
         <View style={s.flowCard}>
@@ -340,8 +349,11 @@ const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: C.bg },
   scroll: { paddingHorizontal: 16, paddingBottom: 32 },
 
-  header:      { paddingTop: 16, paddingBottom: 20 },
-  headerTitle: { fontSize: 28, fontWeight: '700', color: C.text },
+  // Back header
+  backHeader:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 },
+  backBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4, width: 80 },
+  backLabel:   { fontSize: 15, fontWeight: '500' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: C.text, textAlign: 'center', flex: 1 },
 
   // Rhythm Flow card
   flowCard:   { backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14 },
