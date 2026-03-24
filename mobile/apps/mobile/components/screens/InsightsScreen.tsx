@@ -33,6 +33,7 @@ import {
 } from '../../lib/insights';
 import { Analytics } from '../../lib/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../lib/theme-context';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
