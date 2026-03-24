@@ -520,6 +520,8 @@ export default function ProfileScreen() {
           <RhythmDepthCard />
         </View>
 
+        <View style={{ height: 12 }} />
+
         {/* ── 3. Premium card ── */}
         <PremiumCard
           isPremium={isPremium}
