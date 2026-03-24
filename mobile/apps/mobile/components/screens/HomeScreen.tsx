@@ -42,6 +42,7 @@ import { OnboardingChatFlow }   from '../OnboardingChatFlow';
 import { getFlow }              from '../../lib/rhythm-points';
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import { getMissedCycleInfo }   from '../../lib/missed-cycle';
+import { StreakDetail }         from '../StreakDetail';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro,
   loadOnboardingData,
@@ -75,6 +76,8 @@ function HomeHeader({
     const d = new Date();
     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   });
+  const [showStreakDetail, setShowStreakDetail] = useState(false);
+
   useEffect(() => {
     const tick = () => {
       const d = new Date();
@@ -83,19 +86,33 @@ function HomeHeader({
     const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, []);
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: topInset + 12, paddingBottom: 10 }}>
-      <Text style={{ fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 }}>{time}</Text>
-      {streak > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(245,166,35,0.15)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 }}>
-          <Text style={{ fontSize: 14 }}>🔥</Text>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#F5A623' }}>{streak}</Text>
-        </View>
-      )}
-      <Pressable onPress={onProfilePress} hitSlop={12}>
-        <Ionicons name="person-circle-outline" size={28} color={TEXT} />
-      </Pressable>
-    </View>
+    <>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: topInset + 12, paddingBottom: 10 }}>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 }}>{time}</Text>
+        {streak > 0 ? (
+          <Pressable
+            onPress={() => setShowStreakDetail(true)}
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(245,166,35,0.15)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 }}
+          >
+            <Text style={{ fontSize: 14 }}>🔥</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#F5A623' }}>{streak}</Text>
+          </Pressable>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
+        <Pressable onPress={onProfilePress} hitSlop={12}>
+          <Ionicons name="person-circle-outline" size={28} color={TEXT} />
+        </Pressable>
+      </View>
+
+      <StreakDetail
+        visible={showStreakDetail}
+        onClose={() => setShowStreakDetail(false)}
+      />
+    </>
   );
 }
 
