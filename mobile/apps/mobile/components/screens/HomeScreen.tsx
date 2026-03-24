@@ -17,20 +17,18 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Pressable, ScrollView, Platform,
+  View, Text, StyleSheet, Pressable, ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }       from 'expo-router';
 import { Ionicons }                        from '@expo/vector-icons';
-import { LinearGradient }                  from 'expo-linear-gradient';
-import { Video, ResizeMode }               from 'expo-av';
 import AsyncStorage                        from '@react-native-async-storage/async-storage';
 
 import { useDayPlanContext }    from '../../lib/day-plan-context';
 import { useOnboardingPhase }   from '../../lib/onboarding-phase-context';
 import { useChat }              from '../../lib/use-chat';
-import { CircadianBackground }  from '../CircadianBackground';
 import { Analytics }            from '../../lib/analytics';
+import { useTheme }             from '../../lib/theme-context';
 import { usePager }             from '../../lib/pager-context';
 import { useTour }              from '../../lib/tour-context';
 import { RhythmTimeline }       from '../RhythmTimeline';
@@ -119,6 +117,7 @@ function HomeHeader({
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { phase, advance }   = useOnboardingPhase();
   const router               = useRouter();
@@ -251,18 +250,7 @@ export default function HomeScreen() {
 
   // ─── NORMAL MODE ──────────────────────────────────────────────────────────
   return (
-    <View style={ms.root}>
-      {/* Background */}
-      {Platform.OS === 'ios'
-        ? <Video source={require('../../assets/animation-v2.mp4')} style={StyleSheet.absoluteFill} resizeMode={ResizeMode.COVER} shouldPlay isLooping isMuted useNativeControls={false} />
-        : <CircadianBackground />
-      }
-      <LinearGradient
-        colors={['rgba(10,10,58,0.45)', 'rgba(10,10,58,0.75)', 'rgba(10,10,58,0.92)']}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+    <View style={[ms.root, { backgroundColor: theme.colors.background }]}>
 
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
@@ -300,12 +288,12 @@ export default function HomeScreen() {
           {bannerEvent && !bannerDismissed && (
             <Pressable
               onPress={() => setBannerDismissed(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}
             >
-              <Ionicons name="calendar-outline" size={18} color={ACCENT} />
+              <Ionicons name="calendar-outline" size={18} color={theme.colors.accent} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: TEXT }}>{bannerEvent.title}</Text>
-                <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }} numberOfLines={1}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text }}>{bannerEvent.title}</Text>
+                <Text style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }} numberOfLines={1}>
                   {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`}
                 </Text>
               </View>
@@ -314,17 +302,17 @@ export default function HomeScreen() {
 
           {/* Coach Insight card — max 1/jour */}
           {coachInsight && (
-            <View style={{ backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10, gap: 10 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT, letterSpacing: 0.8 }}>💡 DID YOU KNOW?</Text>
-              <Text style={{ fontSize: 13, color: TEXT, lineHeight: 20 }}>{coachInsight.message}</Text>
+            <View style={{ backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10, gap: 10 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.accent, letterSpacing: 0.8 }}>💡 DID YOU KNOW?</Text>
+              <Text style={{ fontSize: 13, color: theme.colors.text, lineHeight: 20 }}>{coachInsight.message}</Text>
               <Pressable
                 onPress={async () => {
                   await markInsightSeen(coachInsight.id);
                   setCoachInsight(null);
                 }}
-                style={{ alignSelf: 'flex-start', backgroundColor: `${ACCENT}20`, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
+                style={{ alignSelf: 'flex-start', backgroundColor: `${theme.colors.accent}20`, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT }}>Got it ✓</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.accent }}>Got it ✓</Text>
               </Pressable>
             </View>
           )}
@@ -337,15 +325,15 @@ export default function HomeScreen() {
             const showWeekly = (dow === 0 && h >= 18) || (dow === 1 && h < 12);
             if (!showWeekly) return null;
             return (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}>
                 <Text style={{ fontSize: 18 }}>📊</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT }}>Weekly report</Text>
-                  <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text }}>Weekly report</Text>
+                  <Text style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
                     {streak > 0 ? `Rhythm Flow: ${streak} days` : 'Check your Insights'}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={14} color={MUTED} />
+                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
               </View>
             );
           })()}
@@ -370,7 +358,7 @@ export default function HomeScreen() {
 }
 
 const ms = StyleSheet.create({
-  root:               { flex: 1, backgroundColor: BG },
+  root:               { flex: 1 },
   inputRow:           { paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8 },
   inputWrap:          { flexDirection: 'row', alignItems: 'center', gap: 10 },
   inputField:         { flex: 1, backgroundColor: CARD, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: `${ACCENT}30` },
