@@ -26,6 +26,7 @@ import { useDayPlanContext }  from '../../lib/day-plan-context';
 import { useOnboardingPhase } from '../../lib/onboarding-phase-context';
 import { useChat }            from '../../lib/use-chat';
 import { useTheme }           from '../../lib/theme-context';
+import { useChatContext }     from '../../lib/chat-context';
 import { usePager }           from '../../lib/pager-context';
 import { useTour }            from '../../lib/tour-context';
 
@@ -68,6 +69,7 @@ function getRLoMood(streak: number, readiness: ReadinessState | null | undefined
 // ─── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { theme }                      = useTheme();
+  const { openChat }                   = useChatContext();
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { phase, advance }             = useOnboardingPhase();
   const router                         = useRouter();
@@ -275,11 +277,11 @@ export default function HomeScreen() {
             onPress={handleActionPress}
           />
 
-          {/* 4. R-Lo Message — calm, 1 sentence */}
+          {/* 4. R-Lo Message — tap opens chat */}
           <RLoMessage
             text={rloText}
             emotion={getRLoMood(streak, dayPlan?.readiness)}
-            onTap={() => {/* open chat via tab */}}
+            onTap={openChat}
           />
 
           {/* 5. Secondary Cards — only rendered if data exists */}
