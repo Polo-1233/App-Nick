@@ -22,7 +22,8 @@ import { useRouter, useFocusEffect }       from 'expo-router';
 import AsyncStorage                        from '@react-native-async-storage/async-storage';
 
 // ─── App contexts ───────────────────────────────────────────────────────────────
-import { useDayPlanContext }  from '../../lib/day-plan-context';
+import { useDayPlanContext }      from '../../lib/day-plan-context';
+import { type ActionCardState }   from '../../lib/action-state';
 import { useOnboardingPhase } from '../../lib/onboarding-phase-context';
 import { useChat }            from '../../lib/use-chat';
 import { useTheme }           from '../../lib/theme-context';
@@ -48,7 +49,7 @@ import { StreakDetail }         from '../StreakDetail';
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
 import { getFlow }              from '../../lib/rhythm-points';
-import { getMissedCycleInfo }   from '../../lib/missed-cycle';
+// getMissedCycleInfo now handled inside action-state.ts
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
@@ -174,26 +175,30 @@ export default function HomeScreen() {
     bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null,
   );
 
-  // ── Navigation from ActionCard ─────────────────────────────────────────────
-  const handleActionPress = useCallback(() => {
-    if (!nextAction) return;
-    switch (nextAction.type) {
-      case 'take_crp':
-      case 'crp_reminder':
-        router.push('/crp-player');
-        break;
-      case 'take_mrm':
-      case 'mrm_reminder':
+  // ── Navigation depuis ActionCard — par état R90 ───────────────────────────
+  const handleActionPress = useCallback((state: ActionCardState) => {
+    switch (state.state) {
+      case 'mrm_active':
+      case 'pre_mrm':
         router.push('/mrm-player');
         break;
-      case 'start_pre_sleep':
-      case 'go_to_sleep':
+      case 'crp_active':
+      case 'pre_crp':
+        router.push('/crp-player');
+        break;
+      case 'winddown':
+      case 'pre_winddown':
+      case 'sleep_window':
+      case 'missed_sleep':
         router.push('/wind-down');
+        break;
+      case 'morning':
+        setShowMorningConfirm(true);
         break;
       default:
         goToPage(1);
     }
-  }, [nextAction, goToPage, router]);
+  }, [router, goToPage]);
 
   // ── Secondary cards ────────────────────────────────────────────────────────
   // TODO: remove mock data before production
@@ -270,10 +275,10 @@ export default function HomeScreen() {
             <View style={s.timelinePlaceholder} />
           )}
 
-          {/* 3. Action Card — most dominant element */}
+          {/* 3. Action Card — live R90 coach */}
           <ActionCard
-            action={nextAction}
-            missedCycle={missedCycle}
+            wakeMin={profile?.anchorTime ?? 390}
+            idealCycles={profile?.idealCyclesPerNight ?? 5}
             onPress={handleActionPress}
           />
 

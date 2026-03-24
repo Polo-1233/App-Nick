@@ -1,25 +1,21 @@
 /**
- * ActionCard — Élément dominant de la HomeScreen
+ * ActionCard — Live R90 Action Coach
+ *
+ * Consomme getCurrentActionState() — se met à jour chaque minute.
+ * Toujours actionnable. Jamais passif.
  *
  * Layout vertical :
- *   [Icône + badge état]
- *   [Titre — grand, gras]
- *   [Sous-titre — contexte]
- *   [Bouton CTA pleine largeur]
- *
- * Règles :
- *   - Titre dynamique : "Reset dans 12 min" / "Wind-down dans 45 min" / "Confirme ton réveil"
- *   - 1 seul CTA : "Commencer" / "Se préparer" / "Confirmer"
- *   - Toujours déclencher une action
- *   - Scale 0.97 → 1 au tap
+ *   [Badge état]
+ *   [Titre — 22px gras]
+ *   [Sous-titre]
+ *   [Bouton CTA pleine largeur]  ← uniquement si action disponible
  */
 
-import { useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { NextAction } from '@r90/types';
 import { nowMin } from '../../lib/time-utils';
-import type { MissedCycleInfo } from '../../lib/missed-cycle';
+import { getCurrentActionState, type ActionCardState } from '../../lib/action-state';
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 const DEEP   = '#141466';
@@ -28,166 +24,117 @@ const GOLD   = '#F5A623';
 const GREEN  = '#22C55E';
 const WHITE  = '#FFFFFF';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Icon per state ───────────────────────────────────────────────────────────
+const STATE_ICON: Record<string, string> = {
+  morning:      'sunny-outline',
+  pre_mrm:      'flash-outline',
+  mrm_active:   'flash',
+  post_mrm:     'checkmark-circle-outline',
+  pre_crp:      'battery-half-outline',
+  crp_active:   'battery-charging-outline',
+  pre_winddown: 'moon-outline',
+  winddown:     'moon',
+  sleep_window: 'bed-outline',
+  missed_sleep: 'time-outline',
+  night:        'star-outline',
+  on_track:     'checkmark-circle-outline',
+};
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface ActionCardProps {
-  action:       NextAction | null;
-  missedCycle?: MissedCycleInfo | null;
-  onPress:      () => void;
+  wakeMin:     number;   // ARP in minutes since midnight
+  idealCycles: number;
+  onPress:     (state: ActionCardState) => void;
 }
 
-interface Display {
-  icon:      string;
-  accentColor: string;
-  label:     string;   // pill au-dessus du titre (ex: "RESET · 12 MIN")
-  title:     string;   // titre principal
-  subtitle:  string;   // sous-texte
-  cta:       string | null;
-}
-
-// ─── Contenu dynamique ───────────────────────────────────────────────────────
-function build(
-  action:      NextAction | null,
-  now:         number,
-  missedCycle?: MissedCycleInfo | null,
-): Display {
-
-  if (missedCycle?.missed) {
-    return {
-      icon: 'moon-outline', accentColor: ACCENT,
-      label:    'MISSED WINDOW',
-      title:    `Next window at ${missedCycle.nextWindow}`,
-      subtitle: `${missedCycle.cyclesRemaining} cycles available — still a great night.`,
-      cta:      null,
-    };
-  }
-
-  if (!action) {
-    return {
-      icon: 'checkmark-circle-outline', accentColor: GREEN,
-      label:    'ON TRACK',
-      title:    'Your rhythm is on track',
-      subtitle: 'Stay consistent and rest well tonight.',
-      cta:      null,
-    };
-  }
-
-  const diff   = action.scheduledAt !== undefined ? action.scheduledAt - now : null;
-  const mins   = diff !== null && diff > 0 ? diff : 0;
-  const urgent = diff !== null && diff <= 5;
-
-  switch (action.type) {
-    case 'wake_up':
-      return {
-        icon: 'sunny-outline', accentColor: GOLD,
-        label:   'WAKE-UP',
-        title:   'Confirm your wake-up',
-        subtitle: 'Log your night to keep your weekly tracking accurate.',
-        cta:     'Confirm (+5)',
-      };
-
-    case 'take_mrm':
-    case 'mrm_reminder':
-      return {
-        icon: 'flash-outline', accentColor: ACCENT,
-        label:   urgent ? 'RESET · NOW' : `RESET · ${mins} MIN`,
-        title:   urgent ? 'Reset time' : `Reset in ${mins} min`,
-        subtitle: '2-minute breathing break to clear your mind.',
-        cta:     'Start',
-      };
-
-    case 'take_crp':
-      return {
-        icon: 'flash', accentColor: GOLD,
-        label:   urgent ? 'RECOVERY · NOW' : `RECOVERY · ${mins} MIN`,
-        title:   urgent ? 'Recovery time' : `Recovery in ${mins} min`,
-        subtitle: '20-min CRP — essential for your performance today.',
-        cta:     'Start',
-      };
-
-    case 'crp_reminder':
-      return {
-        icon: 'flash', accentColor: GOLD,
-        label:   'RECOVERY · OPEN',
-        title:   'Recovery window open',
-        subtitle: '20 minutes. Your body will thank you.',
-        cta:     'Start',
-      };
-
-    case 'start_pre_sleep':
-      return {
-        icon: 'moon-outline', accentColor: ACCENT,
-        label:   mins > 0 ? `WIND-DOWN · ${mins} MIN` : 'WIND-DOWN · NOW',
-        title:   mins > 0 ? `Wind-down in ${mins} min` : 'Wind-down time',
-        subtitle: 'Start stepping away from screens. Prepare your mind.',
-        cta:     mins <= 0 ? 'Get ready' : null,
-      };
-
-    case 'go_to_sleep':
-      return {
-        icon: 'bed-outline', accentColor: ACCENT,
-        label:   'SLEEP WINDOW · OPEN',
-        title:   'Time to sleep',
-        subtitle: 'Your sleep window is open. Your body is ready.',
-        cta:     'Start wind-down',
-      };
-
-    case 'anchor_reminder':
-      return {
-        icon: 'alarm-outline', accentColor: ACCENT,
-        label:   'ANCHOR TIME',
-        title:   action.title,
-        subtitle: action.description ?? '',
-        cta:     null,
-      };
-
-    default:
-      return {
-        icon: 'navigate-circle-outline', accentColor: ACCENT,
-        label:   'NEXT',
-        title:   action.title,
-        subtitle: action.description ?? '',
-        cta:     null,
-      };
-  }
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 export const ActionCard = memo(function ActionCard({
-  action, missedCycle, onPress,
+  wakeMin, idealCycles, onPress,
 }: ActionCardProps) {
-  const disp  = build(action, nowMin(), missedCycle);
+  const [cardState, setCardState] = useState<ActionCardState>(() =>
+    getCurrentActionState(nowMin(), wakeMin, idealCycles)
+  );
+
+  // ── Real-time update: every 30 seconds ────────────────────────────────────
+  useEffect(() => {
+    const update = () => {
+      const s = getCurrentActionState(nowMin(), wakeMin, idealCycles);
+      setCardState(s);
+    };
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, [wakeMin, idealCycles]);
+
+  // ── Press animation ───────────────────────────────────────────────────────
   const scale = useRef(new Animated.Value(1)).current;
 
   function handlePress() {
+    if (!cardState.cta) return;
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.97, duration: 80,  useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1.00, duration: 120, useNativeDriver: true }),
-    ]).start(() => onPress());
+    ]).start(() => onPress(cardState));
   }
 
+  // ── CTA button pulse when urgent ─────────────────────────────────────────
+  const ctaScale = useRef(new Animated.Value(1)).current;
+  const urgent   = cardState.state === 'mrm_active' || cardState.state === 'crp_active' || cardState.state === 'sleep_window';
+
+  useEffect(() => {
+    if (!urgent) { ctaScale.setValue(1); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ctaScale, { toValue: 1.03, duration: 600, useNativeDriver: true }),
+        Animated.timing(ctaScale, { toValue: 1.00, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [urgent]);
+
+  // ── Colors ────────────────────────────────────────────────────────────────
+  const ctaColor = cardState.ctaColor === 'gold' ? GOLD : cardState.ctaColor === 'green' ? GREEN : ACCENT;
+  const icon     = STATE_ICON[cardState.state] ?? 'navigate-circle-outline';
+
   return (
-    <Pressable onPress={handlePress} accessibilityRole="button" accessibilityLabel={disp.title}>
+    <Pressable
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={cardState.title}
+      disabled={!cardState.cta}
+    >
       <Animated.View style={[ac.card, { transform: [{ scale }] }]}>
 
         {/* State badge */}
-        <View style={[ac.badge, { backgroundColor: `${disp.accentColor}22` }]}>
-          <Ionicons name={disp.icon as any} size={13} color={disp.accentColor} />
-          <Text style={[ac.badgeTxt, { color: disp.accentColor }]}>{disp.label}</Text>
+        <View style={[ac.badge, { backgroundColor: `${ctaColor}20` }]}>
+          <Ionicons name={icon as any} size={13} color={ctaColor} />
+          <Text style={[ac.badgeTxt, { color: ctaColor }]}>
+            {cardState.state.replace(/_/g, ' ').toUpperCase()}
+          </Text>
+          {/* Countdown if available */}
+          {cardState.nextEventIn !== null && cardState.nextEventIn > 0 && cardState.nextEventIn < 120 && (
+            <Text style={[ac.countdown, { color: ctaColor }]}>
+              · {cardState.nextEventIn} min
+            </Text>
+          )}
         </View>
 
         {/* Main title */}
-        <Text style={ac.title}>{disp.title}</Text>
+        <Text style={ac.title}>{cardState.title}</Text>
 
         {/* Subtitle */}
-        {!!disp.subtitle && (
-          <Text style={ac.subtitle}>{disp.subtitle}</Text>
+        {!!cardState.subtitle && (
+          <Text style={ac.subtitle}>{cardState.subtitle}</Text>
         )}
 
-        {/* CTA — full width */}
-        {disp.cta !== null && (
-          <Pressable onPress={handlePress} style={[ac.cta, { backgroundColor: disp.accentColor }]}>
-            <Text style={ac.ctaTxt}>{disp.cta}</Text>
-          </Pressable>
+        {/* CTA button — full width, animated pulse if urgent */}
+        {cardState.cta !== null && (
+          <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
+            <View style={[ac.cta, { backgroundColor: ctaColor }]}>
+              <Text style={ac.ctaTxt}>{cardState.cta}</Text>
+            </View>
+          </Animated.View>
         )}
 
       </Animated.View>
@@ -198,38 +145,42 @@ export const ActionCard = memo(function ActionCard({
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const ac = StyleSheet.create({
   card: {
-    marginHorizontal: 20,
-    marginTop:        20,
-    paddingVertical:  24,
+    marginHorizontal:  20,
+    marginTop:         20,
+    paddingVertical:   24,
     paddingHorizontal: 22,
-    borderRadius:     24,
-    backgroundColor:  DEEP,
-    gap:              10,
-    shadowColor:      DEEP,
-    shadowOffset:     { width: 0, height: 8 },
-    shadowOpacity:    0.20,
-    shadowRadius:     24,
-    elevation:        6,
+    borderRadius:      24,
+    backgroundColor:   DEEP,
+    gap:               10,
+    shadowColor:       DEEP,
+    shadowOffset:      { width: 0, height: 8 },
+    shadowOpacity:     0.22,
+    shadowRadius:      24,
+    elevation:         6,
   },
   badge: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    alignSelf:       'flex-start',
-    gap:             5,
-    borderRadius:    20,
+    flexDirection:     'row',
+    alignItems:        'center',
+    alignSelf:         'flex-start',
+    gap:               5,
+    borderRadius:      20,
     paddingHorizontal: 10,
-    paddingVertical:    5,
+    paddingVertical:   5,
   },
   badgeTxt: {
+    fontSize:      11,
+    fontWeight:    '700',
+    letterSpacing: 0.5,
+  },
+  countdown: {
     fontSize:   11,
     fontWeight: '700',
-    letterSpacing: 0.6,
   },
   title: {
-    fontSize:   22,
-    fontWeight: '700',
-    color:      WHITE,
-    lineHeight: 28,
+    fontSize:      22,
+    fontWeight:    '700',
+    color:         WHITE,
+    lineHeight:    28,
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -238,16 +189,16 @@ const ac = StyleSheet.create({
     lineHeight: 20,
   },
   cta: {
-    marginTop:    8,
-    height:       50,
-    borderRadius: 16,
-    alignItems:   'center',
+    marginTop:      8,
+    height:         50,
+    borderRadius:   16,
+    alignItems:     'center',
     justifyContent: 'center',
   },
   ctaTxt: {
-    fontSize:   16,
-    fontWeight: '700',
-    color:      WHITE,
+    fontSize:      16,
+    fontWeight:    '700',
+    color:         WHITE,
     letterSpacing: 0.2,
   },
 });
