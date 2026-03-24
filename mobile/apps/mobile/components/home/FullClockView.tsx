@@ -1,247 +1,152 @@
 /**
- * FullClockView — Full Day Rhythm Clock
+ * FullClockView — R90 Day Clock
  *
- * A circular clock showing the entire day as a ring.
- * Each segment = 1 cycle of 90 min.
- *
- * Visual layers (outer → inner):
- *   1. Event markers (sun, moon, MRM dots, CRP icon, wind-down)
- *   2. Main ring (segmented, current cycle highlighted)
- *   3. Current time cursor (dot on the ring, animated)
- *   4. Center (current time + cycle label)
- *
- * Angle 0° = top = Wake time (ARP).
- * Clockwise = forward in time.
- * Full 360° = 24 hours.
+ * Design: single ring, light blue, divided into 90-min cycles.
+ * Center: current time + cycle info.
+ * Each segment = 1 cycle. Gaps = separators.
+ * Current cycle = full accent. Past = faded. Future = dim outline.
+ * Cursor dot = current position in the ring.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, Pressable,
-  Animated, Dimensions, ScrollView,
+  Animated, Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons }     from '@expo/vector-icons';
+import { SafeAreaView }  from 'react-native-safe-area-context';
+import { Ionicons }      from '@expo/vector-icons';
 import { nowMin, fmtMin } from '../../lib/time-utils';
-import { computeRhythmData, type RhythmSegment, CYCLE } from '../../lib/rhythm-clock';
-import { getEnergyMap, energyOpacity, type PeakPreference } from '../../lib/energy-model';
+import { computeRhythmData, CYCLE } from '../../lib/rhythm-clock';
+import { getEnergyMap, type PeakPreference } from '../../lib/energy-model';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// ─── Tokens ───────────────────────────────────────────────────────────────────
 const ACCENT      = '#1c9fda';
-const DEEP        = '#141466';
-const GOLD        = '#F5A623';
-const CRP_COLOR   = '#E05555';
-const WIND_COLOR  = '#A78BFA';
-const WHITE       = '#FFFFFF';
+const ACCENT_DIM  = 'rgba(28,159,218,0.22)';
+const ACCENT_PAST = 'rgba(28,159,218,0.50)';
+const ACCENT_RING = 'rgba(28,159,218,0.10)';
+const GOLD        = '#D97706';
+const PURPLE      = '#8B5CF6';
 const TEXT_MAIN   = '#002060';
-const TEXT_MUTED  = '#7A9BBC';
-const RING_EMPTY  = 'rgba(28,100,160,0.18)';
-const RING_PAST   = 'rgba(28,159,218,0.45)';
-const RING_CURR   = '#1c9fda';
-const RING_SLEEP  = '#0a1840';
+const TEXT_MUTED  = '#5A7A9A';
+const TEXT_FAINT  = '#9BB5CC';
+const WHITE       = '#FFFFFF';
+const BG          = '#F0F8FF';
 
-// ─── Layout ──────────────────────────────────────────────────────────────────
+// ─── Layout ───────────────────────────────────────────────────────────────────
 const { width: SW } = Dimensions.get('window');
-const CLOCK_D    = SW - 48;          // clock diameter
-const CLOCK_R    = CLOCK_D / 2;      // clock radius
-const CX         = CLOCK_R;
-const CY         = CLOCK_R;
-const RING_O     = CLOCK_R - 2;      // outer ring radius
-const RING_I     = CLOCK_R - 44;     // inner ring radius (ring thickness = 42)
-const RING_MID   = (RING_O + RING_I) / 2;
-const CENTER_R   = RING_I - 18;      // center circle radius
-const SEG_GAP    = 2;                // gap degrees between segments
-const DAY_MIN    = 24 * 60;          // 1440 min
+const SIZE    = SW - 64;          // ring outer diameter
+const R       = SIZE / 2;         // outer radius
+const THICK   = 36;               // ring thickness
+const R_INNER = R - THICK;        // inner radius
+const CX      = R;
+const CY      = R;
+const DAY_MIN = 24 * 60;
+const GAP_DEG = 3;                // gap between segments in degrees
 
-// ─── Math helpers ─────────────────────────────────────────────────────────────
+// ─── Math ─────────────────────────────────────────────────────────────────────
 
-function minToDeg(wakeMin: number, targetMin: number): number {
-  // 0° = top = wakeMin. Clockwise. Full circle = 24h.
-  const diff = ((targetMin - wakeMin) + DAY_MIN) % DAY_MIN;
-  return (diff / DAY_MIN) * 360;
+function degToRad(d: number) { return (d - 90) * (Math.PI / 180); }
+
+function polar(r: number, deg: number) {
+  const rad = degToRad(deg);
+  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
 }
 
-function polar(cx: number, cy: number, r: number, deg: number) {
-  const rad = (deg - 90) * (Math.PI / 180);
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+// Convert a time (minutes since midnight) to an angle on the ring
+// 0° = top = wakeMin. Full 360° = 24h.
+function minToDeg(wakeMin: number, t: number): number {
+  return (((t - wakeMin) + DAY_MIN) % DAY_MIN / DAY_MIN) * 360;
 }
 
-// Build SVG arc path for a ring segment
-function ringSegPath(
-  startDeg: number,
-  endDeg:   number,
-  ro:       number,
-  ri:       number,
-): { outer1: {x:number,y:number}, outer2: {x:number,y:number}, inner1: {x:number,y:number}, inner2: {x:number,y:number}, large: number } {
-  return {
-    outer1: polar(CX, CY, ro, startDeg),
-    outer2: polar(CX, CY, ro, endDeg),
-    inner1: polar(CX, CY, ri, endDeg),
-    inner2: polar(CX, CY, ri, startDeg),
-    large:  endDeg - startDeg > 180 ? 1 : 0,
-  };
-}
+// ─── Segment renderer ─────────────────────────────────────────────────────────
+// We render each segment as a series of thin radial lines (2° each).
+// This avoids SVG and works natively.
 
-// ─── Ring segment (rendered as positioned View using border trick) ─────────────
-
-interface RingSegmentProps {
+interface SegmentProps {
   startDeg: number;
   endDeg:   number;
   color:    string;
-  glow?:    boolean;
+  opacity:  number;
+  onPress?: () => void;
 }
 
-function RingSegment({ startDeg, endDeg, color, glow }: RingSegmentProps) {
-  // Render each segment as a thin arc overlay using absolute positioned views
-  // Strategy: clip a colored view to show only the angular slice
+function Segment({ startDeg, endDeg, color, opacity, onPress }: SegmentProps) {
+  const span = ((endDeg - startDeg) + 360) % 360;
+  if (span <= 0) return null;
 
-  const segCount  = Math.max(1, Math.round((endDeg - startDeg) / 2));
-  const views     = [];
-  const step      = (endDeg - startDeg) / segCount;
+  const STEP  = 2;
+  const count = Math.ceil(span / STEP);
+  const w     = THICK + 2;
 
-  for (let i = 0; i < segCount; i++) {
-    const midDeg = startDeg + i * step + step / 2;
-    const pt     = polar(CX, CY, RING_MID, midDeg);
-    const w      = RING_O - RING_I + 2;
-
-    views.push(
+  const lines = Array.from({ length: count }, (_, i) => {
+    const deg = startDeg + i * STEP + STEP / 2;
+    const pt  = polar(R_INNER + w / 2, deg);
+    return (
       <View
         key={i}
         style={{
           position:        'absolute',
-          left:            pt.x - step * 1.2,
-          top:             pt.y - (RING_O - RING_I) / 2,
-          width:           step * 2.4,
-          height:          RING_O - RING_I,
+          left:            pt.x - 2,
+          top:             pt.y - w / 2,
+          width:           4,
+          height:          w,
           backgroundColor: color,
-          transform:       [{ rotate: `${midDeg}deg` }],
-          borderRadius:    2,
-          ...(glow && {
-            shadowColor:   color,
-            shadowOffset:  { width: 0, height: 0 },
-            shadowOpacity: 0.7,
-            shadowRadius:  8,
-            elevation:     4,
-          }),
-        }}
-      />
-    );
-  }
-  return <>{views}</>;
-}
-
-// ─── Ring segment via radial painting (overlay circular arc) ─────────────────
-
-// We use a simpler, reliable technique:
-// Render a large ring (annulus) and overlay colored arc slices
-// by rotating a View that masks with overflow:hidden
-
-interface ArcSliceProps {
-  startDeg: number;
-  spanDeg:  number;
-  color:    string;
-  opacity?: number;
-  ro:       number;
-  ri:       number;
-}
-
-function ArcSlice({ startDeg, spanDeg, color, opacity = 1, ro, ri }: ArcSliceProps) {
-  if (spanDeg <= 0) return null;
-
-  const chunks: JSX.Element[] = [];
-  const CHUNK  = 2;
-  const count  = Math.ceil(spanDeg / CHUNK);
-  const thick  = ro - ri;
-
-  for (let i = 0; i < count; i++) {
-    const deg = startDeg + i * CHUNK + CHUNK / 2;
-    const pt  = polar(CX, CY, ri + thick / 2, deg);
-    chunks.push(
-      <View
-        key={i}
-        style={{
-          position:        'absolute',
-          left:            pt.x - 1.5,
-          top:             pt.y - thick / 2,
-          width:           3,
-          height:          thick,
-          backgroundColor: color,
-          borderRadius:    1,
           opacity,
+          borderRadius:    2,
           transform:       [{ rotate: `${deg}deg` }],
         }}
       />
     );
+  });
+
+  if (onPress) {
+    const midDeg = startDeg + span / 2;
+    const pt     = polar(R_INNER + THICK / 2, midDeg);
+    return (
+      <>
+        {lines}
+        <Pressable
+          onPress={onPress}
+          style={{
+            position:     'absolute',
+            left:         pt.x - 20,
+            top:          pt.y - 20,
+            width:        40,
+            height:       40,
+            borderRadius: 20,
+          }}
+        />
+      </>
+    );
   }
 
-  return <>{chunks}</>;
-}
-
-// ─── Event marker ─────────────────────────────────────────────────────────────
-
-interface MarkerProps {
-  deg:     number;
-  r:       number;   // where on the ring (RING_MID or outside)
-  size?:   number;
-  color:   string;
-  icon?:   string;
-  onPress?: () => void;
-}
-
-function Marker({ deg, r, size = 10, color, icon, onPress }: MarkerProps) {
-  const pt = polar(CX, CY, r, deg);
-  const Wrapper = onPress ? Pressable : View;
-
-  return (
-    <Wrapper
-      onPress={onPress}
-      hitSlop={12}
-      style={{
-        position:       'absolute',
-        left:           pt.x - size / 2,
-        top:            pt.y - size / 2,
-        width:          size,
-        height:         size,
-        borderRadius:   size / 2,
-        backgroundColor: icon ? 'transparent' : color,
-        alignItems:     'center',
-        justifyContent: 'center',
-        shadowColor:    color,
-        shadowOffset:   { width: 0, height: 0 },
-        shadowOpacity:  icon ? 0 : 0.6,
-        shadowRadius:   4,
-        elevation:      3,
-      }}
-    >
-      {icon && <Text style={{ fontSize: size * 0.9 }}>{icon}</Text>}
-    </Wrapper>
-  );
+  return <>{lines}</>;
 }
 
 // ─── Tooltip ──────────────────────────────────────────────────────────────────
 
-interface Tooltip {
-  label:   string;
-  sub:     string;
-  x:       number;
-  y:       number;
-}
+interface TooltipData { text: string; sub: string; x: number; y: number }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface FullClockViewProps {
-  visible:          boolean;
-  onClose:          () => void;
-  wakeMin:          number;
-  idealCycles:      number;
-  peakPreference?:  PeakPreference;
+  visible:         boolean;
+  onClose:         () => void;
+  wakeMin:         number;
+  idealCycles:     number;
+  peakPreference?: PeakPreference;
 }
 
-export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPreference = 'morning' }: FullClockViewProps) {
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+export function FullClockView({
+  visible, onClose, wakeMin, idealCycles, peakPreference = 'morning',
+}: FullClockViewProps) {
   const [data,    setData]    = useState(() => computeRhythmData(nowMin(), wakeMin, idealCycles));
   const [timeStr, setTime]    = useState(() => fmtMin(nowMin()));
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
+  // Cursor pulse
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -256,37 +161,32 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
   }, [visible, wakeMin, idealCycles]);
 
   useEffect(() => {
-    if (!visible) { pulse.setValue(1); return; }
+    if (!visible) return;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.5, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.8, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.0, duration: 900, useNativeDriver: true }),
       ])
     );
     loop.start();
     return () => loop.stop();
-  }, [visible]);
+  }, [visible, pulse]);
 
   const { segments, totalCycles, currentIdx } = data;
-
-  // Energy map — one entry per cycle
   const energyMap = getEnergyMap(totalCycles, peakPreference);
+  const now       = nowMin();
+  const nowDeg    = minToDeg(wakeMin, now);
+  const cursorPt  = polar(R_INNER + THICK / 2, nowDeg);
 
-  // Current cursor angle
-  const nowMins    = nowMin();
-  const nowDeg     = minToDeg(wakeMin, nowMins);
+  // Cycle progress label
+  const isActive   = currentIdx >= 0 && currentIdx < totalCycles;
+  const cycleLabel = isActive
+    ? `Cycle ${currentIdx + 1} of ${totalCycles}`
+    : currentIdx < 0 ? `${totalCycles} cycles today` : 'Day complete';
 
-  // Key event angles
-  const crpSeg     = segments.find(s => s.isCRP);
-  const crpDeg     = crpSeg ? minToDeg(wakeMin, crpSeg.startMin + 45) : null;
-  const sleepDeg   = minToDeg(wakeMin, segments[segments.length - 1]?.startMin ?? wakeMin + idealCycles * CYCLE);
-  const winddownDeg = sleepDeg > 60 ? sleepDeg - (60 / DAY_MIN) * 360 : sleepDeg;
-  const arp30Deg   = (30 / DAY_MIN) * 360;
-
-  function showTooltip(label: string, sub: string, deg: number, r: number) {
-    const pt = polar(CX, CY, r, deg);
-    setTooltip({ label, sub, x: pt.x, y: pt.y });
-  }
+  const currentSeg = isActive ? segments[currentIdx] : null;
+  const elapsed    = currentSeg ? ((now - currentSeg.startMin + 1440) % 1440) : 0;
+  const remaining  = isActive ? Math.max(0, CYCLE - elapsed) : 0;
 
   return (
     <Modal
@@ -295,294 +195,276 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={fc.root} edges={['top']}>
-        <View style={fc.header}>
-          <Text style={fc.title}>Your Day</Text>
+      <SafeAreaView style={s.root} edges={['top']}>
+
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={s.title}>Day View</Text>
           <Pressable onPress={onClose} hitSlop={12}>
-            <Ionicons name="close" size={20} color={TEXT_MUTED} />
+            <Ionicons name="close" size={22} color={TEXT_MUTED} />
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={fc.scroll} showsVerticalScrollIndicator={false}>
+        {/* Clock */}
+        <View style={s.clockWrap}>
           <Pressable onPress={() => setTooltip(null)}>
-            <View style={{ width: CLOCK_D, height: CLOCK_D }}>
+            <View style={{ width: SIZE, height: SIZE }}>
 
-              {/* ── Background ring (empty) ── */}
-              <View style={fc.ringBg} />
+              {/* Base ring (faint background) */}
+              <View style={s.ringBg} />
 
-              {/* ── Colored arc slices per segment — energy layer ── */}
+              {/* Segments */}
               {segments.map((seg, i) => {
-                const startDeg = minToDeg(wakeMin, seg.startMin);
-                const endDeg   = minToDeg(wakeMin, seg.endMin);
-                const span     = ((endDeg - startDeg) + 360) % 360 || 360 / totalCycles;
-                const gapDeg   = (SEG_GAP / DAY_MIN) * 360;
+                const startDeg = minToDeg(wakeMin, seg.startMin) + GAP_DEG / 2;
+                const rawEnd   = minToDeg(wakeMin, seg.endMin);
+                const endDeg   = rawEnd - GAP_DEG / 2;
 
-                const baseColor = seg.isSleep ? RING_SLEEP : RING_CURR;
-                const energy    = energyMap[i];
-                const opacity   = seg.isSleep
-                  ? 0.6
-                  : energyOpacity(energy?.level ?? 'neutral', seg.isCurrent, seg.isPast);
-                const midDeg    = startDeg + span / 2;
+                const energy  = energyMap[i];
+                const isCurr  = seg.isCurrent && isActive;
+                const isPast  = seg.isPast || (!isActive && currentIdx >= totalCycles);
+                const isSleep = seg.isSleep;
+
+                const color = isSleep
+                  ? `rgba(10,24,64,0.7)`
+                  : ACCENT;
+
+                const opacity = isSleep
+                  ? 0.5
+                  : isCurr
+                    ? 1
+                    : isPast
+                      ? 0.45
+                      : energy?.level === 'high'
+                        ? 0.65
+                        : energy?.level === 'low'
+                          ? 0.20
+                          : 0.38;
 
                 return (
-                  <Pressable
+                  <Segment
                     key={i}
-                    style={{ position: 'absolute', width: CLOCK_D, height: CLOCK_D }}
-                    onPress={() => energy && showTooltip(
-                      energy.tooltip,
-                      `Cycle ${i + 1}`,
-                      midDeg,
-                      RING_MID,
-                    )}
-                  >
-                    <ArcSlice
-                      startDeg={startDeg + gapDeg}
-                      spanDeg={span - gapDeg * 2}
-                      color={baseColor}
-                      opacity={opacity}
-                      ro={RING_O}
-                      ri={RING_I}
-                    />
-                  </Pressable>
-                );
-              })}
-
-              {/* ── MRM dots (inside ring, at 80min of each cycle) ── */}
-              {segments
-                .filter(s => s.hasMRM && !s.isPast)
-                .map((seg, i) => {
-                  const mrmMin = seg.startMin + 80;
-                  const deg    = minToDeg(wakeMin, mrmMin);
-                  return (
-                    <Marker
-                      key={`mrm-${i}`}
-                      deg={deg}
-                      r={RING_MID}
-                      size={7}
-                      color={WHITE}
-                      onPress={() => showTooltip('MRM', '2-min reset', deg, RING_O + 20)}
-                    />
-                  );
-                })}
-
-              {/* ── CRP marker ── */}
-              {crpDeg !== null && (
-                <Marker
-                  deg={crpDeg}
-                  r={RING_O + 20}
-                  size={26}
-                  color={CRP_COLOR}
-                  icon="⚡"
-                  onPress={() => showTooltip('CRP', '20-min recovery', crpDeg, RING_O + 30)}
-                />
-              )}
-
-              {/* ── Wind-down marker ── */}
-              <Marker
-                deg={winddownDeg}
-                r={RING_O + 20}
-                size={22}
-                color={WIND_COLOR}
-                icon="🌅"
-                onPress={() => showTooltip('Wind-down', 'Prepare for sleep', winddownDeg, RING_O + 30)}
-              />
-
-              {/* ── Sleep marker (moon) ── */}
-              <Marker
-                deg={sleepDeg}
-                r={RING_O + 20}
-                size={22}
-                color={DEEP}
-                icon="🌙"
-                onPress={() => showTooltip('Sleep', fmtMin(segments[segments.length - 1]?.startMin ?? 0), sleepDeg, RING_O + 30)}
-              />
-
-              {/* ── Wake marker (sun) at 0° ── */}
-              <Marker
-                deg={0}
-                r={RING_O + 20}
-                size={26}
-                color={GOLD}
-                icon="☀️"
-                onPress={() => showTooltip('Wake time', fmtMin(wakeMin), 0, RING_O + 30)}
-              />
-
-              {/* ── +30 min tick ── */}
-              <Marker
-                deg={arp30Deg}
-                r={RING_O + 14}
-                size={7}
-                color={GOLD}
-              />
-
-              {/* ── Current time cursor (animated dot on ring) ── */}
-              {(() => {
-                const pt = polar(CX, CY, RING_MID, nowDeg);
-                return (
-                  <Animated.View
-                    style={{
-                      position:        'absolute',
-                      left:            pt.x - 8,
-                      top:             pt.y - 8,
-                      width:           16,
-                      height:          16,
-                      borderRadius:    8,
-                      backgroundColor: WHITE,
-                      borderWidth:     2,
-                      borderColor:     ACCENT,
-                      shadowColor:     WHITE,
-                      shadowOffset:    { width: 0, height: 0 },
-                      shadowOpacity:   1,
-                      shadowRadius:    10,
-                      elevation:       8,
-                      transform:       [{ scale: pulse }],
+                    startDeg={startDeg}
+                    endDeg={endDeg}
+                    color={color}
+                    opacity={opacity}
+                    onPress={() => {
+                      const midDeg = startDeg + ((endDeg - startDeg) / 2);
+                      const pt     = polar(R - 8, midDeg);
+                      const label  = isSleep
+                        ? 'Sleep window'
+                        : isCurr
+                          ? 'You are here'
+                          : isPast
+                            ? 'Completed cycle'
+                            : energy?.tooltip ?? 'Upcoming cycle';
+                      const sub = `Cycle ${i + 1} · ${fmtMin(seg.startMin)} → ${fmtMin(seg.endMin)}`;
+                      setTooltip({ text: label, sub, x: pt.x, y: pt.y });
                     }}
                   />
                 );
+              })}
+
+              {/* Cursor dot + pulse ring */}
+              {isActive && (
+                <>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[s.cursorRing, {
+                      left:      cursorPt.x - 10,
+                      top:       cursorPt.y - 10,
+                      transform: [{ scale: pulse }],
+                    }]}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[s.cursorDot, {
+                      left: cursorPt.x - 6,
+                      top:  cursorPt.y - 6,
+                    }]}
+                  />
+                </>
+              )}
+
+              {/* Wake marker — sun at top */}
+              {(() => {
+                const pt = polar(R - THICK / 2, 0);
+                return (
+                  <View style={[s.markerWrap, { left: pt.x - 10, top: pt.y - 10 }]}>
+                    <Ionicons name="sunny" size={16} color={GOLD} />
+                  </View>
+                );
               })()}
 
-              {/* ── Center circle ── */}
-              <View style={[fc.center, { width: CENTER_R * 2, height: CENTER_R * 2, borderRadius: CENTER_R, left: CX - CENTER_R, top: CY - CENTER_R }]}>
-                <Text style={fc.centerTime}>{timeStr}</Text>
-                <Text style={fc.centerCycle}>
-                  {currentIdx >= 0 && currentIdx < totalCycles
-                    ? `Cycle ${currentIdx + 1}/${totalCycles}`
-                    : `${totalCycles} cycles`}
-                </Text>
+              {/* Sleep marker — moon */}
+              {(() => {
+                const sleepDeg = minToDeg(wakeMin, segments[totalCycles - 1]?.startMin ?? 0);
+                const pt       = polar(R - THICK / 2, sleepDeg);
+                return (
+                  <View style={[s.markerWrap, { left: pt.x - 8, top: pt.y - 8 }]}>
+                    <Ionicons name="moon" size={13} color={PURPLE} />
+                  </View>
+                );
+              })()}
+
+              {/* Center */}
+              <View style={s.center} pointerEvents="none">
+                <Text style={s.timeStr}>{timeStr}</Text>
+                <Text style={s.cycleLabel}>{cycleLabel}</Text>
+                {isActive && remaining > 0 && (
+                  <Text style={s.remaining}>{Math.round(remaining)} min left</Text>
+                )}
               </View>
 
-              {/* ── Tooltip ── */}
+              {/* Tooltip */}
               {tooltip && (
-                <View style={[
-                  fc.tooltip,
-                  {
-                    left: Math.max(8, Math.min(CLOCK_D - 140, tooltip.x - 64)),
-                    top:  Math.max(8, Math.min(CLOCK_D - 70,  tooltip.y - 35)),
-                  },
-                ]}>
-                  <Text style={fc.tooltipLabel}>{tooltip.label}</Text>
-                  <Text style={fc.tooltipSub}>{tooltip.sub}</Text>
-                </View>
+                <Pressable
+                  onPress={() => setTooltip(null)}
+                  style={[s.tooltip, {
+                    left: Math.max(8, Math.min(SIZE - 160, tooltip.x - 70)),
+                    top:  Math.max(8, Math.min(SIZE - 70,  tooltip.y - 44)),
+                  }]}
+                >
+                  <Text style={s.tooltipText}>{tooltip.text}</Text>
+                  <Text style={s.tooltipSub}>{tooltip.sub}</Text>
+                </Pressable>
               )}
 
             </View>
           </Pressable>
 
           {/* Legend */}
-          <View style={fc.legend}>
+          <View style={s.legend}>
             {[
-              { color: RING_CURR,               label: 'Current cycle' },
-              { color: RING_PAST,               label: 'Past cycles' },
-              { color: `${RING_CURR}40`,        label: 'Low energy' },
-              { color: RING_SLEEP,              label: 'Sleep window' },
-            ].map(({ color, label }) => (
-              <View key={label} style={fc.legendItem}>
-                <View style={[fc.legendDot, { backgroundColor: color }]} />
-                <Text style={fc.legendTxt}>{label}</Text>
+              { color: ACCENT,       opacity: 1,    label: 'Current cycle' },
+              { color: ACCENT,       opacity: 0.45, label: 'Past cycles'   },
+              { color: ACCENT,       opacity: 0.20, label: 'Low energy'    },
+              { color: 'rgba(10,24,64,0.7)', opacity: 0.5, label: 'Sleep window' },
+            ].map(({ color, opacity, label }) => (
+              <View key={label} style={s.legendItem}>
+                <View style={[s.legendDot, { backgroundColor: color, opacity }]} />
+                <Text style={s.legendTxt}>{label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Segment list */}
-          <View style={fc.list}>
-            {segments.map((seg) => (
-              <View key={seg.index} style={[fc.listRow, seg.isCurrent && fc.listRowActive]}>
-                <View style={[fc.listDot, {
-                  backgroundColor: seg.isCRP ? CRP_COLOR : seg.isSleep ? DEEP : seg.isPast ? RING_PAST : ACCENT
+          {/* Cycle list */}
+          <View style={s.cycleList}>
+            {segments.map((seg, i) => (
+              <View key={i} style={[s.cycleRow, seg.isCurrent && isActive && s.cycleRowActive]}>
+                <View style={[s.cycleDot, {
+                  backgroundColor: seg.isCurrent && isActive ? ACCENT : TEXT_FAINT,
                 }]} />
-                <Text style={[fc.listLabel, seg.isCurrent && { color: ACCENT, fontWeight: '700' }]}>
-                  {seg.label}
+                <Text style={[s.cycleTime, seg.isCurrent && isActive && { color: ACCENT, fontWeight: '700' }]}>
+                  {fmtMin(seg.startMin)} — {fmtMin(seg.endMin)}
                 </Text>
-                <Text style={fc.listTime}>{fmtMin(seg.startMin)} → {fmtMin(seg.endMin)}</Text>
+                <Text style={s.cycleMeta}>
+                  {seg.isSleep ? 'Sleep' : seg.isCRP ? 'CRP' : `Cycle ${i + 1}`}
+                </Text>
                 {seg.hasMRM && !seg.isPast && (
-                  <Text style={fc.listTag}>MRM {fmtMin(seg.startMin + 80)}</Text>
-                )}
-                {seg.isCRP && (
-                  <Text style={[fc.listTag, { color: CRP_COLOR }]}>CRP</Text>
-                )}
-                {seg.isSleep && (
-                  <Text style={[fc.listTag, { color: DEEP }]}>Sleep</Text>
+                  <View style={s.mrmBadge}><Text style={s.mrmBadgeTxt}>MRM</Text></View>
                 )}
               </View>
             ))}
           </View>
 
-          <View style={{ height: 48 }} />
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </Modal>
   );
 }
 
-const fc = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: WHITE },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E5EEF5',
-  },
-  title:  { fontSize: 17, fontWeight: '700', color: TEXT_MAIN },
-  scroll: { alignItems: 'center', paddingTop: 20, paddingHorizontal: 20 },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: BG },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  title:  { fontSize: 18, fontWeight: '700', color: TEXT_MAIN },
 
+  clockWrap: { alignItems: 'center', paddingBottom: 40 },
+
+  // Ring background
   ringBg: {
-    position:        'absolute',
-    left:            RING_I,
-    top:             RING_I,
-    width:           (RING_O - RING_I) * 2 + (CLOCK_D - 2 * RING_O),
-    height:          (RING_O - RING_I) * 2 + (CLOCK_D - 2 * RING_O),
-    borderRadius:    RING_O,
-    borderWidth:     RING_O - RING_I,
-    borderColor:     RING_EMPTY,
-    backgroundColor: 'transparent',
+    position:     'absolute',
+    left:         R - R,
+    top:          R - R,
+    width:        SIZE,
+    height:       SIZE,
+    borderRadius: R,
+    borderWidth:  THICK,
+    borderColor:  ACCENT_DIM,
   },
 
+  // Cursor
+  cursorRing: {
+    position:     'absolute',
+    width:        20,
+    height:       20,
+    borderRadius: 10,
+    borderWidth:  1.5,
+    borderColor:  WHITE,
+    opacity:      0.6,
+  },
+  cursorDot: {
+    position:        'absolute',
+    width:           12,
+    height:          12,
+    borderRadius:    6,
+    backgroundColor: WHITE,
+    shadowColor:     ACCENT,
+    shadowOffset:    { width: 0, height: 0 },
+    shadowOpacity:   1,
+    shadowRadius:    8,
+    elevation:       8,
+  },
+
+  // Markers
+  markerWrap: { position: 'absolute' },
+
+  // Center
   center: {
-    position:        'absolute',
-    backgroundColor: DEEP,
-    alignItems:      'center',
-    justifyContent:  'center',
-    shadowColor:     DEEP,
-    shadowOffset:    { width: 0, height: 4 },
-    shadowOpacity:   0.25,
-    shadowRadius:    14,
-    elevation:       6,
+    position:       'absolute',
+    left:           R - 70,
+    top:            R - 40,
+    width:          140,
+    alignItems:     'center',
+    gap:            4,
   },
-  centerTime:  { fontSize: 26, fontWeight: '800', color: WHITE, letterSpacing: -0.5 },
-  centerCycle: { fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 3 },
+  timeStr:    { fontSize: 36, fontWeight: '800', color: TEXT_MAIN, letterSpacing: -1 },
+  cycleLabel: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
+  remaining:  { fontSize: 11, color: TEXT_FAINT },
 
+  // Tooltip
   tooltip: {
-    position:        'absolute',
-    backgroundColor: DEEP,
-    borderRadius:    10,
-    paddingVertical:  7,
-    paddingHorizontal: 12,
-    minWidth:         120,
+    position:         'absolute',
+    backgroundColor:  WHITE,
+    borderRadius:     12,
+    padding:          10,
+    minWidth:         140,
     shadowColor:      '#000',
     shadowOffset:     { width: 0, height: 4 },
-    shadowOpacity:    0.15,
-    shadowRadius:     10,
+    shadowOpacity:    0.12,
+    shadowRadius:     12,
     elevation:        8,
+    borderWidth:      1,
+    borderColor:      `${ACCENT}20`,
   },
-  tooltipLabel: { fontSize: 13, fontWeight: '700', color: WHITE },
-  tooltipSub:   { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  tooltipText: { fontSize: 13, fontWeight: '700', color: TEXT_MAIN },
+  tooltipSub:  { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
 
-  legend: {
-    flexDirection:  'row',
-    flexWrap:       'wrap',
-    gap:            12,
-    marginTop:      16,
-    justifyContent: 'center',
-    width:          '100%',
-  },
-  legendItem:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot:   { width: 10, height: 10, borderRadius: 5 },
-  legendTxt:   { fontSize: 11, color: TEXT_MUTED },
+  // Legend
+  legend:     { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20, marginTop: 20, justifyContent: 'center' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot:  { width: 10, height: 10, borderRadius: 5 },
+  legendTxt:  { fontSize: 12, color: TEXT_MUTED },
 
-  list:     { width: '100%', marginTop: 16, gap: 2 },
-  listRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
-  listRowActive: { backgroundColor: '#EAF4FB' },
-  listDot:  { width: 8, height: 8, borderRadius: 4 },
-  listLabel:{ fontSize: 13, color: TEXT_MAIN, width: 66 },
-  listTime: { fontSize: 12, color: TEXT_MUTED, flex: 1 },
-  listTag:  { fontSize: 11, fontWeight: '700', color: ACCENT },
+  // Cycle list
+  cycleList:     { width: '100%', paddingHorizontal: 20, marginTop: 24, gap: 2 },
+  cycleRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: `${ACCENT}15` },
+  cycleRowActive:{ backgroundColor: `${ACCENT}08`, borderRadius: 10, paddingHorizontal: 8, marginHorizontal: -8 },
+  cycleDot:      { width: 8, height: 8, borderRadius: 4 },
+  cycleTime:     { fontSize: 13, color: TEXT_MUTED, flex: 1 },
+  cycleMeta:     { fontSize: 12, color: TEXT_FAINT },
+  mrmBadge:      { backgroundColor: `${ACCENT}18`, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  mrmBadgeTxt:   { fontSize: 10, fontWeight: '700', color: ACCENT },
 });
+
+
