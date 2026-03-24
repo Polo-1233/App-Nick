@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }       from 'expo-router';
 import AsyncStorage                        from '@react-native-async-storage/async-storage';
@@ -44,6 +44,8 @@ import {
 // ─── Shared components ─────────────────────────────────────────────────────────
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
+import { StreakDetail }          from '../StreakDetail';
+import { RhythmPointsToast }     from '../RhythmPointsToast';
 // OnboardingChatFlow removed — data collection moved to onboarding pager
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
@@ -82,6 +84,9 @@ export default function HomeScreen() {
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
   const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
+  const [showStreakDetail,   setShowStreakDetail]     = useState(false);
+  const [toastPoints,        setToastPoints]          = useState(0);
+  const [showToast,          setShowToast]            = useState(false);
 
   const hasMountedFocus  = useRef(false);
   const hasRedirected    = useRef(false);
@@ -253,8 +258,15 @@ export default function HomeScreen() {
             { paddingBottom: insets.bottom + 32 },
           ]}
         >
+          {/* Streak badge */}
+          {streak > 0 && (
+            <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakBadge}>
+              <Text style={sh.streakFire}>🔥</Text>
+              <Text style={sh.streakCount}>{streak} day{streak > 1 ? 's' : ''}</Text>
+            </Pressable>
+          )}
+
           {/* 2. Rhythm Timeline */}
-          {/* 2. Timeline — next 3 cycles only, tap to open full clock */}
           <RhythmTimeline
             wakeMin={profile?.anchorTime ?? 390}
             idealCycles={profile?.idealCyclesPerNight ?? 5}
@@ -293,6 +305,17 @@ export default function HomeScreen() {
         onDismiss={() => setShowMorningConfirm(false)}
       />
 
+      <StreakDetail
+        visible={showStreakDetail}
+        onClose={() => setShowStreakDetail(false)}
+      />
+
+      <RhythmPointsToast
+        points={toastPoints}
+        label="Rhythm Points"
+        visible={showToast}
+      />
+
     </AmbientBackground>
   );
 }
@@ -303,4 +326,23 @@ const s = StyleSheet.create({
   safe:                { flex: 1 },
   scroll:              { flexGrow: 1 },
   timelinePlaceholder: { height: 90, marginHorizontal: 20, marginTop: 10 },
+});
+
+const sh = StyleSheet.create({
+  streakBadge: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             5,
+    alignSelf:       'flex-end',
+    marginRight:     20,
+    marginTop:       12,
+    backgroundColor: 'rgba(245,166,35,0.12)',
+    borderRadius:    20,
+    paddingHorizontal: 12,
+    paddingVertical:   6,
+    borderWidth:     1,
+    borderColor:     'rgba(245,166,35,0.25)',
+  },
+  streakFire:  { fontSize: 14 },
+  streakCount: { fontSize: 12, fontWeight: '700', color: '#D97706' },
 });
