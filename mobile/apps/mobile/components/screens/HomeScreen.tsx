@@ -171,9 +171,6 @@ export default function HomeScreen() {
   const nextAction  = dayPlan?.nextAction ?? null;
   const rloText     = dayPlan?.rloMessage?.text
     ?? (userName ? `Stay consistent today, ${userName}.` : 'Stay consistent today.');
-  const missedCycle = getMissedCycleInfo(
-    bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null,
-  );
 
   // ── Navigation depuis ActionCard — par état R90 ───────────────────────────
   const handleActionPress = useCallback((state: ActionCardState) => {
