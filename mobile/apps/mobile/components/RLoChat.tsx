@@ -27,6 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons }   from "@expo/vector-icons";
 import { useChat, type ChatMessage } from "../lib/use-chat";
 import { useTheme }   from "../lib/theme-context";
+import { MascotImage } from "./ui/MascotImage";
 
 // ─── Suggestion chips (always visible above input) ───────────────────────────
 
@@ -115,8 +116,8 @@ function ChatBubble({ message }: { message: ChatMessage }) {
     <View style={[b.row, isUser && b.rowUser]}>
       {/* Bot avatar */}
       {!isUser && (
-        <View style={[b.avatar, { backgroundColor: `${c.accent}30` }]}>
-          <Ionicons name="planet-outline" size={14} color={c.accent} />
+        <View style={b.avatar}>
+          <MascotImage emotion="rassurante" size="sm" style={b.avatarImg} />
         </View>
       )}
 
@@ -146,7 +147,12 @@ const b = StyleSheet.create({
   rowUser:   { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   avatar: {
     width: 28, height: 28, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    overflow: 'hidden', flexShrink: 0,
+    backgroundColor: 'transparent',
+  },
+  avatarImg: {
+    width: 42, height: 42,
+    marginTop: -8, marginLeft: -7, // crop to show head
   },
   bubble: {
     borderRadius: 18,
@@ -203,8 +209,8 @@ export function RLoChat({ visible, onClose }: Props) {
         {/* ── Header ── */}
         <View style={[s.header, { borderBottomColor: c.borderSub }]}>
           <View style={s.headerLeft}>
-            <View style={[s.headerAvatar, { backgroundColor: `${c.accent}25` }]}>
-              <Ionicons name="planet-outline" size={18} color={c.accent} />
+            <View style={s.headerAvatar}>
+              <MascotImage emotion="encourageant" size="sm" style={s.headerAvatarImg} />
             </View>
             <Text style={[s.headerTitle, { color: c.text }]}>R-Lo</Text>
           </View>
@@ -236,8 +242,8 @@ export function RLoChat({ visible, onClose }: Props) {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={s.empty}>
-                <View style={[s.emptyAvatar, { backgroundColor: `${c.accent}20` }]}>
-                  <Ionicons name="planet-outline" size={32} color={c.accent} />
+                <View style={s.emptyAvatar}>
+                  <MascotImage emotion="rassurante" size="md" style={s.emptyAvatarImg} />
                 </View>
                 <Text style={[s.emptyTitle, { color: c.text }]}>Ask R-Lo anything</Text>
                 <Text style={[s.emptySub, { color: c.textMuted }]}>
@@ -315,7 +321,8 @@ const s = StyleSheet.create({
   },
   headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerRight:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  headerAvatar: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', backgroundColor: 'transparent' },
+  headerAvatarImg: { width: 54, height: 54, marginTop: -10, marginLeft: -9 }, // crop to head
   headerTitle:  { fontSize: 16, fontWeight: '700' },
   clearBtn:     { paddingHorizontal: 8, paddingVertical: 4 },
   clearTxt:     { fontSize: 13 },
@@ -323,7 +330,8 @@ const s = StyleSheet.create({
 
   // Empty
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
-  emptyAvatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  emptyAvatar:    { width: 80, height: 80, borderRadius: 40, overflow: 'hidden', marginBottom: 8, backgroundColor: 'transparent' },
+  emptyAvatarImg: { width: 100, height: 100, marginTop: -10, marginLeft: -10 }, // crop to head
   emptyTitle:  { fontSize: 18, fontWeight: '700', textAlign: 'center' },
   emptySub:    { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
