@@ -36,19 +36,20 @@ const CY  = R;
 
 const N     = 16;                     // 16 × 90min = 24h
 const SDEG  = 360 / N;                // 22.5° per segment
-const GDEG  = 5;                      // gap between segments
+const GDEG  = 3;                      // gap between segments
 const VDEG  = SDEG - GDEG;            // visible arc degrees
 
-// Ring 1 — base ring (segments)
-const R1 = R - 22;    // mid radius
-const H1 = 30;        // height
+// Ring 1 — outer ring (thick)
+const R1 = R - 19;    // mid radius
+const H1 = 34;        // height
 
-// Ring 2 — energy ring (thin, just inside)
-const R2 = R - 60;
-const H2 = 16;
+// Ring 2 — inner ring (same segments, thinner)
+const R2 = R - 62;
+const H2 = 22;
 
+// Width fills the full arc chord with slight overlap for clean look
 function segW(r: number) {
-  return 2 * r * Math.sin((VDEG / 2) * (Math.PI / 180));
+  return 2 * r * Math.sin((VDEG / 2) * (Math.PI / 180)) * 1.08;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -168,7 +169,7 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
               const seg = segments[i];
               const recHighlight   = layer === 'recovery' && seg?.isCRP && !isSleep;
 
-              const baseOpacity = isSleep ? 0.12 : 0.08;
+              const baseOpacity = isSleep ? 0.18 : 0.75;
               const opacity     = sleepHighlight  ? 0.80
                 : isBedtimeOpt  ? 0.80
                 : recHighlight  ? 0.80
@@ -185,7 +186,7 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                     position:        'absolute',
                     width:           w,
                     height:          H1,
-                    borderRadius:    H1 / 2,
+                    borderRadius:    5,
                     backgroundColor: color,
                     opacity,
                     left:            x - w / 2,
@@ -218,7 +219,7 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                     position:        'absolute',
                     width:           pw,
                     height:          H1,
-                    borderRadius:    H1 / 2,
+                    borderRadius:    5,
                     backgroundColor: NAVY,
                     opacity:         0.40,
                     left:            px - pw / 2,
@@ -246,9 +247,9 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
               const isSleep = i >= sleepStart;
               if (isSleep) return null;
               const energy  = energyMap[i];
-              const opacity = energy?.level === 'high' ? 0.55
-                : energy?.level === 'neutral'          ? 0.28
-                : 0.10;
+              const opacity = energy?.level === 'high' ? 0.75
+                : energy?.level === 'neutral'          ? 0.75
+                : 0.75;
               const midDeg = i * SDEG;
               const midRad = (midDeg - 90) * (Math.PI / 180);
               const x = CX + R2 * Math.cos(midRad);
@@ -262,7 +263,7 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                     position:        'absolute',
                     width:           w,
                     height:          H2,
-                    borderRadius:    H2 / 2,
+                    borderRadius:    4,
                     backgroundColor: CYAN,
                     opacity,
                     left:            x - w / 2,
