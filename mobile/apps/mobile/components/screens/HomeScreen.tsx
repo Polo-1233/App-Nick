@@ -193,37 +193,37 @@ export default function HomeScreen() {
     }
   }, [nextAction, goToPage, router]);
 
-  // ── Secondary cards: only if real data ────────────────────────────────────
+  // ── Secondary cards ────────────────────────────────────────────────────────
+  // TODO: remove mock data before production
   const secondaryCards: SecondaryCardData[] = [];
 
-  if (bannerEvent && !bannerDismissed) {
-    const evStart = new Date(bannerEvent.start_time)
-      .toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  // Calendar — real data or mock
+  const calendarTitle    = bannerEvent?.title    ?? 'Team dinner';
+  const calendarSubtitle = bannerEvent
+    ? `${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`
+    : '19:30 — Event';
+  if (!bannerDismissed) {
     secondaryCards.push({
       type:      'calendar',
-      title:     bannerEvent.title,
-      subtitle:  `${evStart} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`,
+      title:     calendarTitle,
+      subtitle:  calendarSubtitle,
       onDismiss: () => setBannerDismissed(true),
     });
   }
 
-  if (coachInsight) {
+  // Coach insight — real data or mock
+  const insightMsg = coachInsight?.message
+    ?? '90-minute cycles also exist during the day. That\'s why MRMs matter — they respect your natural rhythm.';
+  if (!coachInsight || coachInsight) { // always show
     secondaryCards.push({
       type:      'insight',
-      id:        coachInsight.id,
-      message:   coachInsight.message,
+      id:        coachInsight?.id ?? 'mock-ci-01',
+      message:   insightMsg,
       onDismiss: async () => {
-        await markInsightSeen(coachInsight.id);
+        if (coachInsight) await markInsightSeen(coachInsight.id);
         setCoachInsight(null);
       },
     });
-  }
-
-  // Weekly report — Sunday evening or Monday morning
-  const now = new Date();
-  const dow = now.getDay(), h = now.getHours();
-  if ((dow === 0 && h >= 18) || (dow === 1 && h < 12)) {
-    secondaryCards.push({ type: 'weekly', streakDays: streak });
   }
 
   // ─── ONBOARDING: full-screen chat ─────────────────────────────────────────
