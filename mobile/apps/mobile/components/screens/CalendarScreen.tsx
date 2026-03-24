@@ -22,6 +22,7 @@ import type { UserProfile } from '@r90/types';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Analytics } from '../../lib/analytics';
+import { fmtMin as minToHHMM } from '../../lib/time-utils';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -39,13 +40,6 @@ const ORANGE    = '#F97171';
 const PURPLE    = '#A78BFA';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function minToHHMM(min: number): string {
-  const m = ((min % 1440) + 1440) % 1440;
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
 
 function cyclesToDuration(cycles: number): string {
   const totalMin = cycles * 90;

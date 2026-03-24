@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NextAction } from '@r90/types';
 import { type MissedCycleInfo } from '../lib/missed-cycle';
+import { nowMin } from '../lib/time-utils';
 
 export type { MissedCycleInfo };
 
@@ -146,15 +147,10 @@ function buildDisplay(
   }
 }
 
-function nowMinutes(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
 export const ActionCard = memo(function ActionCard({
   action, missedCycle, onPress, showButton,
 }: ActionCardProps) {
-  const now  = nowMinutes();
+  const now  = nowMin();
   const disp = buildDisplay(action, now, missedCycle);
   const scale = useRef(new Animated.Value(1)).current;
 

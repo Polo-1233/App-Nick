@@ -43,6 +43,7 @@ import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { getFlow }              from '../../lib/rhythm-points';
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import { getMissedCycleInfo, type MissedCycleInfo } from '../../lib/missed-cycle';
+import { nowMin } from '../../lib/time-utils';
 import type { ReadinessState }  from '@r90/types';
 import type { MascotEmotion }   from '../ui/MascotImage';
 
@@ -68,11 +69,6 @@ const ACCENT  = '#1c9fda';
 const TEXT    = '#FFFFFF';
 const SUB     = '#A8C4E0';
 const MUTED   = '#6B8CAE';
-
-function nowMin(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
 
 // ─── HomeHeader (time + streak badge + profile) ────────────────────────────────
 function HomeHeader({

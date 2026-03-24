@@ -11,23 +11,13 @@ import { useEffect, useRef, memo } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { TimeBlock } from '@r90/types';
+import { nowMin, fmtMin as fmt } from '../lib/time-utils';
 
 const ACCENT  = '#1c9fda';
 const GOLD    = '#F5A623';
 const TEXT    = '#FFFFFF';
 const MUTED   = '#6B8CAE';
 const TRACK_H = 28;
-
-function nowMin(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function fmt(m: number): string {
-  const h   = Math.floor(((m % 1440) + 1440) % 1440 / 60);
-  const min = ((m % 1440) + 1440) % 1440 % 60;
-  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
-}
 
 interface RhythmTimelineProps {
   blocks:     TimeBlock[];

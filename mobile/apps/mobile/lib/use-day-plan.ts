@@ -20,13 +20,8 @@ import { fetchAllCalendarEvents } from "./calendar-unified";
 import { writeAllSleepBlocks } from "./calendar-writeback";
 import { loadWindDownEnabled, scheduleWindDownForToday } from "./wind-down";
 import { scheduleAllNotifications } from "./notifications";
+import { nowMin as getCurrentMinute } from "./time-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-/** Get current minute of day (0-1439) */
-function getCurrentMinute(): number {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
-}
 
 /** Raw inputs cached after each successful plan build, used by applyConflictOption. */
 interface CachedBuildInputs {

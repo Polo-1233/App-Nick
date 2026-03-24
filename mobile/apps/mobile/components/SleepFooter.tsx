@@ -7,16 +7,10 @@
 import { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fmtMin as fmt } from '../lib/time-utils';
 
 const ACCENT = '#1c9fda';
 const MUTED  = '#6B8CAE';
-
-function fmt(m: number): string {
-  const norm = ((m % 1440) + 1440) % 1440;
-  const h    = Math.floor(norm / 60);
-  const min  = norm % 60;
-  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
-}
 
 interface SleepFooterProps {
   bedtime: number | null;  // minutes from midnight
