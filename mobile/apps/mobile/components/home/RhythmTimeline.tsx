@@ -1,17 +1,20 @@
 /**
- * RhythmTimeline — spec référence screenshot
+ * RhythmTimeline — Journée entière en segments de 90 min
  *
- * Layout:
- *   ☀️ [pill][pill][pill][●cursor][pill][pill]... 🌙
- *        ⚡           ⚡
- *   06:30        Cycle 5/11        23:00
+ * Divise toute la journée (anchorTime → bedtime) en blocs de 90 min.
+ * Chaque bloc = 1 segment pilule.
  *
- * Segments:
- *   - Égaux en largeur, pilule arrondie
- *   - Passés/actuel : remplis bleu (#1c9fda)
- *   - Futurs : dark outline (empty)
- *   - Curseur : cercle blanc lumineux centré sur le cycle actuel
- *   - MRM : éclair ⚡ sous le segment
+ * États des segments :
+ *   - Passé  : bleu plein (#1c9fda)
+ *   - Actuel : bleu plein + curseur blanc lumineux dessus
+ *   - Futur  : dark outline vide
+ *
+ * Marqueurs :
+ *   ☀️ gauche (ARP) · 🌙 droite (bedtime)
+ *   ⚡ sous les segments MRM · ○ sous les segments CRP
+ *
+ * Labels :
+ *   "06:30" · "Cycle 5/11" · "23:00"
  */
 
 import { useEffect, useRef, memo } from 'react';
@@ -20,22 +23,23 @@ import { Ionicons } from '@expo/vector-icons';
 import type { TimeBlock } from '@r90/types';
 import { nowMin, fmtMin } from '../../lib/time-utils';
 
-// ─── Tokens ─────────────────────────────────────────────────────────────────
-const ACCENT    = '#1c9fda';
-const FILLED_BG = '#1c9fda';        // completed + current cycles
-const EMPTY_BG  = 'rgba(28,100,160,0.25)';  // future cycles
-const GOLD      = '#F5A623';
-const TEXT_MUTED = '#7A9BBC';
-const TEXT_LABEL = '#002060';
-const CURSOR_COLOR = '#FFFFFF';
-const SEG_H      = 14;   // segment height
-const SEG_RADIUS = 7;    // fully rounded
-const GAP        = 4;    // gap between segments
+// ─── Tokens ──────────────────────────────────────────────────────────────────
+const ACCENT      = '#1c9fda';
+const FILLED_BG   = '#1c9fda';
+const EMPTY_BG    = 'rgba(28,100,160,0.22)';
+const EMPTY_BORDER = 'rgba(28,159,218,0.35)';
+const GOLD        = '#F5A623';
+const TEXT_MUTED  = '#7A9BBC';
+const TEXT_LABEL  = '#002060';
+const CURSOR_WHITE = '#FFFFFF';
+const SEGMENT_H   = 14;
+const SEGMENT_R   = 7;
+const CYCLE_MIN   = 90; // 90 minutes per segment
 
 interface RhythmTimelineProps {
   blocks:     TimeBlock[];
-  bedtime:    number;
-  anchorTime: number;
+  bedtime:    number;   // minutes since midnight
+  anchorTime: number;   // ARP (wake)
 }
 
 export const RhythmTimeline = memo(function RhythmTimeline({
@@ -43,33 +47,55 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 }: RhythmTimelineProps) {
   const W   = Dimensions.get('window').width;
   const PAD = 20;
-  const TW  = W - PAD * 2;   // track width
+  const TW  = W - PAD * 2;
   const DAY = 1440;
 
-  // ── Time math ──────────────────────────────────────────────────────────────
+  // ── Time span ──────────────────────────────────────────────────────────────
   const spanStart = anchorTime;
   const spanEnd   = bedtime <= anchorTime ? bedtime + DAY : bedtime;
   const spanTotal = Math.max(spanEnd - spanStart, 1);
-  const now       = nowMin();
-  const nowAdj    = now < spanStart ? now + DAY : now;
 
-  function xOf(min: number): number {
-    const m = min < spanStart ? min + DAY : min;
-    return Math.max(0, Math.min(TW, ((m - spanStart) / spanTotal) * TW));
+  const now    = nowMin();
+  const nowAdj = now < spanStart ? now + DAY : now;
+
+  // ── Build 90-min segments ─────────────────────────────────────────────────
+  // How many 90-min slots fit in the day span
+  const segCount = Math.max(1, Math.round(spanTotal / CYCLE_MIN));
+
+  // Width of each segment + gap
+  const GAP  = segCount > 8 ? 3 : 4;
+  const segW = (TW - (segCount - 1) * GAP) / segCount;
+
+  // Current segment index (0-based)
+  const elapsedMin   = Math.max(0, nowAdj - spanStart);
+  const currentIdx   = nowAdj >= spanStart && nowAdj < spanEnd
+    ? Math.min(Math.floor(elapsedMin / CYCLE_MIN), segCount - 1)
+    : nowAdj < spanStart ? -1 : segCount; // -1 = before day, segCount = after day
+
+  // Cursor X: center of current segment
+  const cursorSegIdx = Math.max(0, Math.min(currentIdx, segCount - 1));
+  const cursorX      = cursorSegIdx * (segW + GAP) + segW / 2;
+
+  // Cycle label
+  const cycleNum   = currentIdx >= 0 ? Math.min(currentIdx + 1, segCount) : 0;
+  const cycleLabel = currentIdx >= 0 && currentIdx < segCount
+    ? `Cycle ${cycleNum}/${segCount}`
+    : `${segCount} cycles`;
+
+  // ── Map MRM and CRP to segment indices ────────────────────────────────────
+  function blockToSegIdx(startMin: number): number {
+    const adj = startMin < spanStart ? startMin + DAY : startMin;
+    return Math.floor(Math.max(0, adj - spanStart) / CYCLE_MIN);
   }
 
-  // ── Block data ──────────────────────────────────────────────────────────────
-  const cycleBlocks = blocks.filter(b => b.type === 'sleep_cycle');
-  const mrmBlocks   = blocks.filter(b => b.type === 'down_period');
-  const totalCycles = cycleBlocks.length;
+  const mrmSegs = new Set(
+    blocks.filter(b => b.type === 'down_period').map(b => blockToSegIdx(b.start))
+  );
+  const crpSegs = new Set(
+    blocks.filter(b => b.type === 'crp').map(b => blockToSegIdx(b.start))
+  );
 
-  const currentIdx = cycleBlocks.findIndex(b => {
-    const s = b.start < spanStart ? b.start + DAY : b.start;
-    const e = b.end   < spanStart ? b.end   + DAY : b.end;
-    return nowAdj >= s && nowAdj < e;
-  });
-
-  // Cursor pulse animation
+  // ── Cursor pulse ──────────────────────────────────────────────────────────
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -82,70 +108,41 @@ export const RhythmTimeline = memo(function RhythmTimeline({
     return () => loop.stop();
   }, [pulse]);
 
-  // ── Segment layout: equal-width pills ──────────────────────────────────────
-  // Use equal segments when we have cycle blocks, fallback to 11 placeholders
-  const segCount = totalCycles > 0 ? totalCycles : 11;
-  const segW     = (TW - (segCount - 1) * GAP) / segCount;
-
-  // Cursor X: center of current segment
-  const cursorSegIdx = currentIdx >= 0 ? currentIdx : Math.round((nowAdj - spanStart) / (spanTotal / segCount));
-  const cursorX      = cursorSegIdx * (segW + GAP) + segW / 2;
-
-  // MRM segment indices
-  const mrmIndices = new Set(
-    mrmBlocks.map(b => {
-      const mX = xOf(b.start);
-      return Math.floor(mX / (segW + GAP));
-    })
-  );
-
-  // Cycle label
-  const cycleLabel = currentIdx >= 0
-    ? `Cycle ${currentIdx + 1}/${totalCycles}`
-    : `${totalCycles} cycles`;
-
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={tl.outer}>
 
-      {/* Icon markers row */}
-      <View style={[tl.markerRow, { width: TW }]}>
-        {/* Sun left */}
+      {/* Top icons row: ☀️ — — — 🌙 */}
+      <View style={[tl.iconRow, { width: TW }]}>
         <Ionicons name="sunny" size={16} color={GOLD} />
-
-        {/* Spacer */}
         <View style={{ flex: 1 }} />
-
-        {/* Moon right */}
         <Ionicons name="moon" size={14} color={GOLD} />
       </View>
 
-      {/* Track + segments + cursor */}
-      <View style={[tl.track, { width: TW }]}>
+      {/* Segments row */}
+      <View style={[tl.segRow, { width: TW }]}>
+        {Array.from({ length: segCount }, (_, i) => {
+          const filled = i <= currentIdx && currentIdx >= 0;
 
-        {/* Segments */}
-        <View style={tl.segRow}>
-          {Array.from({ length: segCount }, (_, i) => {
-            const filled = currentIdx >= 0 ? i <= currentIdx : false;
-            return (
-              <View
-                key={i}
-                style={[
-                  tl.seg,
-                  {
-                    width:           segW,
-                    backgroundColor: filled ? FILLED_BG : EMPTY_BG,
-                    borderColor:     filled ? 'transparent' : 'rgba(28,159,218,0.35)',
-                    borderWidth:     filled ? 0 : 1,
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
+          return (
+            <View
+              key={i}
+              style={[
+                tl.seg,
+                {
+                  width:           segW,
+                  marginRight:     i < segCount - 1 ? GAP : 0,
+                  backgroundColor: filled ? FILLED_BG : EMPTY_BG,
+                  borderColor:     filled ? 'transparent' : EMPTY_BORDER,
+                  borderWidth:     filled ? 0 : 1,
+                },
+              ]}
+            />
+          );
+        })}
 
-        {/* Cursor — white glowing dot on current cycle */}
-        {currentIdx >= 0 && (
+        {/* Cursor — blanc lumineux sur segment actuel */}
+        {currentIdx >= 0 && currentIdx < segCount && (
           <Animated.View
             pointerEvents="none"
             style={[
@@ -159,25 +156,35 @@ export const RhythmTimeline = memo(function RhythmTimeline({
         )}
       </View>
 
-      {/* MRM lightning bolts below segments */}
-      {mrmBlocks.length > 0 && (
-        <View style={[tl.mrmRow, { width: TW }]}>
-          {mrmBlocks.map((b, i) => {
-            const mX = xOf(b.start);
-            return (
-              <View key={i} style={[tl.mrmIcon, { left: mX - 6 }]}>
-                <Ionicons name="flash" size={10} color={GOLD} />
-              </View>
-            );
+      {/* Markers below segments: ⚡ MRM · ○ CRP */}
+      {(mrmSegs.size > 0 || crpSegs.size > 0) && (
+        <View style={[tl.markerBelow, { width: TW }]}>
+          {Array.from({ length: segCount }, (_, i) => {
+            const segX = i * (segW + GAP) + segW / 2;
+            if (mrmSegs.has(i)) {
+              return (
+                <View key={i} style={[tl.markerIcon, { left: segX - 5 }]}>
+                  <Ionicons name="flash" size={10} color={GOLD} />
+                </View>
+              );
+            }
+            if (crpSegs.has(i)) {
+              return (
+                <View key={i} style={[tl.markerIcon, { left: segX - 5 }]}>
+                  <View style={tl.crpDot} />
+                </View>
+              );
+            }
+            return null;
           })}
         </View>
       )}
 
-      {/* Labels */}
+      {/* Labels row */}
       <View style={[tl.labels, { width: TW }]}>
         <Text style={tl.labelSide}>{fmtMin(anchorTime)}</Text>
         <Text style={tl.labelCenter}>{cycleLabel}</Text>
-        <Text style={tl.labelSide}>{fmtMin(bedtime)}</Text>
+        <Text style={tl.labelSide} numberOfLines={1}>{fmtMin(bedtime)}</Text>
       </View>
 
     </View>
@@ -189,53 +196,61 @@ const tl = StyleSheet.create({
   outer: {
     paddingHorizontal: 20,
     marginTop:         14,
+    gap:               4,
   },
-  markerRow: {
+  iconRow: {
     flexDirection:  'row',
     alignItems:     'center',
-    marginBottom:   6,
-  },
-  track: {
-    position:      'relative',
-    height:        SEG_H + 16, // extra for cursor overflow
-    justifyContent: 'center',
+    marginBottom:   4,
   },
   segRow: {
     flexDirection: 'row',
     alignItems:    'center',
-    gap:           GAP,
+    gap:           0,        // gaps handled per-segment via width calc
+    height:        SEGMENT_H + 16, // extra for cursor
+    position:      'relative',
+    // Use rowGap via gap on outer if needed; we lay segments manually
+    flexWrap:      'nowrap',
   },
   seg: {
-    height:       SEG_H,
-    borderRadius: SEG_RADIUS,
+    height:       SEGMENT_H,
+    borderRadius: SEGMENT_R,
+    // width set inline
+    // marginRight set via GAP calc
   },
   cursor: {
     position:        'absolute',
-    top:             0,
+    top:             (SEGMENT_H + 16 - 16) / 2,
     width:           16,
     height:          16,
     borderRadius:    8,
-    backgroundColor: CURSOR_COLOR,
-    shadowColor:     CURSOR_COLOR,
+    backgroundColor: CURSOR_WHITE,
+    shadowColor:     CURSOR_WHITE,
     shadowOffset:    { width: 0, height: 0 },
-    shadowOpacity:   0.9,
-    shadowRadius:    8,
-    elevation:       6,
+    shadowOpacity:   1,
+    shadowRadius:    10,
+    elevation:       8,
   },
-  mrmRow: {
+  markerBelow: {
     position: 'relative',
-    height:   16,
-    marginTop: 2,
+    height:   14,
   },
-  mrmIcon: {
+  markerIcon: {
     position: 'absolute',
     top:      0,
+  },
+  crpDot: {
+    width:        8,
+    height:       8,
+    borderRadius: 4,
+    borderWidth:  1.5,
+    borderColor:  GOLD,
   },
   labels: {
     flexDirection:  'row',
     justifyContent: 'space-between',
     alignItems:     'center',
-    marginTop:       8,
+    marginTop:       4,
   },
   labelSide: {
     fontSize:   12,
