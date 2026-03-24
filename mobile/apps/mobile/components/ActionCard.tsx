@@ -9,6 +9,9 @@ import { useRef, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NextAction } from '@r90/types';
+import { type MissedCycleInfo } from '../lib/missed-cycle';
+
+export type { MissedCycleInfo };
 
 const CARD    = '#141466';
 const ACCENT  = '#1c9fda';
@@ -16,12 +19,6 @@ const GOLD    = '#F5A623';
 const TEXT    = '#FFFFFF';
 const SUB     = '#A8C4E0';
 const MUTED   = '#6B8CAE';
-
-export interface MissedCycleInfo {
-  missed:          boolean;
-  nextWindow:      string;  // "00:30"
-  cyclesRemaining: number;
-}
 
 interface ActionCardProps {
   action:          NextAction | null;

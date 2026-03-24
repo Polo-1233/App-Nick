@@ -42,6 +42,7 @@ import { SleepFooter }          from '../SleepFooter';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { getFlow }              from '../../lib/rhythm-points';
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
+import { getMissedCycleInfo, type MissedCycleInfo } from '../../lib/missed-cycle';
 import type { ReadinessState }  from '@r90/types';
 import type { MascotEmotion }   from '../ui/MascotImage';
 
@@ -71,33 +72,6 @@ const MUTED   = '#6B8CAE';
 function nowMin(): number {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
-}
-
-// ─── Missed cycle detection ────────────────────────────────────────────────────
-export interface MissedCycleInfo {
-  missed:          boolean;
-  nextWindow:      string;
-  cyclesRemaining: number;
-}
-
-function getMissedCycleInfo(
-  bedtime:    number | null,
-  cycleCount: number,
-  anchorTime: number | null,
-): MissedCycleInfo | null {
-  if (!bedtime || !anchorTime) return null;
-  const now = nowMin();
-  const bedtimeAdj = bedtime < anchorTime ? bedtime + 1440 : bedtime;
-  const nowAdj     = now < anchorTime     ? now + 1440     : now;
-  if (nowAdj <= bedtimeAdj) return null;
-  const minutesPast  = nowAdj - bedtimeAdj;
-  const cyclesMissed = Math.ceil(minutesPast / 90);
-  const remaining    = cycleCount - cyclesMissed;
-  if (remaining < 3) return null;
-  const nextWindowMin = (bedtime + cyclesMissed * 90) % 1440;
-  const h   = Math.floor(nextWindowMin / 60);
-  const m   = nextWindowMin % 60;
-  return { missed: true, nextWindow: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, cyclesRemaining: remaining };
 }
 
 // ─── HomeHeader (time + streak badge + profile) ────────────────────────────────
