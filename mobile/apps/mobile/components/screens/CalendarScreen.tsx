@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -486,6 +487,188 @@ const sc = StyleSheet.create({
   statLabel:  { fontSize: 11, color: TEXT_MUTED },
 });
 
+// ─── Planning Tips Card ───────────────────────────────────────────────────────
+
+interface Tip {
+  icon:  keyof typeof Ionicons.glyphMap;
+  title: string;
+  body:  string;
+  color: string;
+}
+
+function buildPlanningTips(
+  profile:      UserProfile,
+  r90Score:     number,
+  zone:         string | null,
+  recentCycles: number[],
+): Tip[] {
+  const tips: Tip[] = [];
+
+  // Tip 1 — contextualisé selon le score
+  if (r90Score >= 85) {
+    tips.push({
+      icon:  'trophy-outline',
+      title: 'Excellent consistency',
+      body:  `You're hitting your ${profile.idealCyclesPerNight}-cycle target consistently. The key now is protecting that wake time — your body clock is locked in.`,
+      color: GREEN,
+    });
+  } else if (r90Score >= 65) {
+    tips.push({
+      icon:  'trending-up-outline',
+      title: 'Building momentum',
+      body:  `You're close to your target. A more consistent wind-down time will help you reach ${profile.idealCyclesPerNight} cycles most nights.`,
+      color: YELLOW,
+    });
+  } else {
+    tips.push({
+      icon:  'bed-outline',
+      title: 'Focus on bedtime first',
+      body:  `Before optimising anything else, aim to hit your bedtime window 3 nights in a row. Small consistency compounds fast.`,
+      color: ORANGE,
+    });
+  }
+
+  // Tip 2 — ARP / wake time
+  tips.push({
+    icon:  'sunny-outline',
+    title: 'Your anchor: ' + minToHHMM(profile.anchorTime),
+    body:  'Your ARP (Anchor Rising Point) is the cornerstone of R90. Wake at this time every day — even weekends. Everything else is built around it.',
+    color: ACCENT,
+  });
+
+  // Tip 3 — zone-based or generic
+  if (zone === 'orange') {
+    tips.push({
+      icon:  'flash-outline',
+      title: 'Recovery priority tonight',
+      body:  'Your readiness is below target. Add one extra cycle tonight and avoid screens in the 90-minute wind-down window.',
+      color: ORANGE,
+    });
+  } else if (zone === 'yellow') {
+    tips.push({
+      icon:  'moon-outline',
+      title: 'Protect tonight\'s sleep',
+      body:  'You\'re in the yellow zone. A focused wind-down and no caffeine after 14:00 will help you recover tonight.',
+      color: YELLOW,
+    });
+  } else {
+    tips.push({
+      icon:  'repeat-outline',
+      title: 'Recovery nights are planned',
+      body:  'The 4-cycle nights in your week plan are intentional. R90 varies cycle load to avoid chronic sleep pressure. Trust the pattern.',
+      color: PURPLE,
+    });
+  }
+
+  return tips;
+}
+
+function PlanningTipsCard({
+  profile,
+  r90Score,
+  zone,
+  recentCycles,
+}: {
+  profile:      UserProfile;
+  r90Score:     number;
+  zone:         string | null;
+  recentCycles: number[];
+}) {
+  const { theme } = useTheme();
+  const [expanded, setExpanded] = useState(false);
+  const tips = buildPlanningTips(profile, r90Score, zone, recentCycles);
+  const visibleTips = expanded ? tips : [tips[0]!];
+
+  return (
+    <View style={pt.card}>
+      {/* Header row */}
+      <View style={pt.headerRow}>
+        <View style={pt.headerLeft}>
+          <Ionicons name="bulb-outline" size={15} color={ACCENT} />
+          <Text style={pt.headerTitle}>Tips & Advice</Text>
+        </View>
+        <Pressable onPress={() => setExpanded(e => !e)} hitSlop={10}>
+          <Text style={pt.toggle}>{expanded ? 'Less ›' : `All ${tips.length} tips ›`}</Text>
+        </Pressable>
+      </View>
+
+      {/* Tips list */}
+      {visibleTips.map((tip, i) => (
+        <View key={i} style={pt.tipRow}>
+          <View style={[pt.iconWrap, { backgroundColor: `${tip.color}20` }]}>
+            <Ionicons name={tip.icon} size={14} color={tip.color} />
+          </View>
+          <View style={pt.tipBody}>
+            <Text style={pt.tipTitle}>{tip.title}</Text>
+            <Text style={pt.tipText}>{tip.body}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const pt = StyleSheet.create({
+  card: {
+    backgroundColor:  CARD,
+    borderRadius:     20,
+    padding:          18,
+    borderWidth:      1,
+    borderColor:      BORDER,
+    gap:              14,
+  },
+  headerRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           6,
+  },
+  headerTitle: {
+    fontSize:    12,
+    fontWeight:  '700',
+    color:       TEXT_MUTED,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  toggle: {
+    fontSize:   12,
+    color:      ACCENT,
+    fontWeight: '600',
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems:    'flex-start',
+    gap:           12,
+  },
+  iconWrap: {
+    width:         30,
+    height:        30,
+    borderRadius:  9,
+    alignItems:    'center',
+    justifyContent:'center',
+    flexShrink:    0,
+    marginTop:     1,
+  },
+  tipBody: {
+    flex: 1,
+    gap:  4,
+  },
+  tipTitle: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      TEXT,
+  },
+  tipText: {
+    fontSize:   12,
+    color:      TEXT_SUB,
+    lineHeight: 18,
+  },
+});
+
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
@@ -597,6 +780,14 @@ export default function CalendarScreen() {
         {insights.length > 0 && (
           <RLoInsightCard text={insights[0]!} />
         )}
+
+        {/* ── Tips & Advice ── */}
+        <PlanningTipsCard
+          profile={activeProfile}
+          r90Score={r90Score}
+          zone={zone}
+          recentCycles={recentCycles}
+        />
 
       </ScrollView>
     </SafeAreaView>
