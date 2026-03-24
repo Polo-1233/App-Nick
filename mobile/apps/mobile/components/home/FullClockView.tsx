@@ -289,10 +289,7 @@ export function FullClockView({
                 left: CX - R1_O, top: CY - R1_O,
               }]} />
 
-              {/* ── Energy outer ring ── */}
-              {(active === 'energy' || active === 'cycles') && energyChunks.map((chunks, i) => (
-                <StaticArc key={`e${i}`} chunks={chunks} />
-              ))}
+
 
               {/* ── Main ring segments ── */}
               {allChunks.map((chunks, i) => {
