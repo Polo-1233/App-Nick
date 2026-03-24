@@ -98,10 +98,10 @@ function ChecklistPhase({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         ))}
       </View>
       <Pressable onPress={onNext} style={ph.mainBtn}>
-        <Text style={ph.mainBtnTxt}>Continuer →</Text>
+        <Text style={ph.mainBtnTxt}>Continue →</Text>
       </Pressable>
       <Pressable onPress={onSkip} style={ph.skipBtn}>
-        <Text style={ph.skipTxt}>Passer</Text>
+        <Text style={ph.skipTxt}>Skip</Text>
       </Pressable>
     </View>
   );
@@ -143,7 +143,7 @@ function ContentPhase({
 
   return (
     <View style={ph.wrap}>
-      <Text style={ph.title}>Ce soir</Text>
+      <Text style={ph.title}>Tonight</Text>
       <View style={ct.card}>
         <Text style={ct.cardTitle}>{content.title}</Text>
         <Text style={ct.cardSub}>{content.description}</Text>

@@ -60,7 +60,7 @@ function buildDisplay(
   if (!action) {
     return {
       title:      'Your rhythm is on track',
-      subtitle:   'Bonne nuit.',
+      subtitle:   'Good night.',
       icon:       'checkmark-circle-outline',
       iconColor:  ACCENT,
       urgent:     false,
@@ -81,7 +81,7 @@ function buildDisplay(
         iconColor:   GOLD,
         urgent:      false,
         showButton:  true,
-        buttonLabel: 'Confirmer (+5)',
+        buttonLabel: 'Confirm (+5)',
       };
 
     case 'take_crp':
@@ -92,7 +92,7 @@ function buildDisplay(
         iconColor:   GOLD,
         urgent:      diff !== null && diff < 15,
         showButton:  true,
-        buttonLabel: 'Commencer →',
+        buttonLabel: 'Start →',
       };
 
     case 'crp_reminder':
@@ -103,7 +103,7 @@ function buildDisplay(
         iconColor:   GOLD,
         urgent:      true,
         showButton:  true,
-        buttonLabel: 'Commencer →',
+        buttonLabel: 'Start →',
       };
 
     case 'start_pre_sleep':
@@ -114,13 +114,13 @@ function buildDisplay(
         iconColor:   ACCENT,
         urgent:      diff !== null && diff < 30,
         showButton:  diff !== null && diff <= 0,
-        buttonLabel: 'Commencer →',
+        buttonLabel: 'Start →',
       };
 
     case 'go_to_sleep':
       return {
-        title:       'Fenêtre de sommeil ouverte',
-        subtitle:    action.description || 'Bonne nuit.',
+        title:       'Sleep window open',
+        subtitle:    action.description || 'Good night.',
         icon:        'bed-outline',
         iconColor:   ACCENT,
         urgent:      true,

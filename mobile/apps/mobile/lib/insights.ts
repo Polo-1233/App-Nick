@@ -74,7 +74,7 @@ export function computeRhythmStrength(
 export function getRhythmInsightMessage(score: number): string {
   if (score >= 75) return 'Your rhythm is strong. Keep it up.';
   if (score >= 50) return 'Your rhythm is building. Every cycle counts.';
-  return 'Semaine chargée. R-Lo est là pour t\'aider.';
+  return "Busy week. R-Lo is here to help.";
 }
 
 // ─── Weekly Cycles ────────────────────────────────────────────────────────────

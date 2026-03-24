@@ -96,7 +96,7 @@ function getWeekMessage(aligned: number, total: number): string {
 
 // ─── 7 Dots semaine ───────────────────────────────────────────────────────────
 
-const DAYS_FR = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function WeekDots({ dots }: { dots: Array<'green' | 'amber' | 'grey'> }) {
   const colorMap = { green: C.success, amber: C.rhythmLow, grey: '#444' };
@@ -105,7 +105,7 @@ function WeekDots({ dots }: { dots: Array<'green' | 'amber' | 'grey'> }) {
       {dots.map((d, i) => (
         <View key={i} style={wd.col}>
           <View style={[wd.dot, { backgroundColor: colorMap[d] }]} />
-          <Text style={wd.day}>{DAYS_FR[i]}</Text>
+          <Text style={wd.day}>{DAYS[i]}</Text>
         </View>
       ))}
     </View>
@@ -145,8 +145,8 @@ function ExpandableDetails({
   const consist    = consistencyLabel(consistPct);
   const balanceAbs = Math.abs(insights.rhythmBalance);
   const balanceTxt = insights.rhythmBalance >= 0
-    ? `${insights.rhythmBalance} cycle${insights.rhythmBalance !== 1 ? 's' : ''} d'avance of l'target`
-    : `${balanceAbs} cycle${balanceAbs !== 1 ? 's' : ''} à récupérer — un coucher tôt ce soir suffit`;
+    ? `${insights.rhythmBalance} cycle${insights.rhythmBalance !== 1 ? 's' : ''} ahead of target`
+    : `${balanceAbs} cycle${balanceAbs !== 1 ? 's' : ''} to recover — an early night tonight does the trick`;
 
   return (
     <View style={ed.wrap}>
@@ -199,7 +199,7 @@ function EmptyState() {
       <MascotImage emotion="Reflexion" size="md" />
       <Text style={s.emptyTitle}>Your rhythm is building</Text>
       <Text style={s.emptySub}>
-        {"R-Lo a besoin de quelques nuits pour calculer ton Rhythm Flow.\n\nCommence par loguer ta première nuit ou connecte un wearable."}
+        {"R-Lo needs a few nights to calculate your Rhythm Flow.\n\nStart by logging your first night or connecting a wearable."}
       </Text>
     </View>
   );

@@ -504,7 +504,7 @@ export default function HomeScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: TEXT }}>{bannerEvent.title}</Text>
                 <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }} numberOfLines={1}>
-                  {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Événement'}`}
+                  {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`}
                 </Text>
               </View>
             </Pressable>
@@ -540,7 +540,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT }}>Weekly report</Text>
                   <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-                    {streak > 0 ? `Rhythm Flow: ${streak} jours` : 'Check your Insights'}
+                    {streak > 0 ? `Rhythm Flow: ${streak} days` : 'Check your Insights'}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={MUTED} />
