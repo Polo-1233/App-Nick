@@ -12,11 +12,10 @@ import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { TimeBlock } from '@r90/types';
 import { nowMin, fmtMin as fmt } from '../lib/time-utils';
+import { useTheme } from '../lib/theme-context';
 
-const ACCENT  = '#1c9fda';
+// GOLD is semantic — same in both themes
 const GOLD    = '#F5A623';
-const TEXT    = '#FFFFFF';
-const MUTED   = '#6B8CAE';
 const TRACK_H = 28;
 
 interface RhythmTimelineProps {
@@ -29,6 +28,8 @@ interface RhythmTimelineProps {
 export const RhythmTimeline = memo(function RhythmTimeline({
   blocks, wakeTime, bedtime, anchorTime,
 }: RhythmTimelineProps) {
+  const { theme } = useTheme();
+  const c = theme.colors;
   const { width: W } = Dimensions.get('window');
   const PAD = 20;
   const TW  = W - PAD * 2;
@@ -83,7 +84,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
       {/* Track */}
       <View style={[tl.track, { width: TW }]}>
         {/* Background */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${ACCENT}18`, borderRadius: 8 }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${c.accent}18`, borderRadius: 8 }]} />
 
         {/* Sleep cycles */}
         {cycleBlocks.map((b, i) => {
@@ -98,7 +99,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
                 {
                   left:            x1,
                   width:           Math.max(4, x2 - x1 - 2),
-                  backgroundColor: isCurrent ? ACCENT : `${ACCENT}40`,
+                  backgroundColor: isCurrent ? c.accent : `${c.accent}40`,
                   height:          isCurrent ? TRACK_H - 4 : TRACK_H - 8,
                   top:             isCurrent ? 2 : 4,
                 },
@@ -117,7 +118,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 
         {/* MRM dots */}
         {mrmBlocks.map((b, i) => (
-          <View key={`mrm-${i}`} style={[tl.dotMRM, { left: xOf(b.start) - 3 }]} />
+          <View key={`mrm-${i}`} style={[tl.dotMRM, { left: xOf(b.start) - 3, backgroundColor: c.textMuted }]} />
         ))}
 
         {/* CRP marker */}
@@ -134,20 +135,20 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 
         {/* Sleep window (end) */}
         <View style={[tl.markerSleep, { left: Math.min(TW - 16, xOf(bedtime) - 8) }]}>
-          <Ionicons name="moon" size={12} color={ACCENT} />
+          <Ionicons name="moon" size={12} color={c.accent} />
         </View>
       </View>
 
       {/* "You are here" cursor */}
       <View style={[tl.cursorLayer, { width: TW }]} pointerEvents="none">
-        <Animated.View style={[tl.cursor, { left: nowX - 7, transform: [{ scale: pulse }] }]} />
+        <Animated.View style={[tl.cursor, { left: nowX - 7, borderColor: c.accent, transform: [{ scale: pulse }] }]} />
       </View>
 
       {/* Labels row */}
       <View style={[tl.labelRow, { width: TW }]}>
-        <Text style={tl.labelSide}>{fmt(anchorTime)}</Text>
-        <Text style={tl.labelCenter}>{cycleLabel}</Text>
-        <Text style={tl.labelSide}>{fmt(bedtime)}</Text>
+        <Text style={[tl.labelSide, { color: c.textMuted }]}>{fmt(anchorTime)}</Text>
+        <Text style={[tl.labelCenter, { color: c.text }]}>{cycleLabel}</Text>
+        <Text style={[tl.labelSide, { color: c.textMuted }]}>{fmt(bedtime)}</Text>
       </View>
     </View>
   );
@@ -158,13 +159,13 @@ const tl = StyleSheet.create({
   track:       { height: TRACK_H, position: 'relative', borderRadius: 8, overflow: 'visible', marginBottom: 4 },
   cycleBar:    { position: 'absolute', borderRadius: 5 },
   preSleepBar: { position: 'absolute', top: 6, bottom: 6, backgroundColor: 'rgba(255,200,80,0.18)', borderRadius: 4 },
-  dotMRM:      { position: 'absolute', top: '50%', width: 6, height: 6, borderRadius: 3, backgroundColor: MUTED, marginTop: -3 },
+  dotMRM:      { position: 'absolute', top: '50%', width: 6, height: 6, borderRadius: 3, marginTop: -3 },
   markerCRP:   { position: 'absolute', top: -8, width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
   markerARP:   { position: 'absolute', left: -7, top: -8, width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
   markerSleep: { position: 'absolute', top: -8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
   cursorLayer: { height: 0, position: 'relative' },
-  cursor:      { position: 'absolute', top: -28, width: 14, height: 14, borderRadius: 7, backgroundColor: TEXT, borderWidth: 2, borderColor: ACCENT },
+  cursor:      { position: 'absolute', top: -28, width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF', borderWidth: 2 },
   labelRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  labelSide:   { fontSize: 11, color: MUTED, width: 40 },
-  labelCenter: { fontSize: 12, fontWeight: '700', color: TEXT, textAlign: 'center', flex: 1 },
+  labelSide:   { fontSize: 11, width: 40 },
+  labelCenter: { fontSize: 12, fontWeight: '700', textAlign: 'center', flex: 1 },
 });

@@ -11,15 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NextAction } from '@r90/types';
 import { type MissedCycleInfo } from '../lib/missed-cycle';
 import { nowMin } from '../lib/time-utils';
+import { useTheme } from '../lib/theme-context';
 
 export type { MissedCycleInfo };
 
-const CARD    = '#141466';
-const ACCENT  = '#1c9fda';
-const GOLD    = '#F5A623';
-const TEXT    = '#FFFFFF';
-const SUB     = '#A8C4E0';
-const MUTED   = '#6B8CAE';
+// Semantic brand colors — same in both themes
+const GOLD  = '#F5A623';
+const ACCENT = '#1c9fda'; // used only in buildDisplay for iconColor (brand accent, not surface)
+
 
 interface ActionCardProps {
   action:          NextAction | null;
@@ -150,6 +149,8 @@ function buildDisplay(
 export const ActionCard = memo(function ActionCard({
   action, missedCycle, onPress, showButton,
 }: ActionCardProps) {
+  const { theme } = useTheme();
+  const c    = theme.colors;
   const now  = nowMin();
   const disp = buildDisplay(action, now, missedCycle);
   const scale = useRef(new Animated.Value(1)).current;
@@ -165,7 +166,11 @@ export const ActionCard = memo(function ActionCard({
     <Pressable onPress={handlePress} accessible accessibilityRole="button" accessibilityLabel={disp.title}>
       <Animated.View style={[
         ac.card,
-        disp.urgent && ac.urgent,
+        {
+          backgroundColor: c.surface,
+          borderColor:     disp.urgent ? `${GOLD}40` : `${c.accent}25`,
+          ...(disp.urgent && { backgroundColor: 'rgba(245,166,35,0.06)' }),
+        },
         { transform: [{ scale }] },
       ]}>
         <View style={[ac.iconWrap, { backgroundColor: `${disp.iconColor}18` }]}>
@@ -173,8 +178,8 @@ export const ActionCard = memo(function ActionCard({
         </View>
 
         <View style={ac.body}>
-          <Text style={ac.title} numberOfLines={1}>{disp.title}</Text>
-          <Text style={ac.subtitle} numberOfLines={2}>{disp.subtitle}</Text>
+          <Text style={[ac.title, { color: c.text }]} numberOfLines={1}>{disp.title}</Text>
+          <Text style={[ac.subtitle, { color: c.textSub }]} numberOfLines={2}>{disp.subtitle}</Text>
         </View>
 
         {(showButton !== false && disp.showButton && disp.buttonLabel) ? (
@@ -182,7 +187,7 @@ export const ActionCard = memo(function ActionCard({
             <Text style={[ac.btnLabel, { color: disp.iconColor }]}>{disp.buttonLabel}</Text>
           </View>
         ) : (
-          <Ionicons name="chevron-forward" size={16} color={MUTED} />
+          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
         )}
       </Animated.View>
     </Pressable>
@@ -190,12 +195,11 @@ export const ActionCard = memo(function ActionCard({
 });
 
 const ac = StyleSheet.create({
-  card:     { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: CARD, borderRadius: 18, padding: 18, marginHorizontal: 20, marginTop: 16, borderWidth: 1, borderColor: `${ACCENT}25` },
-  urgent:   { borderColor: `${GOLD}40`, backgroundColor: 'rgba(245,166,35,0.06)' },
+  card:     { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 18, padding: 18, marginHorizontal: 20, marginTop: 16, borderWidth: 1 },
   iconWrap: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   body:     { flex: 1, gap: 4 },
-  title:    { fontSize: 15, fontWeight: '700', color: TEXT },
-  subtitle: { fontSize: 13, color: SUB, lineHeight: 18 },
+  title:    { fontSize: 15, fontWeight: '700' },
+  subtitle: { fontSize: 13, lineHeight: 18 },
   btn:      { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
   btnLabel: { fontSize: 12, fontWeight: '700' },
 });
