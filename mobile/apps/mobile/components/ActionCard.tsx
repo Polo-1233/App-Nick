@@ -1,147 +1,133 @@
 /**
- * ActionCard — CTA unique context-driven
+ * ActionCard — Spec pixel-perfect R90
  *
- * Un seul état à la fois. Piloté par dayPlan.nextAction.
- * Logique contextuelle : MRM / CRP / wind-down / missed cycle / goodnight.
+ * - Carte blanche, shadow légère
+ * - Titre 20px / 600, texte #002060
+ * - Sous-texte 14px, couleur #6B7A90
+ * - Bouton CTA plein bleu 48px, 1 seul
+ * - Micro scale au tap (0.97 → 1)
  */
 
 import { useRef, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import type { NextAction } from '@r90/types';
 import { type MissedCycleInfo } from '../lib/missed-cycle';
 import { nowMin } from '../lib/time-utils';
-import { useTheme } from '../lib/theme-context';
 
 export type { MissedCycleInfo };
 
-// Semantic brand colors — same in both themes
-const GOLD  = '#F5A623';
-const ACCENT = '#1c9fda'; // used only in buildDisplay for iconColor (brand accent, not surface)
-
+// Design tokens — fixed by spec
+const TEXT_PRIMARY = '#002060';
+const TEXT_SUB     = '#6B7A90';
+const ACCENT       = '#1c9fda';
+const GOLD         = '#F5A623';
 
 interface ActionCardProps {
-  action:          NextAction | null;
-  missedCycle?:    MissedCycleInfo | null;
-  onPress:         () => void;
-  showButton?:     boolean;
+  action:      NextAction | null;
+  missedCycle?: MissedCycleInfo | null;
+  onPress:     () => void;
+  showButton?: boolean;
 }
 
 interface ActionDisplay {
-  title:      string;
-  subtitle:   string;
-  icon:       string;
-  iconColor:  string;
-  urgent:     boolean;
-  showButton: boolean;
-  buttonLabel?: string;
+  title:        string;
+  subtitle:     string;
+  ctaLabel:     string | null;   // null = pas de bouton
+  urgent:       boolean;
 }
 
 function buildDisplay(
-  action: NextAction | null,
-  nowMin: number,
+  action:      NextAction | null,
+  now:         number,
   missedCycle?: MissedCycleInfo | null,
 ): ActionDisplay {
-  // Missed cycle takes priority
+
   if (missedCycle?.missed) {
     return {
-      title:      'Next window',
-      subtitle:   `${missedCycle.nextWindow} — ${missedCycle.cyclesRemaining} cycles — still a great night.`,
-      icon:       'moon-outline',
-      iconColor:  ACCENT,
-      urgent:     false,
-      showButton: false,
+      title:    `Next window: ${missedCycle.nextWindow}`,
+      subtitle: `${missedCycle.cyclesRemaining} cycles — still a great night.`,
+      ctaLabel: null,
+      urgent:   false,
     };
   }
 
   if (!action) {
     return {
-      title:      'Your rhythm is on track',
-      subtitle:   'Good night.',
-      icon:       'checkmark-circle-outline',
-      iconColor:  ACCENT,
-      urgent:     false,
-      showButton: false,
+      title:    'Your rhythm is on track',
+      subtitle: 'Rest well.',
+      ctaLabel: null,
+      urgent:   false,
     };
   }
 
   const at   = action.scheduledAt;
-  const diff = at !== undefined ? at - nowMin : null;
-  const diffStr = diff !== null && diff > 0 ? ` dans ${diff} min` : '';
+  const diff = at !== undefined ? at - now : null;
+  const inMin = diff !== null && diff > 0 ? ` in ${diff} min` : '';
 
   switch (action.type) {
     case 'wake_up':
       return {
-        title:       'Confirm your wake-up',
-        subtitle:    action.description || 'Tap to confirm (+5)',
-        icon:        'sunny-outline',
-        iconColor:   GOLD,
-        urgent:      false,
-        showButton:  true,
-        buttonLabel: 'Confirm (+5)',
+        title:    'Confirm your wake-up',
+        subtitle: 'Log your night to track your rhythm.',
+        ctaLabel: 'Confirm (+5)',
+        urgent:   false,
+      };
+
+    case 'take_mrm':
+    case 'mrm_reminder':
+      return {
+        title:    `Reset${inMin}`,
+        subtitle: '2-minute breathing break.',
+        ctaLabel: 'Start',
+        urgent:   diff !== null && diff <= 5,
       };
 
     case 'take_crp':
       return {
-        title:       action.title,
-        subtitle:    `CRP${diffStr} — 20 min recovery`,
-        icon:        'flash-outline',
-        iconColor:   GOLD,
-        urgent:      diff !== null && diff < 15,
-        showButton:  true,
-        buttonLabel: 'Start →',
+        title:    `Recovery${inMin}`,
+        subtitle: '20-min CRP — window open.',
+        ctaLabel: 'Start',
+        urgent:   diff !== null && diff < 15,
       };
 
     case 'crp_reminder':
       return {
-        title:       'Recovery now',
-        subtitle:    '20 min — window open',
-        icon:        'flash',
-        iconColor:   GOLD,
-        urgent:      true,
-        showButton:  true,
-        buttonLabel: 'Start →',
+        title:    'Recovery now',
+        subtitle: '20 min — window open.',
+        ctaLabel: 'Start',
+        urgent:   true,
       };
 
     case 'start_pre_sleep':
       return {
-        title:       action.title,
-        subtitle:    `Wind-down${diffStr}`,
-        icon:        'moon-outline',
-        iconColor:   ACCENT,
-        urgent:      diff !== null && diff < 30,
-        showButton:  diff !== null && diff <= 0,
-        buttonLabel: 'Start →',
+        title:    `Wind-down${inMin}`,
+        subtitle: 'Start stepping away from screens.',
+        ctaLabel: diff !== null && diff <= 0 ? 'Start' : null,
+        urgent:   diff !== null && diff < 30,
       };
 
     case 'go_to_sleep':
       return {
-        title:       'Sleep window open',
-        subtitle:    action.description || 'Good night.',
-        icon:        'bed-outline',
-        iconColor:   ACCENT,
-        urgent:      true,
-        showButton:  false,
+        title:    'Sleep window open',
+        subtitle: action.description || 'Good night.',
+        ctaLabel: null,
+        urgent:   true,
       };
 
     case 'anchor_reminder':
       return {
-        title:       action.title,
-        subtitle:    action.description,
-        icon:        'alarm-outline',
-        iconColor:   ACCENT,
-        urgent:      false,
-        showButton:  false,
+        title:    action.title,
+        subtitle: action.description,
+        ctaLabel: null,
+        urgent:   false,
       };
 
     default:
       return {
-        title:       action.title,
-        subtitle:    action.description,
-        icon:        'navigate-circle-outline',
-        iconColor:   ACCENT,
-        urgent:      false,
-        showButton:  false,
+        title:    action.title,
+        subtitle: action.description,
+        ctaLabel: null,
+        urgent:   false,
       };
   }
 }
@@ -149,8 +135,6 @@ function buildDisplay(
 export const ActionCard = memo(function ActionCard({
   action, missedCycle, onPress, showButton,
 }: ActionCardProps) {
-  const { theme } = useTheme();
-  const c    = theme.colors;
   const now  = nowMin();
   const disp = buildDisplay(action, now, missedCycle);
   const scale = useRef(new Animated.Value(1)).current;
@@ -162,32 +146,19 @@ export const ActionCard = memo(function ActionCard({
     ]).start(() => onPress());
   }
 
+  const showCTA = showButton !== false && disp.ctaLabel !== null;
+
   return (
     <Pressable onPress={handlePress} accessible accessibilityRole="button" accessibilityLabel={disp.title}>
-      <Animated.View style={[
-        ac.card,
-        {
-          backgroundColor: c.surface,
-          borderColor:     disp.urgent ? `${GOLD}40` : `${c.accent}25`,
-          ...(disp.urgent && { backgroundColor: 'rgba(245,166,35,0.06)' }),
-        },
-        { transform: [{ scale }] },
-      ]}>
-        <View style={[ac.iconWrap, { backgroundColor: `${disp.iconColor}18` }]}>
-          <Ionicons name={disp.icon as any} size={24} color={disp.iconColor} />
-        </View>
-
-        <View style={ac.body}>
-          <Text style={[ac.title, { color: c.text }]} numberOfLines={1}>{disp.title}</Text>
-          <Text style={[ac.subtitle, { color: c.textSub }]} numberOfLines={2}>{disp.subtitle}</Text>
-        </View>
-
-        {(showButton !== false && disp.showButton && disp.buttonLabel) ? (
-          <View style={[ac.btn, { backgroundColor: `${disp.iconColor}22`, borderColor: `${disp.iconColor}40` }]}>
-            <Text style={[ac.btnLabel, { color: disp.iconColor }]}>{disp.buttonLabel}</Text>
+      <Animated.View style={[ac.card, { transform: [{ scale }] }]}>
+        <Text style={ac.title}>{disp.title}</Text>
+        {!!disp.subtitle && (
+          <Text style={ac.subtitle}>{disp.subtitle}</Text>
+        )}
+        {showCTA && (
+          <View style={[ac.cta, disp.urgent && { backgroundColor: GOLD }]}>
+            <Text style={ac.ctaLabel}>{disp.ctaLabel}</Text>
           </View>
-        ) : (
-          <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
         )}
       </Animated.View>
     </Pressable>
@@ -195,11 +166,41 @@ export const ActionCard = memo(function ActionCard({
 });
 
 const ac = StyleSheet.create({
-  card:     { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 18, padding: 18, marginHorizontal: 20, marginTop: 16, borderWidth: 1 },
-  iconWrap: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  body:     { flex: 1, gap: 4 },
-  title:    { fontSize: 15, fontWeight: '700' },
-  subtitle: { fontSize: 13, lineHeight: 18 },
-  btn:      { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
-  btnLabel: { fontSize: 12, fontWeight: '700' },
+  card: {
+    marginHorizontal: 20,
+    marginTop:        24,
+    padding:          20,
+    borderRadius:     20,
+    backgroundColor:  '#FFFFFF',
+    shadowColor:      '#000000',
+    shadowOffset:     { width: 1, height: 8 },
+    shadowOpacity:    0.06,
+    shadowRadius:     30,
+    elevation:        4,
+  },
+  title: {
+    fontSize:   20,
+    fontWeight: '600',
+    color:      TEXT_PRIMARY,
+    lineHeight: 26,
+  },
+  subtitle: {
+    marginTop:  6,
+    fontSize:   14,
+    color:      TEXT_SUB,
+    lineHeight: 20,
+  },
+  cta: {
+    marginTop:       16,
+    height:          48,
+    borderRadius:    14,
+    backgroundColor: ACCENT,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  ctaLabel: {
+    color:      '#FFFFFF',
+    fontSize:   16,
+    fontWeight: '600',
+  },
 });

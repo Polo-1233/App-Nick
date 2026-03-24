@@ -1,14 +1,18 @@
 /**
- * RLoMessageBar — Message contextuel R-Lo (1-2 lignes)
+ * RLoMessageBar — Spec pixel-perfect R90
  *
- * Tap → ouvre le chat R-Lo via ChatContext.openChat()
+ * - Avatar 28px, glow bleu léger
+ * - 1 phrase max, 14px, #002060 opacity 0.8
+ * - Pas de chevron, pas de CTA
+ * - Fade + slide 200ms à l'apparition
  */
 
-import { memo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { memo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { MascotImage } from './ui/MascotImage';
-import { useTheme } from '../lib/theme-context';
+
+const TEXT_PRIMARY = '#002060';
+const ACCENT       = '#1c9fda';
 
 interface RLoMessageBarProps {
   text:     string;
@@ -19,42 +23,83 @@ interface RLoMessageBarProps {
 export const RLoMessageBar = memo(function RLoMessageBar({
   text, onTap, emotion = 'rassurante',
 }: RLoMessageBarProps) {
-  const { theme } = useTheme();
-  const c = theme.colors;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(8)).current;
+
+  // Fade + slide in on mount / text change
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    slideAnim.setValue(8);
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [text]);
 
   return (
     <Pressable
       onPress={onTap}
-      style={({ pressed }) => [
-        rl.wrap,
-        {
-          backgroundColor: c.surface2,
-          borderColor:     `${c.accent}20`,
-        },
-        pressed && { opacity: 0.75 },
-      ]}
       accessible
       accessibilityRole="button"
       accessibilityLabel="Open R-Lo chat"
     >
-      <View style={rl.avatar}>
-        <MascotImage emotion={emotion} size="sm" />
-      </View>
+      <Animated.View
+        style={[
+          rl.wrap,
+          {
+            opacity:   fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        {/* Avatar with subtle glow */}
+        <View style={rl.avatarWrap}>
+          <View style={rl.avatarGlow} />
+          <View style={rl.avatar}>
+            <MascotImage emotion={emotion} size="sm" />
+          </View>
+        </View>
 
-      <View style={rl.content}>
-        <Text style={[rl.text, { color: c.text }]} numberOfLines={2}>{text}</Text>
-        <Text style={[rl.cta, { color: c.accent }]}>Chat with R-Lo →</Text>
-      </View>
-
-      <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
+        <Text style={rl.text} numberOfLines={1}>{text}</Text>
+      </Animated.View>
     </Pressable>
   );
 });
 
 const rl = StyleSheet.create({
-  wrap:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginTop: 14, borderRadius: 16, padding: 14, borderWidth: 1 },
-  avatar:  { width: 40, height: 40, borderRadius: 20, overflow: 'hidden' },
-  content: { flex: 1, gap: 3 },
-  text:    { fontSize: 13, lineHeight: 19 },
-  cta:     { fontSize: 11, fontWeight: '600' },
+  wrap: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            10,
+    marginHorizontal: 20,
+    marginTop:      14,
+    paddingVertical: 2,
+  },
+  avatarWrap: {
+    position:       'relative',
+    width:          28,
+    height:         28,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  avatarGlow: {
+    position:        'absolute',
+    width:           36,
+    height:          36,
+    borderRadius:    18,
+    backgroundColor: `${ACCENT}18`,
+  },
+  avatar: {
+    width:        28,
+    height:       28,
+    borderRadius: 14,
+    overflow:     'hidden',
+  },
+  text: {
+    flex:       1,
+    fontSize:   14,
+    color:      TEXT_PRIMARY,
+    opacity:    0.8,
+    lineHeight: 20,
+  },
 });

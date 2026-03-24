@@ -1,33 +1,39 @@
 /**
- * SleepFooter — "Tonight: 23:00" toujours visible en bas
+ * SleepFooter — Spec pixel-perfect R90
  *
- * Style discret, rappel passif de la fenêtre de sommeil.
+ * "🌙 23:00" — discret, bas de page
+ * 14px, #002060 opacity 0.6
  */
 
 import { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { fmtMin as fmt } from '../lib/time-utils';
-import { useTheme } from '../lib/theme-context';
+
+const TEXT_PRIMARY = '#002060';
 
 interface SleepFooterProps {
-  bedtime: number | null;  // minutes from midnight
+  bedtime: number | null;
 }
 
 export const SleepFooter = memo(function SleepFooter({ bedtime }: SleepFooterProps) {
-  const { theme } = useTheme();
-  const c = theme.colors;
-
   if (bedtime === null) return null;
   return (
     <View style={sf.wrap}>
-      <Ionicons name="moon-outline" size={12} color={c.accent} />
-      <Text style={[sf.text, { color: c.textMuted }]}>Tonight: {fmt(bedtime)}</Text>
+      <Text style={sf.text}>🌙 {fmt(bedtime)}</Text>
     </View>
   );
 });
 
 const sf = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
-  text: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3 },
+  wrap: {
+    alignItems:    'center',
+    paddingBottom: 20,
+    marginTop:     'auto',
+  },
+  text: {
+    fontSize:  14,
+    color:     TEXT_PRIMARY,
+    opacity:   0.6,
+    lineHeight: 20,
+  },
 });

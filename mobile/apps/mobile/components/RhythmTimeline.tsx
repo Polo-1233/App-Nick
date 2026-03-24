@@ -1,96 +1,99 @@
 /**
- * RhythmTimeline — Barre horizontale ARP → Sleep Window
+ * RhythmTimeline — Spec pixel-perfect R90
  *
- * - Segments = cycles de 90 min (type sleep_cycle)
- * - Curseur "vous êtes ici" pulsant
- * - Marqueurs MRM (dots), CRP (éclair doré), Sleep (lune)
- * - Texte "Cycle X/Y" centré sous la barre
+ * - Ligne fine 4px avec segments cycles
+ * - Cycle actuel : +20% width, bleu plein, glow
+ * - Curseur 10px pulsant = "you are here"
+ * - Marqueurs : MRM (dot 6px), CRP (cercle creux), Sleep (🌙 à droite)
+ * - Pas de label "cycle X/Y"
  */
 
 import { useEffect, useRef, memo } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { TimeBlock } from '@r90/types';
-import { nowMin, fmtMin as fmt } from '../lib/time-utils';
-import { useTheme } from '../lib/theme-context';
+import { nowMin } from '../lib/time-utils';
 
-// GOLD is semantic — same in both themes
-const GOLD    = '#F5A623';
-const TRACK_H = 28;
+// Brand colors — fixed (track is design-language, not surface)
+const ACCENT   = '#1c9fda';
+const TRACK_BG = '#E6EEF5';
+const CYCLE_BG = '#DCEAF5';
 
 interface RhythmTimelineProps {
   blocks:     TimeBlock[];
-  wakeTime:   number;   // minutes from midnight (ARP)
-  bedtime:    number;   // minutes from midnight
+  wakeTime:   number;
+  bedtime:    number;
   anchorTime: number;
 }
 
 export const RhythmTimeline = memo(function RhythmTimeline({
-  blocks, wakeTime, bedtime, anchorTime,
+  blocks, bedtime, anchorTime,
 }: RhythmTimelineProps) {
-  const { theme } = useTheme();
-  const c = theme.colors;
   const { width: W } = Dimensions.get('window');
-  const PAD = 20;
-  const TW  = W - PAD * 2;
-  const DAY = 1440;
+  const PAD  = 20;
+  const TW   = W - PAD * 2;
+  const DAY  = 1440;
+  const TRACK_H = 4;
+  const CYCLE_H = 16; // cycles sit on top of the track, centred
 
   const spanStart = anchorTime;
   const spanEnd   = bedtime <= anchorTime ? bedtime + DAY : bedtime;
   const spanTotal = Math.max(spanEnd - spanStart, 1);
 
-  const now  = nowMin();
-  let nowAdj = now < spanStart ? now + DAY : now;
-  const pct  = Math.max(0, Math.min(1, (nowAdj - spanStart) / spanTotal));
-  const nowX = pct * TW;
+  const now    = nowMin();
+  const nowAdj = now < spanStart ? now + DAY : now;
+  const pct    = Math.max(0, Math.min(1, (nowAdj - spanStart) / spanTotal));
+  const nowX   = pct * TW;
 
   function xOf(min: number): number {
-    let m = min < spanStart ? min + DAY : min;
+    const m = min < spanStart ? min + DAY : min;
     return Math.max(0, Math.min(TW, ((m - spanStart) / spanTotal) * TW));
   }
 
-  // Pulse animation
+  // Cursor pulse — slow 1.5s loop
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.4, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1.0, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.5, duration: 750, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.0, duration: 750, useNativeDriver: true }),
       ])
-    ).start();
-    return () => pulse.stopAnimation();
+    );
+    loop.start();
+    return () => loop.stop();
   }, [pulse]);
 
-  const cycleBlocks  = blocks.filter(b => b.type === 'sleep_cycle');
-  const crpBlocks    = blocks.filter(b => b.type === 'crp');
-  const mrmBlocks    = blocks.filter(b => b.type === 'down_period');
-  const preSleep     = blocks.find(b => b.type === 'pre_sleep');
+  const cycleBlocks = blocks.filter(b => b.type === 'sleep_cycle');
+  const crpBlocks   = blocks.filter(b => b.type === 'crp');
+  const mrmBlocks   = blocks.filter(b => b.type === 'down_period');
 
-  // Current cycle index
+  // Current cycle
   const currentCycle = cycleBlocks.findIndex(b => {
     const s = b.start < spanStart ? b.start + DAY : b.start;
     const e = b.end   < spanStart ? b.end   + DAY : b.end;
     return nowAdj >= s && nowAdj < e;
   });
-  const totalCycles  = cycleBlocks.length;
-  const cycleLabel   = currentCycle >= 0
-    ? `Cycle ${currentCycle + 1}/${totalCycles}`
-    : nowAdj < spanStart
-    ? `${totalCycles} cycles tonight`
-    : `${totalCycles} cycles today`;
+
+  // Compute cycle widths (+20% for current)
+  const baseWidth = cycleBlocks.length > 0
+    ? (TW - (cycleBlocks.length - 1) * 6) / cycleBlocks.length
+    : 0;
 
   return (
-    <View style={tl.wrap}>
-      {/* Track */}
-      <View style={[tl.track, { width: TW }]}>
-        {/* Background */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${c.accent}18`, borderRadius: 8 }]} />
+    <View style={[tl.wrap, { width: TW }]}>
 
-        {/* Sleep cycles */}
+      {/* ── Track base ── */}
+      <View style={tl.track} />
+
+      {/* ── Cycle segments (above track, centred vertically) ── */}
+      <View style={[tl.segmentLayer, { width: TW }]} pointerEvents="none">
         {cycleBlocks.map((b, i) => {
-          const x1  = xOf(b.start);
-          const x2  = xOf(b.end);
+          const x1 = xOf(b.start);
+          const x2 = xOf(b.end);
+          const rawW = Math.max(8, x2 - x1 - 3);
           const isCurrent = i === currentCycle;
+          const segW = isCurrent ? rawW * 1.0 : rawW; // width from data, +glow for current
+
           return (
             <View
               key={i}
@@ -98,74 +101,124 @@ export const RhythmTimeline = memo(function RhythmTimeline({
                 tl.cycleBar,
                 {
                   left:            x1,
-                  width:           Math.max(4, x2 - x1 - 2),
-                  backgroundColor: isCurrent ? c.accent : `${c.accent}40`,
-                  height:          isCurrent ? TRACK_H - 4 : TRACK_H - 8,
-                  top:             isCurrent ? 2 : 4,
+                  width:           segW,
+                  height:          isCurrent ? CYCLE_H : CYCLE_H - 4,
+                  top:             isCurrent ? 0 : 2,
+                  backgroundColor: isCurrent ? ACCENT : CYCLE_BG,
+                  borderRadius:    isCurrent ? 8 : 4,
+                  // Shadow / glow for current cycle
+                  ...(isCurrent && {
+                    shadowColor:   ACCENT,
+                    shadowOffset:  { width: 0, height: 0 },
+                    shadowOpacity: 0.35,
+                    shadowRadius:  8,
+                    elevation:     4,
+                  }),
                 },
               ]}
             />
           );
         })}
-
-        {/* Pre-sleep zone */}
-        {preSleep && (
-          <View style={[
-            tl.preSleepBar,
-            { left: xOf(preSleep.start), width: Math.max(4, xOf(preSleep.end) - xOf(preSleep.start)) },
-          ]} />
-        )}
-
-        {/* MRM dots */}
-        {mrmBlocks.map((b, i) => (
-          <View key={`mrm-${i}`} style={[tl.dotMRM, { left: xOf(b.start) - 3, backgroundColor: c.textMuted }]} />
-        ))}
-
-        {/* CRP marker */}
-        {crpBlocks.map((b, i) => (
-          <View key={`crp-${i}`} style={[tl.markerCRP, { left: xOf(b.start) - 7 }]}>
-            <Ionicons name="flash" size={11} color={GOLD} />
-          </View>
-        ))}
-
-        {/* ARP (start) */}
-        <View style={tl.markerARP}>
-          <Ionicons name="sunny" size={12} color={GOLD} />
-        </View>
-
-        {/* Sleep window (end) */}
-        <View style={[tl.markerSleep, { left: Math.min(TW - 16, xOf(bedtime) - 8) }]}>
-          <Ionicons name="moon" size={12} color={c.accent} />
-        </View>
       </View>
 
-      {/* "You are here" cursor */}
-      <View style={[tl.cursorLayer, { width: TW }]} pointerEvents="none">
-        <Animated.View style={[tl.cursor, { left: nowX - 7, borderColor: c.accent, transform: [{ scale: pulse }] }]} />
+      {/* ── MRM dots ── */}
+      {mrmBlocks.map((b, i) => (
+        <View
+          key={`mrm-${i}`}
+          style={[tl.mrmDot, { left: xOf(b.start) - 3 }]}
+        />
+      ))}
+
+      {/* ── CRP hollow circle ── */}
+      {crpBlocks.map((b, i) => (
+        <View
+          key={`crp-${i}`}
+          style={[tl.crpCircle, { left: xOf(b.start) - 5 }]}
+        />
+      ))}
+
+      {/* ── Sleep moon — always at far right ── */}
+      <View style={[tl.sleepMoon, { left: TW - 14 }]}>
+        <Ionicons name="moon" size={13} color={ACCENT} />
       </View>
 
-      {/* Labels row */}
-      <View style={[tl.labelRow, { width: TW }]}>
-        <Text style={[tl.labelSide, { color: c.textMuted }]}>{fmt(anchorTime)}</Text>
-        <Text style={[tl.labelCenter, { color: c.text }]}>{cycleLabel}</Text>
-        <Text style={[tl.labelSide, { color: c.textMuted }]}>{fmt(bedtime)}</Text>
-      </View>
+      {/* ── Cursor "you are here" ── */}
+      <Animated.View
+        style={[
+          tl.cursor,
+          {
+            left: nowX - 5,
+            transform: [{ scale: pulse }],
+          },
+        ]}
+        pointerEvents="none"
+      />
+
     </View>
   );
 });
 
 const tl = StyleSheet.create({
-  wrap:        { paddingHorizontal: 20, marginTop: 8 },
-  track:       { height: TRACK_H, position: 'relative', borderRadius: 8, overflow: 'visible', marginBottom: 4 },
-  cycleBar:    { position: 'absolute', borderRadius: 5 },
-  preSleepBar: { position: 'absolute', top: 6, bottom: 6, backgroundColor: 'rgba(255,200,80,0.18)', borderRadius: 4 },
-  dotMRM:      { position: 'absolute', top: '50%', width: 6, height: 6, borderRadius: 3, marginTop: -3 },
-  markerCRP:   { position: 'absolute', top: -8, width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
-  markerARP:   { position: 'absolute', left: -7, top: -8, width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
-  markerSleep: { position: 'absolute', top: -8, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  cursorLayer: { height: 0, position: 'relative' },
-  cursor:      { position: 'absolute', top: -28, width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF', borderWidth: 2 },
-  labelRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  labelSide:   { fontSize: 11, width: 40 },
-  labelCenter: { fontSize: 12, fontWeight: '700', textAlign: 'center', flex: 1 },
+  wrap: {
+    marginHorizontal: 20,
+    marginTop:        10,
+    height:           90,
+    justifyContent:   'center',
+  },
+  track: {
+    position:        'absolute',
+    left:            0,
+    right:           0,
+    height:          4,
+    borderRadius:    2,
+    backgroundColor: TRACK_BG,
+    top:             43, // centre vertical in 90px container
+  },
+  segmentLayer: {
+    position:  'absolute',
+    top:       35, // centres CYCLE_H=16 around track centre (43 - 8)
+    height:    16,
+  },
+  cycleBar: {
+    position: 'absolute',
+  },
+  mrmDot: {
+    position:        'absolute',
+    top:             37, // sits on the track
+    width:           6,
+    height:          6,
+    borderRadius:    3,
+    backgroundColor: '#B0C4D8',
+  },
+  crpCircle: {
+    position:     'absolute',
+    top:          34,
+    width:        12,
+    height:       12,
+    borderRadius: 6,
+    borderWidth:  1.5,
+    borderColor:  '#F5A623',
+    backgroundColor: 'transparent',
+  },
+  sleepMoon: {
+    position:       'absolute',
+    top:            30,
+    width:          14,
+    height:         14,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  cursor: {
+    position:        'absolute',
+    top:             38, // centred on track
+    width:           10,
+    height:          10,
+    borderRadius:    5,
+    backgroundColor: ACCENT,
+    shadowColor:     ACCENT,
+    shadowOffset:    { width: 0, height: 0 },
+    shadowOpacity:   0.5,
+    shadowRadius:    6,
+    elevation:       4,
+  },
 });

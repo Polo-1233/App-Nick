@@ -57,16 +57,12 @@ function getRLoMood(streak: number, readiness: ReadinessState | null | undefined
   return 'Reflexion';
 }
 
-// ─── Brand tokens ──────────────────────────────────────────────────────────────
-const BG      = '#0a0a3a';
-const CARD    = '#141466';
-const SURFACE2= '#1c1c7a';
-const ACCENT  = '#1c9fda';
-const TEXT    = '#FFFFFF';
-const SUB     = '#A8C4E0';
-const MUTED   = '#6B8CAE';
+// ─── HomeHeader (spec pixel-perfect) ─────────────────────────────────────────
+// height: 60px | left: heure | center: streak | right: avatar
 
-// ─── HomeHeader (time + streak badge + profile) ────────────────────────────────
+const H_TEXT   = '#002060';
+const H_ACCENT = '#1c9fda';
+
 function HomeHeader({
   topInset, onProfilePress, streak,
 }: { topInset: number; onProfilePress: () => void; streak: number }) {
@@ -87,32 +83,66 @@ function HomeHeader({
 
   return (
     <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: topInset + 12, paddingBottom: 10 }}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: TEXT, letterSpacing: 0.3 }}>{time}</Text>
+      <View style={[hdr.wrap, { paddingTop: topInset + 10 }]}>
+        {/* Left — heure */}
+        <Text style={hdr.time}>{time}</Text>
+
+        {/* Center — streak (optionnel) */}
         {streak > 0 ? (
-          <Pressable
-            onPress={() => setShowStreakDetail(true)}
-            hitSlop={8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(245,166,35,0.15)', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4 }}
-          >
-            <Text style={{ fontSize: 14 }}>🔥</Text>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#F5A623' }}>{streak}</Text>
+          <Pressable onPress={() => setShowStreakDetail(true)} hitSlop={8} style={hdr.streakPill}>
+            <Text style={hdr.streakEmoji}>🔥</Text>
+            <Text style={hdr.streakNum}>{streak}</Text>
           </Pressable>
         ) : (
-          <View style={{ width: 40 }} />
+          <View />
         )}
-        <Pressable onPress={onProfilePress} hitSlop={12}>
-          <Ionicons name="person-circle-outline" size={28} color={TEXT} />
+
+        {/* Right — avatar */}
+        <Pressable onPress={onProfilePress} hitSlop={12} style={hdr.avatarBtn}>
+          <Ionicons name="person-outline" size={17} color={H_TEXT} />
         </Pressable>
       </View>
 
-      <StreakDetail
-        visible={showStreakDetail}
-        onClose={() => setShowStreakDetail(false)}
-      />
+      <StreakDetail visible={showStreakDetail} onClose={() => setShowStreakDetail(false)} />
     </>
   );
 }
+
+const hdr = StyleSheet.create({
+  wrap: {
+    height:          60,
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingHorizontal: 20,
+    paddingBottom:   10,
+  },
+  time: {
+    fontSize:   18,
+    fontWeight: '500',
+    color:      H_TEXT,
+    letterSpacing: 0.2,
+  },
+  streakPill: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             4,
+  },
+  streakEmoji: { fontSize: 14 },
+  streakNum: {
+    fontSize:   14,
+    fontWeight: '600',
+    color:      H_ACCENT,
+  },
+  avatarBtn: {
+    width:           32,
+    height:          32,
+    borderRadius:    16,
+    backgroundColor: '#EAF4FB',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+});
 
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 
@@ -255,12 +285,12 @@ export default function HomeScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32, flexGrow: 1 }}
         >
           {/* 1. Header */}
           <HomeHeader topInset={0} onProfilePress={() => goToPage(3)} streak={streak} />
 
-          {/* 2. Rhythm Timeline */}
+          {/* 2. Timeline */}
           {profile && bedtime && wakeTime ? (
             <RhythmTimeline
               blocks={blocks}
@@ -269,8 +299,8 @@ export default function HomeScreen() {
               anchorTime={profile.anchorTime}
             />
           ) : (
-            <View style={{ height: 64, marginHorizontal: 20, backgroundColor: `${ACCENT}10`, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: MUTED, fontSize: 12 }}>Setting up your rhythm…</Text>
+            <View style={{ height: 90, marginHorizontal: 20, justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#B0C4D8', fontSize: 13 }}>Setting up your rhythm…</Text>
             </View>
           )}
 
@@ -284,56 +314,48 @@ export default function HomeScreen() {
             emotion={getRLoMood(streak, dayPlan?.readiness)}
           />
 
-          {/* 5. Secondary Cards */}
+          {/* 5. Secondary cards — seulement si utile */}
           {bannerEvent && !bannerDismissed && (
             <Pressable
               onPress={() => setBannerDismissed(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}
+              style={sc.card}
             >
-              <Ionicons name="calendar-outline" size={18} color={theme.colors.accent} />
+              <Ionicons name="calendar-outline" size={16} color="#1c9fda" />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text }}>{bannerEvent.title}</Text>
-                <Text style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }} numberOfLines={1}>
+                <Text style={sc.cardTitle} numberOfLines={1}>{bannerEvent.title}</Text>
+                <Text style={sc.cardSub} numberOfLines={1}>
                   {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`}
                 </Text>
               </View>
             </Pressable>
           )}
 
-          {/* Coach Insight card — max 1/jour */}
           {coachInsight && (
-            <View style={{ backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10, gap: 10 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.accent, letterSpacing: 0.8 }}>💡 DID YOU KNOW?</Text>
-              <Text style={{ fontSize: 13, color: theme.colors.text, lineHeight: 20 }}>{coachInsight.message}</Text>
+            <View style={sc.card}>
+              <Text style={sc.cardLabel}>💡</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={sc.cardTitle}>{coachInsight.message}</Text>
+              </View>
               <Pressable
-                onPress={async () => {
-                  await markInsightSeen(coachInsight.id);
-                  setCoachInsight(null);
-                }}
-                style={{ alignSelf: 'flex-start', backgroundColor: `${theme.colors.accent}20`, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
+                onPress={async () => { await markInsightSeen(coachInsight.id); setCoachInsight(null); }}
+                hitSlop={8}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.accent }}>Got it ✓</Text>
+                <Text style={sc.cardDismiss}>✓</Text>
               </Pressable>
             </View>
           )}
 
-          {/* Weekly Report card — dimanche soir ou lundi matin */}
-          {(() => {
-            const d = new Date();
-            const dow = d.getDay();
-            const h   = d.getHours();
-            const showWeekly = (dow === 0 && h >= 18) || (dow === 1 && h < 12);
-            if (!showWeekly) return null;
+          {/* Weekly report — dimanche soir / lundi matin uniquement */}
+          {(()=>{
+            const d=new Date(), dow=d.getDay(), h=d.getHours();
+            if(!((dow===0&&h>=18)||(dow===1&&h<12))) return null;
             return (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}>
-                <Text style={{ fontSize: 18 }}>📊</Text>
+              <View style={sc.card}>
+                <Text style={sc.cardLabel}>📊</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: theme.colors.text }}>Weekly report</Text>
-                  <Text style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
-                    {streak > 0 ? `Rhythm Flow: ${streak} days` : 'Check your Insights'}
-                  </Text>
+                  <Text style={sc.cardTitle}>Weekly report</Text>
+                  <Text style={sc.cardSub}>{streak > 0 ? `${streak} days rhythm flow` : 'Check your Insights'}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
               </View>
             );
           })()}
@@ -358,9 +380,24 @@ export default function HomeScreen() {
 }
 
 const ms = StyleSheet.create({
-  root:               { flex: 1 },
-  inputRow:           { paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8 },
-  inputWrap:          { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  inputField:         { flex: 1, backgroundColor: CARD, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: `${ACCENT}30` },
-  inputPlaceholder:   { color: MUTED, fontSize: 14 },
+  root: { flex: 1 },
+});
+
+// Secondary cards — spec: height 60, bg #F7FAFD, radius 14, padding 12
+const sc = StyleSheet.create({
+  card: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             10,
+    height:          60,
+    backgroundColor: '#F7FAFD',
+    borderRadius:    14,
+    paddingHorizontal: 12,
+    marginHorizontal:  20,
+    marginTop:         10,
+  },
+  cardLabel:   { fontSize: 16 },
+  cardTitle:   { fontSize: 13, fontWeight: '500', color: '#002060', lineHeight: 18 },
+  cardSub:     { fontSize: 12, color: '#6B7A90', marginTop: 1 },
+  cardDismiss: { fontSize: 14, color: '#1c9fda', fontWeight: '600' },
 });
