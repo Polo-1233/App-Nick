@@ -14,11 +14,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Animated, Platform,
+  View, Text, TextInput, StyleSheet, ScrollView, Animated, Platform, Pressable, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView }    from 'react-native-safe-area-context';
 import { LinearGradient }  from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
+import { Ionicons }        from '@expo/vector-icons';
 import { CircadianBackground } from './CircadianBackground';
 import { saveOnboardingData }  from '../lib/storage';
 import type { ChatMessage }    from '../lib/use-chat';
@@ -135,7 +136,9 @@ export function OnboardingChatFlow({
   messages, isThinking, injectMessage, advance,
 }: OnboardingChatFlowProps) {
   const scrollRef         = useRef<ScrollView>(null);
+  const inputRef          = useRef<TextInput>(null);
   const [step, setStep]   = useState<OnboardingStep>('greeting');
+  const [input, setInput] = useState('');
   const dataRef           = useRef({ name: '', wakeMin: 450, wakeLabel: '7:30', goal: '' });
 
   // Boot greeting sequence
@@ -195,8 +198,13 @@ export function OnboardingChatFlow({
     }
   }, [step, injectMessage, advance]);
 
-  // Expose handleReply for text input — we use a simple inline approach
-  // (the actual text input is managed in the parent; we receive text via injectMessage + handleReply)
+  const handleSend = useCallback(() => {
+    const txt = input.trim();
+    if (!txt || step === 'greeting' || step === 'summary' || step === 'done') return;
+    setInput('');
+    injectMessage(txt, 'user');
+    void handleReply(txt);
+  }, [input, step, injectMessage, handleReply]);
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
@@ -231,13 +239,28 @@ export function OnboardingChatFlow({
         </ScrollView>
 
         {/* Input bar */}
-        <View style={s.inputRow}>
-          <View style={s.inputWrap}>
-            <View style={s.inputField}>
-              <Text style={s.inputPlaceholder}>Type a message…</Text>
-            </View>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.inputRow}>
+            <TextInput
+              ref={inputRef}
+              style={s.inputField}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Type a message…"
+              placeholderTextColor="#6B8CAE"
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+              editable={step !== 'greeting' && step !== 'summary' && step !== 'done'}
+            />
+            <Pressable
+              onPress={handleSend}
+              style={[s.sendBtn, (!input.trim() || step === 'greeting') && s.sendBtnDisabled]}
+              disabled={!input.trim() || step === 'greeting'}
+            >
+              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+            </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -247,8 +270,34 @@ export function OnboardingChatFlow({
 OnboardingChatFlow.displayName = 'OnboardingChatFlow';
 
 const s = StyleSheet.create({
-  inputRow:          { paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8 },
-  inputWrap:         { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  inputField:        { flex: 1, backgroundColor: CARD, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, borderWidth: 1, borderColor: `${ACCENT}30` },
-  inputPlaceholder:  { color: '#6B8CAE', fontSize: 14 },
+  inputRow: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             10,
+    paddingHorizontal: 16,
+    paddingBottom:   16,
+    paddingTop:      8,
+  },
+  inputField: {
+    flex:             1,
+    backgroundColor:  CARD,
+    borderRadius:     24,
+    paddingHorizontal: 18,
+    paddingVertical:  12,
+    borderWidth:      1,
+    borderColor:      `${ACCENT}30`,
+    color:            '#FFFFFF',
+    fontSize:         14,
+  },
+  sendBtn: {
+    width:           40,
+    height:          40,
+    borderRadius:    20,
+    backgroundColor: ACCENT,
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  sendBtnDisabled: {
+    backgroundColor: `${ACCENT}40`,
+  },
 });
