@@ -158,9 +158,19 @@ export default function HomeScreen() {
   // ── Calendar banner ────────────────────────────────────────────────────────
   useEffect(() => {
     if (isOnboarding) return;
-    getUpcomingEvents(1).then(res => {
-      if (res.ok && res.data?.events?.[0]) setBannerEvent(res.data.events[0]);
-    }).catch(() => {});
+    // DEMO: mock calendar event for Nick preview — remove before production
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(19, 30, 0, 0);
+    setBannerEvent({
+      title:           'Team performance review',
+      start_time:      tomorrow.toISOString(),
+      event_type_hint: 'meeting',
+    });
+    // Production:
+    // getUpcomingEvents(1).then(res => {
+    //   if (res.ok && res.data?.events?.[0]) setBannerEvent(res.data.events[0]);
+    // }).catch(() => {});
   }, [isOnboarding]);
 
   // ── Morning confirmation ───────────────────────────────────────────────────
