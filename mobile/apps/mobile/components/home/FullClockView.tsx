@@ -53,7 +53,7 @@ const R_IN_MID  = (R_IN_O + R_IN_I) / 2;
 const IN_THICK  = R_IN_O - R_IN_I;
 
 const DAY_MIN   = 24 * 60;
-const SEG_GAP   = 4;   // gap in degrees between segments
+const SEG_GAP   = 7;   // gap in degrees between segments
 
 // ─── Math helpers ─────────────────────────────────────────────────────────────
 
