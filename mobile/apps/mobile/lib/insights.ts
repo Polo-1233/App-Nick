@@ -72,8 +72,8 @@ export function computeRhythmStrength(
  * This is what the UI displays instead of the raw number.
  */
 export function getRhythmInsightMessage(score: number): string {
-  if (score >= 75) return 'Ton rythme est solide. Continue comme ça.';
-  if (score >= 50) return 'Ton rythme se construit. Chaque cycle compte.';
+  if (score >= 75) return 'Your rhythm is strong. Keep it up.';
+  if (score >= 50) return 'Your rhythm is building. Every cycle counts.';
   return 'Semaine chargée. R-Lo est là pour t\'aider.';
 }
 
@@ -102,9 +102,9 @@ export function computeSleepConsistency(
 export function consistencyLabel(pct: number): string {
   if (pct >= 90) return 'Excellent consistency';
   if (pct >= 80) return 'Strong rhythm';
-  if (pct >= 65) return 'En progression';
-  if (pct >= 50) return 'En construction';
-  return 'En construction';
+  if (pct >= 65) return 'Improving';
+  if (pct >= 50) return 'Building';
+  return 'Building';
 }
 
 // ─── Rhythm Balance (was: Sleep Debt) ────────────────────────────────────────

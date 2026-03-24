@@ -15,16 +15,16 @@ interface CoachInsight {
 }
 
 export const COACH_INSIGHTS: CoachInsight[] = [
-  { id: 'ci-01', triggerDay: 2,  category: 'science', message: "Sais-tu pourquoi l'heure de réveil est plus importante que l'heure de coucher ? Ton corps se synchronise avec la lumière du matin." },
-  { id: 'ci-02', triggerDay: 4,  category: 'method',  message: "Les cycles de 90 minutes existent aussi le jour. C'est pour ça que les MRM sont importants — ils respectent ton rythme naturel." },
-  { id: 'ci-03', triggerDay: 6,  category: 'method',  message: "Le CRP n'est pas une sieste. C'est un moment de récupération mentale. Même sans dormir, ton cerveau se repose." },
-  { id: 'ci-04', triggerDay: 8,  category: 'method',  message: "Si tu rates ta fenêtre de sommeil, le prochain cycle est dans 90 minutes. C'est la flexibilité de la méthode R90." },
-  { id: 'ci-05', triggerDay: 10, category: 'science', message: "La température idéale pour dormir est entre 16° et 18°C. Ton corps doit baisser sa température pour s'endormir." },
-  { id: 'ci-06', triggerDay: 12, category: 'science', message: "La lumière bleue des écrans retarde la production de mélatonine de 30 à 90 minutes. D'où l'importance du wind-down." },
-  { id: 'ci-07', triggerDay: 14, category: 'method',  message: "La méthode R90 ne compte pas en heures mais en cycles. 5 cycles valent mieux que 8 heures fragmentées." },
-  { id: 'ci-08', triggerDay: 16, category: 'method',  message: "L'important n'est pas chaque nuit, mais l'équilibre sur 7 jours. Une mauvaise nuit n'est jamais un échec." },
-  { id: 'ci-09', triggerDay: 18, category: 'science', message: "La caféine a une demi-vie de 5 à 6 heures. Un café à 14h est encore à 50% dans ton sang à 20h." },
-  { id: 'ci-10', triggerDay: 20, category: 'method',  message: "Nick Littlehales a développé la méthode R90 en travaillant avec les plus grands sportifs du monde. Tu utilises les mêmes principes." },
+  { id: 'ci-01', triggerDay: 2,  category: 'science', message: "Did you know why l'heure de réveil est plus importante que l'heure de coucher ? Ton corps se synchronise avec la lumière du matin." },
+  { id: 'ci-02', triggerDay: 4,  category: 'method',  message: "90-minute cycles also exist during the day. C'est pour ça que les MRM sont importants — ils respectent ton rythme naturel." },
+  { id: 'ci-03', triggerDay: 6,  category: 'method',  message: "The CRP is not a nap. C'est un moment de récupération mentale. Même sans dormir, ton cerveau se repose." },
+  { id: 'ci-04', triggerDay: 8,  category: 'method',  message: "If you miss your sleep window, le prochain cycle est dans 90 minutes. C'est la flexibilité de la méthode R90." },
+  { id: 'ci-05', triggerDay: 10, category: 'science', message: "The ideal sleep temperature est entre 16° et 18°C. Ton corps doit baisser sa température pour s'endormir." },
+  { id: 'ci-06', triggerDay: 12, category: 'science', message: "Blue light from screens retarde la production de mélatonine de 30 à 90 minutes. D'où l'importance du wind-down." },
+  { id: 'ci-07', triggerDay: 14, category: 'method',  message: "The R90 method counts cycles, not hours. 5 cycles valent mieux que 8 heures fragmentées." },
+  { id: 'ci-08', triggerDay: 16, category: 'method',  message: "What matters is not each night, mais l'équilibre sur 7 jours. Une mauvaise nuit n'est jamais un échec." },
+  { id: 'ci-09', triggerDay: 18, category: 'science', message: "Caffeine has a half-life de 5 à 6 heures. Un café à 14h est encore à 50% dans ton sang à 20h." },
+  { id: 'ci-10', triggerDay: 20, category: 'method',  message: "Nick Littlehales developed the R90 method en travaillant avec les plus grands sportifs du monde. Tu utilises les mêmes principes." },
 ];
 
 const SIGNUP_KEY = '@r90:signupDate:v1';

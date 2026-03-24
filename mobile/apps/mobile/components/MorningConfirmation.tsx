@@ -23,9 +23,9 @@ export const CONFIRM_DATE_KEY = '@r90:lastConfirmDate:v1';
 type Mood = 'tired' | 'neutral' | 'good';
 
 const MOODS: Array<{ value: Mood; emoji: string; label: string }> = [
-  { value: 'tired',   emoji: '😴', label: 'Fatigué' },
-  { value: 'neutral', emoji: '😐', label: 'Neutre' },
-  { value: 'good',    emoji: '😊', label: 'Bien' },
+  { value: 'tired',   emoji: '😴', label: 'Tired' },
+  { value: 'neutral', emoji: '😐', label: 'Neutral' },
+  { value: 'good',    emoji: '😊', label: 'Good' },
 ];
 
 interface Props {
@@ -58,10 +58,10 @@ export const MorningConfirmation = memo(function MorningConfirmation({
             <Ionicons name="close" size={20} color={MUTED} />
           </Pressable>
 
-          <Text style={s.greeting}>☀️ Bonjour{firstName ? ` ${firstName}` : ''}</Text>
-          <Text style={s.wakeTime}>Tu t'es réveillé à {wakeTime}</Text>
+          <Text style={s.greeting}>☀️ Good morning{firstName ? ` ${firstName}` : ''}</Text>
+          <Text style={s.wakeTime}>You woke up at {wakeTime}</Text>
 
-          <Text style={s.moodLabel}>Comment te sens-tu ?</Text>
+          <Text style={s.moodLabel}>How do you feel?</Text>
           <View style={s.moods}>
             {MOODS.map(m => (
               <Pressable
@@ -76,7 +76,7 @@ export const MorningConfirmation = memo(function MorningConfirmation({
           </View>
 
           <Pressable style={s.confirmBtn} onPress={() => { void handleConfirm(); }}>
-            <Text style={s.confirmTxt}>Confirmer (+{POINTS.ARP_CONFIRM}) →</Text>
+            <Text style={s.confirmTxt}>Confirm (+{POINTS.ARP_CONFIRM}) →</Text>
           </Pressable>
         </View>
       </View>

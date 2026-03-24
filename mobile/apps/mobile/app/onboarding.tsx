@@ -288,9 +288,9 @@ export default function OnboardingScreen() {
   const isNextDisabled = saving;
 
   const nextLabel =
-    page === TOTAL_PAGES - 1 ? (saving ? 'Configuration…' : 'Commencer →') :
-    page === 0 ? "Voyons ça →" :
-    'Suivant →';
+    page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : "Let's go →") :
+    page === 0 ? "Let's see →" :
+    'Next →';
 
   // ─────────────────────────────────────────────────────────────────────────
 

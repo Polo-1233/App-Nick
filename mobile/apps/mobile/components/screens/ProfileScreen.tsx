@@ -454,7 +454,7 @@ export default function ProfileScreen() {
 
   const MENU_SECTIONS = [
     {
-      title: 'Mon sommeil',
+      title: 'My Sleep',
       items: [
         {
           icon:    'time-outline',
@@ -471,12 +471,12 @@ export default function ProfileScreen() {
       ],
     },
     {
-      title: 'Personnalisation',
+      title: 'Personalisation',
       items: [
         {
           icon:    'fitness-outline',
-          label:   'Mode de vie',
-          sub:     'Stress, environnement, exercice, alcool',
+          label:   'Lifestyle',
+          sub:     'Stress, environment, exercise, alcohol',
           onPress: () => setShowLifestyle(v => !v),
         },
       ],
@@ -499,7 +499,7 @@ export default function ProfileScreen() {
       ],
     },
     {
-      title: 'Compte',
+      title: 'Account',
       items: [
         {
           icon:    'person-circle-outline',
@@ -569,37 +569,37 @@ export default function ProfileScreen() {
         {/* ── Lifestyle inline section ── */}
         {showLifestyle && (
           <View style={s.lifestyleSection}>
-            <Text style={s.sectionTitle}>Mode de vie</Text>
+            <Text style={s.sectionTitle}>Lifestyle</Text>
 
-            <Text style={s.lsLabel}>Niveau de stress</Text>
+            <Text style={s.lsLabel}>Stress level</Text>
             <View style={s.lsRow}>
               {(['low','medium','high','variable'] as const).map(v => (
                 <Pressable key={v} style={[s.lsChip, lsStress === v && { backgroundColor: C.accent }]} onPress={() => setLsStress(v)}>
-                  <Text style={[s.lsChipTxt, lsStress === v && { color: '#fff' }]}>{v === 'low' ? 'Bas' : v === 'medium' ? 'Moyen' : v === 'high' ? 'Élevé' : 'Variable'}</Text>
+                  <Text style={[s.lsChipTxt, lsStress === v && { color: '#fff' }]}>{v === 'low' ? 'Low' : v === 'medium' ? 'Medium' : v === 'high' ? 'High' : 'Variable'}</Text>
                 </Pressable>
               ))}
             </View>
 
-            <Text style={s.lsLabel}>Exercice</Text>
+            <Text style={s.lsLabel}>Exercise</Text>
             <View style={s.lsRow}>
               {(['none','light','moderate','heavy'] as const).map(v => (
                 <Pressable key={v} style={[s.lsChip, lsExercise === v && { backgroundColor: C.accent }]} onPress={() => setLsExercise(v)}>
-                  <Text style={[s.lsChipTxt, lsExercise === v && { color: '#fff' }]}>{v === 'none' ? 'Aucun' : v === 'light' ? 'Léger' : v === 'moderate' ? 'Modéré' : 'Intense'}</Text>
+                  <Text style={[s.lsChipTxt, lsExercise === v && { color: '#fff' }]}>{v === 'none' ? 'None' : v === 'light' ? 'Light' : v === 'moderate' ? 'Moderate' : 'Intense'}</Text>
                 </Pressable>
               ))}
             </View>
 
-            <Text style={s.lsLabel}>Alcool</Text>
+            <Text style={s.lsLabel}>Alcohol</Text>
             <View style={s.lsRow}>
               {(['none','occasional','regular'] as const).map(v => (
                 <Pressable key={v} style={[s.lsChip, lsAlcohol === v && { backgroundColor: C.accent }]} onPress={() => setLsAlcohol(v)}>
-                  <Text style={[s.lsChipTxt, lsAlcohol === v && { color: '#fff' }]}>{v === 'none' ? 'Aucun' : v === 'occasional' ? 'Occasionnel' : 'Régulier'}</Text>
+                  <Text style={[s.lsChipTxt, lsAlcohol === v && { color: '#fff' }]}>{v === 'none' ? 'None' : v === 'occasional' ? 'Occasional' : 'Regular'}</Text>
                 </Pressable>
               ))}
             </View>
 
             <Pressable style={s.lsSaveBtn} onPress={() => { HapticsLight(); void handleSaveLifestyle(); }} disabled={lsSaving}>
-              <Text style={s.lsSaveTxt}>{lsSaving ? 'Sauvegarde…' : 'Enregistrer'}</Text>
+              <Text style={s.lsSaveTxt}>{lsSaving ? 'Saving…' : 'Save'}</Text>
             </Pressable>
           </View>
         )}

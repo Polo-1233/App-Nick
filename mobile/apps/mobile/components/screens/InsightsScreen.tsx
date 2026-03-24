@@ -3,8 +3,8 @@
  *
  * Structure (spec 1.3) :
  *   1. Rhythm Flow — grand nombre de jours + phrase R-Lo
- *   2. Cette semaine — 7 dots (vert/ambre/gris), phrase contextuelle
- *   3. [En savoir plus ↓] — section expandable avec détails en phrases
+ *   2. This week — 7 dots (vert/ambre/gris), phrase contextuelle
+ *   3. [Learn more ↓] — section expandable avec détails en phrases
  *
  * Principes :
  *   - Pas de score numérique brut visible
@@ -88,10 +88,10 @@ function getAlignedCount(dots: Array<'green' | 'amber' | 'grey'>): number {
 }
 
 function getWeekMessage(aligned: number, total: number): string {
-  if (aligned === total) return 'Semaine parfaite. Ton rythme est solide.';
-  if (aligned >= 5) return `${aligned}/7 jours alignés. En bonne voie.`;
-  if (aligned >= 3) return `${aligned}/7 jours alignés. Le rythme se construit.`;
-  return `${aligned}/7 jours. Chaque cycle compte — continue.`;
+  if (aligned === total) return 'Perfect week. Your rhythm is rock solid.';
+  if (aligned >= 5) return `${aligned}/7 days aligned. On track.`;
+  if (aligned >= 3) return `${aligned}/7 days aligned. Building your rhythm.`;
+  return `${aligned}/7 days. Every cycle counts — keep going.`;
 }
 
 // ─── 7 Dots semaine ───────────────────────────────────────────────────────────
@@ -145,13 +145,13 @@ function ExpandableDetails({
   const consist    = consistencyLabel(consistPct);
   const balanceAbs = Math.abs(insights.rhythmBalance);
   const balanceTxt = insights.rhythmBalance >= 0
-    ? `${insights.rhythmBalance} cycle${insights.rhythmBalance !== 1 ? 's' : ''} d'avance sur l'objectif`
+    ? `${insights.rhythmBalance} cycle${insights.rhythmBalance !== 1 ? 's' : ''} d'avance of l'target`
     : `${balanceAbs} cycle${balanceAbs !== 1 ? 's' : ''} à récupérer — un coucher tôt ce soir suffit`;
 
   return (
     <View style={ed.wrap}>
       <Pressable onPress={toggle} style={ed.toggle}>
-        <Text style={ed.toggleLabel}>{open ? 'Moins de détails ↑' : 'En savoir plus ↓'}</Text>
+        <Text style={ed.toggleLabel}>{open ? 'Less detail ↑' : 'Learn more ↓'}</Text>
       </Pressable>
 
       {open && (
@@ -159,20 +159,20 @@ function ExpandableDetails({
           <View style={ed.row}>
             <Ionicons name="moon-outline" size={14} color={C.accent} />
             <Text style={ed.txt}>
-              <Text style={ed.bold}>Cycles cette semaine :</Text>{' '}
-              {insights.weeklyCycles} sur {insights.weeklyTarget} objectif
+              <Text style={ed.bold}>Cycles this week :</Text>{' '}
+              {insights.weeklyCycles} of {insights.weeklyTarget} target
             </Text>
           </View>
           <View style={ed.row}>
             <Ionicons name="sync-outline" size={14} color={C.accent} />
             <Text style={ed.txt}>
-              <Text style={ed.bold}>Consistance :</Text> {consist}
+              <Text style={ed.bold}>Consistency:</Text> {consist}
             </Text>
           </View>
           <View style={ed.row}>
             <Ionicons name="trending-up-outline" size={14} color={C.accent} />
             <Text style={ed.txt}>
-              <Text style={ed.bold}>Rythme :</Text> {balanceTxt}
+              <Text style={ed.bold}>Rhythm:</Text> {balanceTxt}
             </Text>
           </View>
         </View>
@@ -197,7 +197,7 @@ function EmptyState() {
   return (
     <View style={s.emptyState}>
       <MascotImage emotion="Reflexion" size="md" />
-      <Text style={s.emptyTitle}>Ton rythme se construit</Text>
+      <Text style={s.emptyTitle}>Your rhythm is building</Text>
       <Text style={s.emptySub}>
         {"R-Lo a besoin de quelques nuits pour calculer ton Rhythm Flow.\n\nCommence par loguer ta première nuit ou connecte un wearable."}
       </Text>
@@ -287,7 +287,7 @@ export default function InsightsScreen() {
         <View style={s.flowCard}>
           <Text style={s.flowLabel}>Rhythm Flow</Text>
           <Text style={s.flowNumber}>{flowDays}</Text>
-          <Text style={s.flowSub}>jours de rythme</Text>
+          <Text style={s.flowSub}>rhythm days</Text>
 
           {/* Phrase R-Lo */}
           <View style={s.rloRow}>
@@ -298,9 +298,9 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        {/* ── 2. Cette semaine ── */}
+        {/* ── 2. This week ── */}
         <View style={s.weekCard}>
-          <Text style={s.sectionLabel}>Cette semaine</Text>
+          <Text style={s.sectionLabel}>This week</Text>
           <WeekDots dots={dots} />
           <Text style={s.weekMsg}>{weekMsg}</Text>
 
@@ -308,7 +308,7 @@ export default function InsightsScreen() {
           {weekSummary?.on_track !== null && weekSummary && (
             <View style={[s.badge, { backgroundColor: weekSummary.on_track ? `${C.success}20` : `${C.rhythmLow}20` }]}>
               <Text style={[s.badgeText, { color: weekSummary.on_track ? C.success : C.rhythmLow }]}>
-                {weekSummary.on_track ? 'En rythme' : 'En construction'}
+                {weekSummary.on_track ? 'On track' : 'Building'}
               </Text>
             </View>
           )}
@@ -343,7 +343,7 @@ const s = StyleSheet.create({
   rloAvatar:  { width: 32, height: 32, borderRadius: 16, overflow: 'hidden' },
   rloMsg:     { flex: 1, fontSize: 13, color: C.text, lineHeight: 19 },
 
-  // Cette semaine card
+  // This week card
   weekCard:    { backgroundColor: C.card, borderRadius: 20, padding: 20, marginBottom: 14 },
   sectionLabel:{ fontSize: 12, fontWeight: '700', color: C.textMuted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 },
   weekMsg:     { fontSize: 14, color: C.textSub, marginTop: 14, lineHeight: 20, textAlign: 'center' },

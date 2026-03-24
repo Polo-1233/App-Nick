@@ -140,8 +140,8 @@ export async function scheduleN5MissedCycle(
     await Notifications.scheduleNotificationAsync({
       identifier: MISSED_CYCLE_ID,
       content: {
-        title: 'Pas de stress 🌙',
-        body:  `Ta prochaine fenêtre est à ${nextWindowTime}. ${cyclesRemaining} cycles, c'est très bien.`,
+        title: 'No stress 🌙',
+        body:  `Your next window is at ${nextWindowTime}. ${cyclesRemaining} cycles — that's great.`,
         data:  { type: 'missed_cycle', route: '/(tabs)' },
       },
       trigger: {

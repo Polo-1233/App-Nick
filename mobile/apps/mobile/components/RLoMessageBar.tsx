@@ -37,7 +37,7 @@ export const RLoMessageBar = memo(function RLoMessageBar({
 
       <View style={rl.content}>
         <Text style={rl.text} numberOfLines={2}>{text}</Text>
-        <Text style={rl.cta}>Discuter avec R-Lo →</Text>
+        <Text style={rl.cta}>Chat with R-Lo →</Text>
       </View>
 
       <Ionicons name="chevron-forward" size={14} color={MUTED} />

@@ -35,11 +35,11 @@ const MUTED  = '#6B8CAE';
 type WindDownPhase = 'intro' | 'checklist' | 'content' | 'goodnight';
 
 const CHECKLIST = [
-  { id: 'lights',   label: 'Lumière tamisée ?' },
-  { id: 'cool',     label: 'Pièce fraîche ?' },
-  { id: 'caffeine', label: 'Plus de caféine ?' },
-  { id: 'screens',  label: 'Écrans en mode nuit ?' },
-  { id: 'ready',    label: 'Prêt pour le sommeil ?' },
+  { id: 'lights',   label: 'Lights dimmed?' },
+  { id: 'cool',     label: 'Room is cool?' },
+  { id: 'caffeine', label: 'No more caffeine?' },
+  { id: 'screens',  label: 'Screens on night mode?' },
+  { id: 'ready',    label: 'Ready to sleep?' },
 ];
 
 // ─── Phase 1 — Intro ──────────────────────────────────────────────────────────
@@ -52,8 +52,8 @@ function IntroPhase({ onNext }: { onNext: () => void }) {
   return (
     <Pressable style={ph.wrap} onPress={onNext}>
       <MascotImage emotion="rassurante" size="md" />
-      <Text style={ph.title}>Ton wind-down commence.</Text>
-      <Text style={ph.sub}>Prépare-toi pour une bonne nuit.</Text>
+      <Text style={ph.title}>Your wind-down starts now.</Text>
+      <Text style={ph.sub}>Prepare for a good night.</Text>
     </Pressable>
   );
 }
@@ -84,7 +84,7 @@ function ChecklistPhase({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 
   return (
     <View style={ph.wrap}>
-      <Text style={ph.title}>Prépare ton environnement</Text>
+      <Text style={ph.title}>Set up your space</Text>
       <View style={cl.list}>
         {CHECKLIST.map((item, i) => (
           <Pressable key={item.id} onPress={() => toggle(item.id, i)}>
@@ -153,12 +153,12 @@ function ContentPhase({
         await addPoints(POINTS.WINDDOWN_START, 'winddown_start').catch(() => {});
         setPlaying(true);
       }}>
-        <Text style={ph.mainBtnTxt}>Écouter →</Text>
+        <Text style={ph.mainBtnTxt}>Listen →</Text>
       </Pressable>
       <Pressable style={ph.skipBtn} onPress={() => {
         getNextContent('winddown', isPremium).then(c => setContent(c));
       }}>
-        <Text style={ph.skipTxt}>Autre chose</Text>
+        <Text style={ph.skipTxt}>Something else</Text>
       </Pressable>
     </View>
   );
@@ -174,8 +174,8 @@ function GoodnightPhase({ onClose }: { onClose: () => void }) {
     <Pressable style={gn.wrap} onPress={onClose}>
       <Animated.View style={[gn.content, { opacity }]}>
         <MascotImage emotion="rassurante" size="sm" />
-        <Text style={gn.text}>Fenêtre de sommeil ouverte.</Text>
-        <Text style={gn.sub}>Bonne nuit.</Text>
+        <Text style={gn.text}>Sleep window open.</Text>
+        <Text style={gn.sub}>Good night.</Text>
       </Animated.View>
     </Pressable>
   );

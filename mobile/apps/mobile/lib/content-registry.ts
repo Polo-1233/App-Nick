@@ -27,8 +27,8 @@ export interface ContentItem {
 export const MRM_CONTENT: ContentItem[] = [
   {
     id:          'mrm-breathing-box',
-    title:       'Respiration carrée',
-    description: 'Inspire, retiens, expire, retiens. 2 minutes.',
+    title:       'Box breathing',
+    description: 'Inhale, hold, exhale, hold. 2 minutes.',
     duration:    120,
     category:    'mrm',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -37,8 +37,8 @@ export const MRM_CONTENT: ContentItem[] = [
   },
   {
     id:          'mrm-breathing-478',
-    title:       'Respiration 4-7-8',
-    description: 'Technique de relaxation rapide. 2 minutes.',
+    title:       '4-7-8 Breathing',
+    description: 'Quick relaxation technique. 2 minutes.',
     duration:    120,
     category:    'mrm',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -47,8 +47,8 @@ export const MRM_CONTENT: ContentItem[] = [
   },
   {
     id:          'mrm-breathing-calm',
-    title:       'Respiration lente',
-    description: 'Retour au calme progressif. 3 minutes.',
+    title:       'Slow breathing',
+    description: 'Progressive calm. 3 minutes.',
     duration:    180,
     category:    'mrm',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -57,8 +57,8 @@ export const MRM_CONTENT: ContentItem[] = [
   },
   {
     id:          'mrm-stretch-neck',
-    title:       'Étirement cou & épaules',
-    description: 'Relâche les tensions du haut du corps. 2 minutes.',
+    title:       'Neck & shoulder stretch',
+    description: 'Release upper body tension. 2 minutes.',
     duration:    120,
     category:    'mrm',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -67,8 +67,8 @@ export const MRM_CONTENT: ContentItem[] = [
   },
   {
     id:          'mrm-eyes-rest',
-    title:       'Repos visuel',
-    description: 'Repos des yeux et détente mentale. 2 minutes.',
+    title:       'Visual rest',
+    description: 'Eye rest and mental relaxation. 2 minutes.',
     duration:    120,
     category:    'mrm',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -82,8 +82,8 @@ export const MRM_CONTENT: ContentItem[] = [
 export const CRP_CONTENT: ContentItem[] = [
   {
     id:          'crp-meditation-body',
-    title:       'Body scan guidé',
-    description: 'Exploration corporelle complète. 20 minutes.',
+    title:       'Guided body scan',
+    description: 'Full body exploration. 20 minutes.',
     duration:    1200,
     category:    'crp',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -92,8 +92,8 @@ export const CRP_CONTENT: ContentItem[] = [
   },
   {
     id:          'crp-meditation-breath',
-    title:       'Méditation respiration',
-    description: 'Ancrage par la respiration. 20 minutes.',
+    title:       'Breath meditation',
+    description: 'Breath-anchored meditation. 20 minutes.',
     duration:    1200,
     category:    'crp',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -112,8 +112,8 @@ export const CRP_CONTENT: ContentItem[] = [
   },
   {
     id:          'crp-relaxation-progressive',
-    title:       'Relaxation progressive',
-    description: 'Relâchement musculaire guidé. 15 minutes.',
+    title:       'Progressive relaxation',
+    description: 'Guided muscle relaxation. 15 minutes.',
     duration:    900,
     category:    'crp',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -122,8 +122,8 @@ export const CRP_CONTENT: ContentItem[] = [
   },
   {
     id:          'crp-meditation-nature',
-    title:       'Méditation nature',
-    description: 'Sons naturels + guidage vocal. 20 minutes.',
+    title:       'Nature meditation',
+    description: 'Nature sounds + guided voice. 20 minutes.',
     duration:    1200,
     category:    'crp',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -137,8 +137,8 @@ export const CRP_CONTENT: ContentItem[] = [
 export const WINDDOWN_CONTENT: ContentItem[] = [
   {
     id:          'wd-story-forest',
-    title:       'Forêt nocturne',
-    description: 'Une promenade dans une forêt calme. 12 minutes.',
+    title:       'Night forest',
+    description: 'A walk through a calm forest. 12 minutes.',
     duration:    720,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -147,8 +147,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-story-ocean',
-    title:       'Bord de mer',
-    description: 'Les vagues et le sable. 15 minutes.',
+    title:       'Seaside',
+    description: 'Waves and sand. 15 minutes.',
     duration:    900,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -157,8 +157,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-story-train',
-    title:       'Voyage en train',
-    description: 'Le rythme apaisant du train. 12 minutes.',
+    title:       'Train journey',
+    description: 'The soothing rhythm of a train. 12 minutes.',
     duration:    720,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -167,8 +167,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-breathing-presleep',
-    title:       'Respiration pré-sommeil',
-    description: 'Préparation physiologique au sommeil. 10 minutes.',
+    title:       'Pre-sleep breathing',
+    description: 'Physiological sleep preparation. 10 minutes.',
     duration:    600,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -177,8 +177,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-breathing-progressive',
-    title:       'Relaxation progressive',
-    description: 'Du corps vers le sommeil. 8 minutes.',
+    title:       'Progressive relaxation',
+    description: 'From body to sleep. 8 minutes.',
     duration:    480,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -187,8 +187,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-soundscape-rain',
-    title:       'Pluie douce',
-    description: 'Ambiance sonore relaxante. 30 minutes.',
+    title:       'Gentle rain',
+    description: 'Relaxing soundscape. 30 minutes.',
     duration:    1800,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -197,8 +197,8 @@ export const WINDDOWN_CONTENT: ContentItem[] = [
   },
   {
     id:          'wd-soundscape-night',
-    title:       'Nuit calme',
-    description: 'Sons de la nuit. 30 minutes.',
+    title:       'Calm night',
+    description: 'Sounds of the night. 30 minutes.',
     duration:    1800,
     category:    'winddown',
     // eslint-disable-next-line @typescript-eslint/no-require-imports

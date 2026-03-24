@@ -48,8 +48,8 @@ function buildDisplay(
   // Missed cycle takes priority
   if (missedCycle?.missed) {
     return {
-      title:      'Prochaine fenêtre',
-      subtitle:   `${missedCycle.nextWindow} — ${missedCycle.cyclesRemaining} cycles, c'est très bien pour cette nuit.`,
+      title:      'Next window',
+      subtitle:   `${missedCycle.nextWindow} — ${missedCycle.cyclesRemaining} cycles — still a great night.`,
       icon:       'moon-outline',
       iconColor:  ACCENT,
       urgent:     false,
@@ -59,7 +59,7 @@ function buildDisplay(
 
   if (!action) {
     return {
-      title:      'Ton rythme est en place',
+      title:      'Your rhythm is on track',
       subtitle:   'Bonne nuit.',
       icon:       'checkmark-circle-outline',
       iconColor:  ACCENT,
@@ -75,8 +75,8 @@ function buildDisplay(
   switch (action.type) {
     case 'wake_up':
       return {
-        title:       'Confirmer ton réveil',
-        subtitle:    action.description || 'Tape pour confirmer (+5)',
+        title:       'Confirm your wake-up',
+        subtitle:    action.description || 'Tap to confirm (+5)',
         icon:        'sunny-outline',
         iconColor:   GOLD,
         urgent:      false,
@@ -87,7 +87,7 @@ function buildDisplay(
     case 'take_crp':
       return {
         title:       action.title,
-        subtitle:    `CRP${diffStr} — 20 min de récupération`,
+        subtitle:    `CRP${diffStr} — 20 min recovery`,
         icon:        'flash-outline',
         iconColor:   GOLD,
         urgent:      diff !== null && diff < 15,
@@ -97,8 +97,8 @@ function buildDisplay(
 
     case 'crp_reminder':
       return {
-        title:       'Récupération maintenant',
-        subtitle:    '20 min — fenêtre ouverte',
+        title:       'Recovery now',
+        subtitle:    '20 min — window open',
         icon:        'flash',
         iconColor:   GOLD,
         urgent:      true,

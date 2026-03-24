@@ -49,10 +49,10 @@ export default function CrpPlayerScreen() {
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
         <View style={s.doneWrap}>
           <MascotImage emotion="Fiere" size="md" />
-          <Text style={s.doneTitle}>Belle récupération.</Text>
+          <Text style={s.doneTitle}>Great recovery.</Text>
           <Text style={s.doneSub}>+{POINTS.CRP_COMPLETE} Rhythm Points ✦</Text>
           <Pressable style={[s.closeBtn, { backgroundColor: GOLD }]} onPress={() => router.back()}>
-            <Text style={s.closeTxt}>Fermer</Text>
+            <Text style={s.closeTxt}>Close</Text>
           </Pressable>
         </View>
       </SafeAreaView>

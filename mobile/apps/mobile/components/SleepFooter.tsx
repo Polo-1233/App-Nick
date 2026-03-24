@@ -1,5 +1,5 @@
 /**
- * SleepFooter — "Ce soir : 23:00" toujours visible en bas
+ * SleepFooter — "Tonight: 23:00" toujours visible en bas
  *
  * Style discret, rappel passif de la fenêtre de sommeil.
  */
@@ -27,7 +27,7 @@ export const SleepFooter = memo(function SleepFooter({ bedtime }: SleepFooterPro
   return (
     <View style={sf.wrap}>
       <Ionicons name="moon-outline" size={12} color={ACCENT} />
-      <Text style={sf.text}>Ce soir : {fmt(bedtime)}</Text>
+      <Text style={sf.text}>Tonight: {fmt(bedtime)}</Text>
     </View>
   );
 });

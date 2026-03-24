@@ -383,7 +383,7 @@ export default function HomeScreen() {
   const wakeTime    = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
   const blocks      = dayPlan?.blocks ?? [];
   const nextAction  = dayPlan?.nextAction ?? null;
-  const rloText     = dayPlan?.rloMessage?.text ?? (userName ? `Bon à te revoir, ${userName}.` : 'Ton rythme se calcule…');
+  const rloText     = dayPlan?.rloMessage?.text ?? (userName ? `Welcome back, ${userName}.` : 'Your rhythm is being calculated…');
   const missedCycle = getMissedCycleInfo(bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null);
 
   const handleActionPress = useCallback(() => {
@@ -505,7 +505,7 @@ export default function HomeScreen() {
           {/* Coach Insight card — max 1/jour */}
           {coachInsight && (
             <View style={{ backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10, gap: 10 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT, letterSpacing: 0.8 }}>💡 LE SAVAIS-TU ?</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT, letterSpacing: 0.8 }}>💡 DID YOU KNOW?</Text>
               <Text style={{ fontSize: 13, color: TEXT, lineHeight: 20 }}>{coachInsight.message}</Text>
               <Pressable
                 onPress={async () => {
@@ -514,7 +514,7 @@ export default function HomeScreen() {
                 }}
                 style={{ alignSelf: 'flex-start', backgroundColor: `${ACCENT}20`, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6 }}
               >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT }}>Compris ✓</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: ACCENT }}>Got it ✓</Text>
               </Pressable>
             </View>
           )}
@@ -530,9 +530,9 @@ export default function HomeScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#141466', borderRadius: 14, padding: 14, marginHorizontal: 20, marginTop: 10 }}>
                 <Text style={{ fontSize: 18 }}>📊</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT }}>Bilan de la semaine</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: TEXT }}>Weekly report</Text>
                   <Text style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
-                    {streak > 0 ? `Rhythm Flow : ${streak} jours` : 'Consulte tes Insights'}
+                    {streak > 0 ? `Rhythm Flow: ${streak} jours` : 'Check your Insights'}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={MUTED} />

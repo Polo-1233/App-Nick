@@ -55,10 +55,10 @@ export default function MrmPlayerScreen() {
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
         <View style={s.doneWrap}>
           <MascotImage emotion="Fiere" size="md" />
-          <Text style={s.doneTitle}>Pause terminée.</Text>
+          <Text style={s.doneTitle}>Break done.</Text>
           <Text style={s.doneSub}>+{POINTS.MRM_COMPLETE} Rhythm Points ✦</Text>
           <Pressable style={s.closeBtn} onPress={() => router.back()}>
-            <Text style={s.closeTxt}>Fermer</Text>
+            <Text style={s.closeTxt}>Close</Text>
           </Pressable>
         </View>
       </SafeAreaView>
