@@ -630,11 +630,11 @@ function InsightsShortcutCard({ onPress }: { onPress: () => void }) {
     <Pressable onPress={onPress} style={({ pressed }) => [is.card, pressed && is.pressed]}>
       <View style={is.left}>
         <View style={is.iconWrap}>
-          <Ionicons name="analytics-outline" size={18} color={ACCENT} />
+          <Ionicons name="book-outline" size={18} color={ACCENT} />
         </View>
         <View style={is.body}>
-          <Text style={is.title}>Your rhythm insights</Text>
-          <Text style={is.sub}>Flow days, weekly dots, trend analysis</Text>
+          <Text style={is.title}>Coach Insights</Text>
+          <Text style={is.sub}>Videos, programs & content library</Text>
         </View>
       </View>
       <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />

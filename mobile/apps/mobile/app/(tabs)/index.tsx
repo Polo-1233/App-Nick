@@ -30,7 +30,7 @@ import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
 import { useTour } from "../../lib/tour-context";
 import HomeScreen     from "../../components/screens/HomeScreen";
 import CalendarScreen from "../../components/screens/CalendarScreen";
-import InsightsScreen from "../../components/screens/InsightsScreen";
+import CoachInsightsScreen from "../../components/screens/CoachInsightsScreen";
 import ProfileScreen  from "../../components/screens/ProfileScreen";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -196,7 +196,7 @@ export default function PagerLayout() {
           <CalendarScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
-          <InsightsScreen />
+          <CoachInsightsScreen />
         </View>
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
@@ -244,9 +244,9 @@ export default function PagerLayout() {
         >
           <TabIcon anim={anim2} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
-            label="Insights"
+            label="Coach"
             showTourRing={tourStep === 2}
-            icon={<Ionicons name={activeIndex === 2 ? "stats-chart" : "stats-chart-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 2 ? "book" : "book-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
           />
         </Pressable>
 
