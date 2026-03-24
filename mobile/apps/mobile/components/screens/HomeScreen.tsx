@@ -271,13 +271,6 @@ export default function HomeScreen() {
             { paddingBottom: insets.bottom + 32 },
           ]}
         >
-          {/* 1. Header */}
-          <HomeHeader
-            streak={streak}
-            onAvatarPress={() => goToPage(3)}
-            onStreakPress={() => setShowStreakDetail(true)}
-          />
-
           {/* 2. Rhythm Timeline */}
           {/* 2. Timeline — next 3 cycles only, tap to open full clock */}
           <RhythmTimeline
