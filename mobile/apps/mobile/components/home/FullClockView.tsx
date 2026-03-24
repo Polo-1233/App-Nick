@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, Pressable, Animated, Dimensions,
+  View, Text, StyleSheet, Modal, Pressable, Animated, Dimensions, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons }     from '@expo/vector-icons';
@@ -62,8 +62,9 @@ interface FullClockViewProps {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPreference = 'morning' }: FullClockViewProps) {
-  const [data, setData] = useState(() => computeRhythmData(nowMin(), wakeMin, N));
-  const [time, setTime] = useState(() => fmtMin(nowMin()));
+  const [data,   setData]   = useState(() => computeRhythmData(nowMin(), wakeMin, N));
+  const [time,   setTime]   = useState(() => fmtMin(nowMin()));
+  const [layer,  setLayer]  = useState<'sleep' | 'energy' | 'recovery'>('energy');
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -137,10 +138,11 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
           </Pressable>
         </View>
 
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.clockWrap}>
           <View style={{ width: D, height: D }}>
 
-            {/* ═══ LAYER 1 — Base ring (very light) ═══ */}
+            {/* ═══ LAYER 1 — Base ring ═══ */}
             {Array.from({ length: N }, (_, i) => {
               const isSleep = i >= sleepStart;
               const midDeg  = i * SDEG;
@@ -148,6 +150,16 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
               const x = CX + R1 * Math.cos(midRad);
               const y = CY + R1 * Math.sin(midRad);
               const w = segW(R1);
+
+              // Sleep layer — highlight sleep segments
+              const sleepHighlight = layer === 'sleep' && isSleep;
+              // Recovery layer — highlight CRP segment
+              const seg = segments[i];
+              const recHighlight   = layer === 'recovery' && seg?.isCRP && !isSleep;
+
+              const baseOpacity = isSleep ? 0.12 : 0.08;
+              const opacity     = sleepHighlight ? 0.75 : recHighlight ? 0.80 : baseOpacity;
+              const color       = sleepHighlight ? NAVY : recHighlight ? '#D97706' : NAVY;
 
               return (
                 <View
@@ -157,8 +169,8 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                     width:           w,
                     height:          H1,
                     borderRadius:    H1 / 2,
-                    backgroundColor: isSleep ? NAVY : NAVY,
-                    opacity:         isSleep ? 0.12 : 0.08,
+                    backgroundColor: color,
+                    opacity,
                     left:            x - w / 2,
                     top:             y - H1 / 2,
                     transform:       [{ rotate: `${midDeg}deg` }],
@@ -167,12 +179,12 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
               );
             })}
 
-            {/* ═══ LAYER 2 — Energy ring (opacity only) ═══ */}
-            {Array.from({ length: N }, (_, i) => {
+            {/* ═══ LAYER 2 — Energy ring (visible only on 'energy' layer) ═══ */}
+            {layer === 'energy' && Array.from({ length: N }, (_, i) => {
               const isSleep = i >= sleepStart;
               if (isSleep) return null;
               const energy  = energyMap[i];
-              const opacity = energy?.level === 'high' ? 0.50
+              const opacity = energy?.level === 'high' ? 0.55
                 : energy?.level === 'neutral'          ? 0.28
                 : 0.10;
               const midDeg = i * SDEG;
@@ -234,6 +246,41 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
           </View>
         </View>
 
+        {/* ── Layer selector ── */}
+        <View style={s.layerBar}>
+          {([
+            { id: 'energy',   icon: 'flash-outline',   label: 'Energy'   },
+            { id: 'sleep',    icon: 'moon-outline',    label: 'Sleep'    },
+            { id: 'recovery', icon: 'fitness-outline', label: 'Recovery' },
+          ] as const).map(({ id, icon, label }) => {
+            const on = layer === id;
+            return (
+              <Pressable
+                key={id}
+                onPress={() => setLayer(id)}
+                style={[s.chip, on && s.chipOn]}
+              >
+                <Ionicons name={icon} size={14} color={on ? '#FFFFFF' : TEXT_M} />
+                <Text style={[s.chipLabel, on && s.chipLabelOn]}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* ── Layer description ── */}
+        <View style={s.desc}>
+          {layer === 'energy' && (
+            <Text style={s.descText}>Inner ring shows your energy level across 90-min cycles. Brighter = higher energy.</Text>
+          )}
+          {layer === 'sleep' && (
+            <Text style={s.descText}>Highlighted segments = your {idealCycles} planned sleep cycles tonight.</Text>
+          )}
+          {layer === 'recovery' && (
+            <Text style={s.descText}>Your CRP recovery window — the best moment to rest during the day.</Text>
+          )}
+        </View>
+
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
@@ -244,7 +291,17 @@ const s = StyleSheet.create({
   root:      { flex: 1, backgroundColor: BG },
   header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
   title:     { fontSize: 18, fontWeight: '700', color: TEXT_D },
+  scroll:    { alignItems: 'center', paddingBottom: 48 },
   clockWrap: { alignItems: 'center', marginTop: 20 },
+
+  // Panel
+  layerBar:     { flexDirection: 'row', gap: 10, marginTop: 28, justifyContent: 'center' },
+  chip:         { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 24, backgroundColor: 'rgba(20,20,102,0.07)', borderWidth: 1, borderColor: 'rgba(20,20,102,0.10)' },
+  chipOn:       { backgroundColor: CYAN, borderColor: CYAN },
+  chipLabel:    { fontSize: 13, fontWeight: '600', color: TEXT_M },
+  chipLabelOn:  { color: '#FFFFFF' },
+  desc:         { marginTop: 16, paddingHorizontal: 32 },
+  descText:     { fontSize: 13, color: TEXT_M, textAlign: 'center', lineHeight: 20 },
 
   cursorPulse: {
     position:        'absolute',
