@@ -1,42 +1,27 @@
 /**
  * SleepFooter
  *
- * Passive reminder of tonight's sleep window.
- * Minimal presence — does not compete with the Action Card.
- *
- * "🌙 23:00"
+ * Discreet tonight's sleep window indicator.
+ * "🌙 Tonight: 23:00"
+ * Small, low opacity, at the bottom.
  */
 
 import { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { fmtMin } from '../../lib/time-utils';
 
-const TEXT_PRIMARY = '#002060';
-
-interface SleepFooterProps {
-  bedtime: number | null; // minutes since midnight
-}
+interface SleepFooterProps { bedtime: number | null }
 
 export const SleepFooter = memo(function SleepFooter({ bedtime }: SleepFooterProps) {
   if (bedtime === null) return null;
-
   return (
-    <View style={sf.wrap}>
-      <Text style={sf.text}>🌙 {fmtMin(bedtime)}</Text>
+    <View style={s.wrap}>
+      <Text style={s.text}>🌙  Tonight: {fmtMin(bedtime)}</Text>
     </View>
   );
 });
 
-const sf = StyleSheet.create({
-  wrap: {
-    alignItems:  'center',
-    paddingBottom: 24,
-    paddingTop:    12,
-  },
-  text: {
-    fontSize:  14,
-    color:     TEXT_PRIMARY,
-    opacity:   0.5,
-    lineHeight: 20,
-  },
+const s = StyleSheet.create({
+  wrap: { alignItems: 'center', paddingVertical: 20 },
+  text: { fontSize: 13, color: '#002060', opacity: 0.45, letterSpacing: 0.2 },
 });

@@ -1,123 +1,122 @@
 /**
- * ActionCard — dominant UI element on HomeScreen
+ * PrimaryActionCard (ActionCard)
  *
- * Hierarchy:
- *   1. Dynamic title    — large, tells the user WHAT to do
- *   2. Subtitle         — optional context (small, muted)
- *   3. ONE CTA button   — full-width, blue, 48px
+ * The most dominant card on the screen.
+ * Matches reference: rich blue card with icon + text block + right-side CTA button.
+ *
+ * Layout:
+ *   [Icon]  [Title / Subtitle]  [CTA button]
  *
  * Rules:
- *   - Never more than 1 button
- *   - Title changes based on next action
- *   - Press triggers micro scale animation (0.97 → 1)
+ *   - ONE action only, never two buttons
+ *   - Button on the right (pill shape)
+ *   - Icon on the left (color-coded circle)
+ *   - Scale animation on press (0.97 → 1)
  */
 
 import { useRef, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NextAction } from '@r90/types';
 import { nowMin } from '../../lib/time-utils';
 import type { MissedCycleInfo } from '../../lib/missed-cycle';
 
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const TEXT_PRIMARY = '#002060';
-const TEXT_MUTED   = '#6B7A90';
-const ACCENT       = '#1c9fda';
-const GOLD         = '#F5A623';
+// ─── Tokens ─────────────────────────────────────────────────────────────────────
+const DEEP   = '#141466';
+const ACCENT = '#1c9fda';
+const GOLD   = '#F5A623';
+const WHITE  = '#FFFFFF';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────────
 interface ActionCardProps {
   action:       NextAction | null;
   missedCycle?: MissedCycleInfo | null;
   onPress:      () => void;
 }
 
-interface DisplayData {
-  title:    string;
-  subtitle: string;
-  cta:      string | null;   // null = no button
+interface Display {
+  icon:      string;
+  iconColor: string;
+  title:     string;
+  subtitle:  string;
+  cta:       string | null;
 }
 
-// ─── Build display data from action ────────────────────────────────────────────
-function buildDisplay(
+// ─── Build display data ──────────────────────────────────────────────────────────
+function build(
   action:      NextAction | null,
   now:         number,
   missedCycle?: MissedCycleInfo | null,
-): DisplayData {
+): Display {
 
-  // Missed window takes priority
   if (missedCycle?.missed) {
     return {
+      icon: 'moon-outline', iconColor: ACCENT,
       title:    `Next window: ${missedCycle.nextWindow}`,
       subtitle: `${missedCycle.cyclesRemaining} cycles — still a good night.`,
       cta:      null,
     };
   }
 
-  // No action — rhythm is on track
   if (!action) {
     return {
+      icon: 'checkmark-circle-outline', iconColor: '#4ADE80',
       title:    'Your rhythm is on track',
-      subtitle: '',
+      subtitle: 'Rest and stay consistent.',
       cta:      null,
     };
   }
 
-  const diff   = action.scheduledAt !== undefined ? action.scheduledAt - now : null;
-  const inMin  = diff !== null && diff > 0 ? ` in ${diff} min` : '';
+  const diff  = action.scheduledAt !== undefined ? action.scheduledAt - now : null;
+  const inMin = diff !== null && diff > 0 ? ` in ${diff} min` : '';
 
   switch (action.type) {
     case 'wake_up':
       return {
-        title:    'Confirm your wake-up',
-        subtitle: 'Log your night to track your rhythm.',
-        cta:      'Confirm (+5)',
+        icon: 'sunny-outline', iconColor: GOLD,
+        title: 'Confirm your wake-up',
+        subtitle: 'Tap to log your night.',
+        cta: 'Confirm (+5)',
       };
-
     case 'take_mrm':
     case 'mrm_reminder':
       return {
-        title:    `Reset${inMin}`,
+        icon: 'flash-outline', iconColor: ACCENT,
+        title: `Reset${inMin}`,
         subtitle: '2-minute breathing break.',
-        cta:      'Start',
+        cta: 'Start →',
       };
-
     case 'take_crp':
       return {
-        title:    `Recovery${inMin}`,
-        subtitle: '20-min window — essential today.',
-        cta:      'Start',
+        icon: 'flash-outline', iconColor: GOLD,
+        title: `Recovery time`,
+        subtitle: `CRP${inMin} — 20 min recovery`,
+        cta: 'Start →',
       };
-
     case 'crp_reminder':
       return {
-        title:    'Recovery now',
+        icon: 'flash', iconColor: GOLD,
+        title: 'Recovery now',
         subtitle: 'Your 20-min window is open.',
-        cta:      'Start',
+        cta: 'Start →',
       };
-
     case 'start_pre_sleep':
       return {
-        title:    `Wind-down${inMin}`,
+        icon: 'moon-outline', iconColor: ACCENT,
+        title: `Wind-down${inMin}`,
         subtitle: 'Start stepping away from screens.',
-        cta:      diff !== null && diff <= 0 ? 'Start' : null,
+        cta: diff !== null && diff <= 0 ? 'Start →' : null,
       };
-
     case 'go_to_sleep':
       return {
-        title:    'Sleep window open',
+        icon: 'bed-outline', iconColor: ACCENT,
+        title: 'Sleep window open',
         subtitle: 'Your body is ready.',
-        cta:      null,
+        cta: null,
       };
-
-    case 'anchor_reminder':
-      return {
-        title:    action.title,
-        subtitle: action.description ?? '',
-        cta:      null,
-      };
-
     default:
       return {
+        icon: 'navigate-circle-outline', iconColor: ACCENT,
         title:    action.title,
         subtitle: action.description ?? '',
         cta:      null,
@@ -125,16 +124,14 @@ function buildDisplay(
   }
 }
 
-// ─── Component ─────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────────
 export const ActionCard = memo(function ActionCard({
   action, missedCycle, onPress,
 }: ActionCardProps) {
-  const now   = nowMin();
-  const disp  = buildDisplay(action, now, missedCycle);
+  const disp  = build(action, nowMin(), missedCycle);
   const scale = useRef(new Animated.Value(1)).current;
 
   function handlePress() {
-    // Micro scale feedback: 0.97 → 1
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.97, duration: 80,  useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1.00, duration: 120, useNativeDriver: true }),
@@ -142,25 +139,25 @@ export const ActionCard = memo(function ActionCard({
   }
 
   return (
-    <Pressable
-      onPress={handlePress}
-      accessible
-      accessibilityRole="button"
-      accessibilityLabel={disp.title}
-    >
+    <Pressable onPress={handlePress} accessibilityRole="button" accessibilityLabel={disp.title}>
       <Animated.View style={[ac.card, { transform: [{ scale }] }]}>
 
-        {/* Title */}
-        <Text style={ac.title}>{disp.title}</Text>
+        {/* Icon circle */}
+        <View style={[ac.iconWrap, { backgroundColor: `${disp.iconColor}22` }]}>
+          <Ionicons name={disp.icon as any} size={22} color={disp.iconColor} />
+        </View>
 
-        {/* Subtitle */}
-        {!!disp.subtitle && (
-          <Text style={ac.subtitle}>{disp.subtitle}</Text>
-        )}
+        {/* Text block */}
+        <View style={ac.body}>
+          <Text style={ac.title} numberOfLines={1}>{disp.title}</Text>
+          {!!disp.subtitle && (
+            <Text style={ac.subtitle} numberOfLines={2}>{disp.subtitle}</Text>
+          )}
+        </View>
 
-        {/* CTA — only 1, only if needed */}
+        {/* CTA — right side pill */}
         {disp.cta !== null && (
-          <View style={ac.cta}>
+          <View style={ac.ctaPill}>
             <Text style={ac.ctaLabel}>{disp.cta}</Text>
           </View>
         )}
@@ -170,44 +167,54 @@ export const ActionCard = memo(function ActionCard({
   );
 });
 
-// ─── Styles ─────────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────────
 const ac = StyleSheet.create({
   card: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             14,
     marginHorizontal: 20,
-    marginTop:        24,
-    padding:          20,
-    borderRadius:     20,
-    backgroundColor:  '#FFFFFF',
-    // Soft shadow
-    shadowColor:      '#000000',
+    marginTop:        16,
+    padding:          18,
+    borderRadius:     18,
+    backgroundColor:  DEEP,
+    shadowColor:      DEEP,
     shadowOffset:     { width: 0, height: 4 },
-    shadowOpacity:    0.06,
-    shadowRadius:     20,
-    elevation:        3,
+    shadowOpacity:    0.15,
+    shadowRadius:     16,
+    elevation:        4,
+  },
+  iconWrap: {
+    width:          46,
+    height:         46,
+    borderRadius:   14,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  body: {
+    flex: 1,
+    gap:  3,
   },
   title: {
-    fontSize:   20,
-    fontWeight: '600',
-    color:      TEXT_PRIMARY,
-    lineHeight: 26,
-  },
-  subtitle: {
-    marginTop:  6,
-    fontSize:   14,
-    color:      TEXT_MUTED,
+    fontSize:   15,
+    fontWeight: '700',
+    color:      WHITE,
     lineHeight: 20,
   },
-  cta: {
-    marginTop:       16,
-    height:          48,
-    borderRadius:    14,
+  subtitle: {
+    fontSize:  13,
+    color:     'rgba(255,255,255,0.65)',
+    lineHeight: 18,
+  },
+  ctaPill: {
     backgroundColor: ACCENT,
-    alignItems:      'center',
-    justifyContent:  'center',
+    borderRadius:    20,
+    paddingHorizontal: 14,
+    paddingVertical:    8,
   },
   ctaLabel: {
-    color:      '#FFFFFF',
-    fontSize:   16,
-    fontWeight: '600',
+    fontSize:   13,
+    fontWeight: '700',
+    color:      WHITE,
   },
 });

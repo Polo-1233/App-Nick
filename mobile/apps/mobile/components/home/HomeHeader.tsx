@@ -1,60 +1,60 @@
 /**
  * HomeHeader
  *
- * Left  — current time (updates every 30s)
- * Right — optional streak badge + profile avatar
+ * Layout: time (left) · streak pill (center) · avatar (right)
+ * Height: 60px, horizontal padding: 20px
  */
 
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const TEXT    = '#002060';
 const ACCENT  = '#1c9fda';
-const AVATAR_BG = '#EAF4FB';
+const DEEP    = '#141466';
+const TEXT    = '#002060';
 
 interface HomeHeaderProps {
-  streak?:         number;
-  onAvatarPress:   () => void;
-  onStreakPress?:  () => void;
+  streak?:        number;
+  onAvatarPress:  () => void;
+  onStreakPress?: () => void;
 }
 
 export function HomeHeader({ streak = 0, onAvatarPress, onStreakPress }: HomeHeaderProps) {
-  const [time, setTime] = useState(currentTime);
+  const [time, setTime] = useState(getTime);
 
   useEffect(() => {
-    const id = setInterval(() => setTime(currentTime()), 30_000);
+    const id = setInterval(() => setTime(getTime()), 30_000);
     return () => clearInterval(id);
   }, []);
 
   return (
-    <View style={s.wrap}>
-      {/* Left — time */}
+    <View style={s.row}>
+      {/* Left — current time */}
       <Text style={s.time}>{time}</Text>
 
-      {/* Right — streak (optional) + avatar */}
-      <View style={s.right}>
-        {streak > 0 && (
-          <Pressable onPress={onStreakPress} hitSlop={8} style={s.streakRow}>
-            <Text style={s.streakEmoji}>🔥</Text>
-            <Text style={s.streakNum}>{streak}</Text>
-          </Pressable>
-        )}
-        <Pressable onPress={onAvatarPress} hitSlop={12} style={s.avatar}>
-          <Ionicons name="person-outline" size={16} color={TEXT} />
+      {/* Center — streak pill (hidden when 0) */}
+      {streak > 0 ? (
+        <Pressable onPress={onStreakPress} hitSlop={8} style={s.pill}>
+          <Text style={s.pillText}>🔥 {streak}</Text>
         </Pressable>
-      </View>
+      ) : <View style={s.center} />}
+
+      {/* Right — avatar */}
+      <Pressable onPress={onAvatarPress} hitSlop={12} style={s.avatar}>
+        <Ionicons name="person-outline" size={16} color={TEXT} />
+      </Pressable>
     </View>
   );
 }
 
-function currentTime(): string {
+function getTime(): string {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+function pad(n: number): string { return String(n).padStart(2, '0'); }
 
 const s = StyleSheet.create({
-  wrap: {
+  row: {
     flexDirection:     'row',
     alignItems:        'center',
     justifyContent:    'space-between',
@@ -65,19 +65,16 @@ const s = StyleSheet.create({
     fontSize:   18,
     fontWeight: '500',
     color:      TEXT,
+    width:      60,
   },
-  right: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           10,
+  center: { flex: 1 },
+  pill: {
+    backgroundColor: '#EAF4FB',
+    borderRadius:    20,
+    paddingHorizontal: 10,
+    paddingVertical:   4,
   },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           3,
-  },
-  streakEmoji: { fontSize: 13 },
-  streakNum: {
+  pillText: {
     fontSize:   13,
     fontWeight: '600',
     color:      ACCENT,
@@ -86,7 +83,7 @@ const s = StyleSheet.create({
     width:           32,
     height:          32,
     borderRadius:    16,
-    backgroundColor: AVATAR_BG,
+    backgroundColor: '#EAF4FB',
     alignItems:      'center',
     justifyContent:  'center',
   },

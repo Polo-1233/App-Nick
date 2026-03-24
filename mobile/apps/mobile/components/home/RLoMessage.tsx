@@ -1,14 +1,17 @@
 /**
- * RLoMessage
+ * RLoCard (RLoMessage)
  *
- * A single calm sentence from R-Lo.
- * Appears with a subtle fade-in animation.
+ * Second card below ActionCard.
+ * Matches reference: rich blue card with avatar + message text + "Chat →" CTA.
+ *
+ * Layout:
+ *   [R-Lo avatar]  [1–2 sentence message]  [Chat →]
  *
  * Rules:
- *   - 1 sentence MAX
- *   - Never repeats the CTA
- *   - Calm and supportive tone
- *   - Small avatar on the left
+ *   - 1–2 sentences MAX
+ *   - Never repeats the CTA from ActionCard
+ *   - Calm, intelligent tone
+ *   - Fade-in on mount / message change
  */
 
 import { memo, useEffect, useRef } from 'react';
@@ -16,8 +19,9 @@ import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { MascotImage } from '../ui/MascotImage';
 import type { MascotEmotion } from '../ui/MascotImage';
 
-const TEXT_PRIMARY = '#002060';
-const ACCENT       = '#1c9fda';
+const DEEP   = '#141466';
+const ACCENT = '#1c9fda';
+const WHITE  = '#FFFFFF';
 
 interface RLoMessageProps {
   text:     string;
@@ -30,74 +34,82 @@ export const RLoMessage = memo(function RLoMessage({
   emotion = 'rassurante',
   onTap,
 }: RLoMessageProps) {
-  const opacity   = useRef(new Animated.Value(0)).current;
+  const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(6)).current;
 
-  // Fade + slide in when text changes
   useEffect(() => {
     opacity.setValue(0);
     translateY.setValue(6);
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
     ]).start();
   }, [text]);
 
   return (
     <Pressable onPress={onTap} disabled={!onTap}>
       <Animated.View
-        style={[
-          rl.wrap,
-          { opacity, transform: [{ translateY }] },
-        ]}
+        style={[rl.card, { opacity, transform: [{ translateY }] }]}
       >
-        {/* Avatar — 28px with subtle glow ring */}
+        {/* R-Lo avatar */}
         <View style={rl.avatarWrap}>
-          <View style={rl.avatarGlow} />
           <View style={rl.avatar}>
             <MascotImage emotion={emotion} size="sm" />
           </View>
         </View>
 
-        {/* Message — 1 sentence, low opacity */}
+        {/* Message */}
         <Text style={rl.text} numberOfLines={2}>{text}</Text>
+
+        {/* Chat CTA */}
+        {!!onTap && (
+          <Text style={rl.cta}>Chat →</Text>
+        )}
       </Animated.View>
     </Pressable>
   );
 });
 
 const rl = StyleSheet.create({
-  wrap: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             10,
+  card: {
+    flexDirection:    'row',
+    alignItems:       'center',
+    gap:              12,
     marginHorizontal: 20,
-    marginTop:        14,
+    marginTop:        10,
+    padding:          16,
+    borderRadius:     18,
+    backgroundColor:  DEEP,
+    shadowColor:      DEEP,
+    shadowOffset:     { width: 0, height: 4 },
+    shadowOpacity:    0.12,
+    shadowRadius:     14,
+    elevation:        3,
   },
   avatarWrap: {
-    width:          28,
-    height:         28,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-  avatarGlow: {
-    position:        'absolute',
-    width:           36,
-    height:          36,
-    borderRadius:    18,
-    backgroundColor: `${ACCENT}15`,
+    width:        36,
+    height:       36,
+    borderRadius: 18,
+    overflow:     'hidden',
+    flexShrink:   0,
+    backgroundColor: `${ACCENT}25`,
   },
   avatar: {
-    width:        28,
-    height:       28,
-    borderRadius: 14,
+    width:        36,
+    height:       36,
+    borderRadius: 18,
     overflow:     'hidden',
   },
   text: {
     flex:       1,
     fontSize:   14,
-    color:      TEXT_PRIMARY,
-    opacity:    0.75,
+    color:      'rgba(255,255,255,0.85)',
     lineHeight: 20,
+  },
+  cta: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      ACCENT,
+    flexShrink: 0,
   },
 });
