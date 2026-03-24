@@ -140,6 +140,56 @@ function buildInsights(
   return insights.slice(0, 3);
 }
 
+// ─── R-Lo insight card (style homepage) ──────────────────────────────────────
+
+function RLoInsightCard({ text }: { text: string }) {
+  return (
+    <View style={ri.card}>
+      {/* Avatar */}
+      <View style={ri.avatarWrap}>
+        <MascotImage emotion="encourageant" size="sm" style={ri.avatarImg} />
+      </View>
+      {/* Message */}
+      <Text style={ri.text} numberOfLines={3}>{text}</Text>
+    </View>
+  );
+}
+
+const ri = StyleSheet.create({
+  card: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               12,
+    padding:           16,
+    borderRadius:      18,
+    backgroundColor:   '#1a1f6e',
+    borderWidth:       1,
+    borderColor:       'rgba(28,159,218,0.2)',
+    shadowColor:       '#000',
+    shadowOffset:      { width: 0, height: 2 },
+    shadowOpacity:     0.06,
+    shadowRadius:      10,
+    elevation:         2,
+  },
+  avatarWrap: {
+    width:           34,
+    height:          34,
+    borderRadius:    17,
+    overflow:        'hidden',
+    backgroundColor: 'rgba(28,159,218,0.2)',
+    flexShrink:      0,
+  },
+  avatarImg: {
+    width: 50, height: 50, marginTop: -8, marginLeft: -8,
+  },
+  text: {
+    flex:      1,
+    fontSize:  13,
+    color:     'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+  },
+});
+
 // ─── R90 Score calculator ─────────────────────────────────────────────────────
 
 function calcR90Score(recentCycles: number[], target: number): number {
@@ -281,16 +331,8 @@ function WeekDayCard({ day, isSelected }: { day: WeekDay; isSelected: boolean })
         ))}
       </View>
 
-      {/* Bedtime */}
+      {/* Bedtime only — no cycle count, no REC badge */}
       <Text style={[wd.time, { color: cycleColor }]}>{minToHHMM(day.bedtimeMin)}</Text>
-      <Text style={wd.timeSub}>{day.cycles}c</Text>
-
-      {/* Recovery badge */}
-      {day.isRecovery && (
-        <View style={wd.recoveryBadge}>
-          <Text style={wd.recoveryText}>REC</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -550,41 +592,9 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* ── Insights ── */}
+        {/* ── R-Lo insight card — style homepage ── */}
         {insights.length > 0 && (
-          <View style={s.section}>
-            <SectionHeader title="R-Lo Insights" />
-            <View style={s.insightsWrap}>
-              {/* Insight 0 — actionable, mis en évidence */}
-              <InsightPrimary text={insights[0]!} />
-              {/* Insights 1+ — éducatifs, discrets */}
-              {insights.slice(1).length > 0 && (
-                <View style={s.insightsSecondary}>
-                  {insights.slice(1).map((txt, i) => (
-                    <InsightSecondary key={i} text={txt} index={i + 1} />
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* ── R90 Score ── */}
-        {recentCycles.length > 0 ? (
-          <R90ScoreCard
-            score={r90Score}
-            cycles={totalAchieved}
-            target={target}
-            nights={recentCycles.length}
-          />
-        ) : (
-          <View style={s.section}>
-            <SectionHeader title="R90 Score" />
-            <View style={s.scoreEmpty}>
-              <Ionicons name="stats-chart-outline" size={28} color={TEXT_MUTED} />
-              <Text style={s.scoreEmptyText}>Track a few nights to see your R90 score</Text>
-            </View>
-          </View>
+          <RLoInsightCard text={insights[0]!} />
         )}
 
       </ScrollView>
