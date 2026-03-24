@@ -24,15 +24,17 @@
 
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { DayPlan, UserProfile, NightRecord } from '@r90/types';
+import type { DayPlan, UserProfile, NightRecord, TimeBlock } from '@r90/types';
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
 const NOTIF_KEYS = {
-  ANCHOR:    '@r90:notif:anchor:v1',
-  PRE_SLEEP: '@r90:notif:preSleep:v1',
-  CRP:       '@r90:notif:crp:v1',
-  LOG_NUDGE: '@r90:notif:logNudge:v1',
+  ANCHOR:       '@r90:notif:anchor:v1',
+  PRE_SLEEP:    '@r90:notif:preSleep:v1',
+  CRP:          '@r90:notif:crp:v1',
+  LOG_NUDGE:    '@r90:notif:logNudge:v1',
+  MRM:          '@r90:notif:mrm:v1',
+  MISSED_CYCLE: '@r90:notif:missedCycle:v1',
 } as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -161,7 +163,7 @@ async function scheduleCRPReminder(plan: DayPlan): Promise<void> {
     {
       title: 'CRP window open',
       body: 'Your recovery window is open. Even 30 minutes will help.',
-      data: { route: '/' },
+      data: { route: '/crp-player', type: 'crp' },
     },
     minuteOfDayToDate(CRP_WINDOW_OPEN, false),
   );
@@ -199,6 +201,78 @@ async function scheduleLogNudge(
   );
 }
 
+/**
+ * N_MRM — MRM (Micro Recovery Moment) notification.
+ * Fires at the next upcoming MRM (down_period block) at least 5 min in the future.
+ * Only one MRM notification scheduled at a time — rescheduled on each plan refresh.
+ */
+async function scheduleMRMReminder(mrmBlocks: TimeBlock[]): Promise<void> {
+  await cancelAndClear(NOTIF_KEYS.MRM);
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const nextMRMMin = mrmBlocks
+    .map(b => b.start)
+    .filter(m => m > nowMins + 5)
+    .sort((a, b) => a - b)[0];
+
+  if (nextMRMMin === undefined) return;
+
+  const triggerDate = minuteOfDayToDate(nextMRMMin, false);
+  if (triggerDate <= now) return;
+
+  await scheduleOnce(
+    NOTIF_KEYS.MRM,
+    {
+      title: 'Micro reset',
+      body: '2-minute breathing break. Tap to start.',
+      data: { route: '/mrm-player', type: 'mrm' },
+    },
+    triggerDate,
+  );
+}
+
+/**
+ * N5 — Missed cycle reminder.
+ * Fires 15 minutes after ideal bedtime if the user hasn't started wind-down.
+ * Only fires if remaining cycles ≥ 3 (still worth sleeping).
+ * Not fired if cyclesRemaining < 3 (too late, unhelpful).
+ */
+async function scheduleMissedCycleReminder(
+  bedtime:    number,
+  cycleCount: number,
+  anchorTime: number,
+): Promise<void> {
+  await cancelAndClear(NOTIF_KEYS.MISSED_CYCLE);
+
+  const MISSED_CYCLE_OFFSET = 15; // minutes after bedtime
+  const triggerMin = (bedtime + MISSED_CYCLE_OFFSET) % 1440;
+  const triggerDate = minuteOfDayToDate(triggerMin, false);
+
+  if (triggerDate <= new Date()) return;
+
+  // Compute next window time at schedule time
+  const cyclesMissed = Math.ceil(MISSED_CYCLE_OFFSET / 90);
+  const remaining = cycleCount - cyclesMissed;
+  if (remaining < 3) return;
+
+  const nextWindowMin = (bedtime + cyclesMissed * 90) % 1440;
+  const h = Math.floor(nextWindowMin / 60);
+  const m = nextWindowMin % 60;
+  const nextWindowTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+  await scheduleOnce(
+    NOTIF_KEYS.MISSED_CYCLE,
+    {
+      title: 'No stress',
+      body: `Your next window is at ${nextWindowTime}. ${remaining} cycles — still a great night.`,
+      data: { route: '/(tabs)', type: 'missed_cycle' },
+    },
+    triggerDate,
+  );
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -215,11 +289,18 @@ export async function scheduleAllNotifications(
     const hasPermission = await hasNotificationPermission();
     if (!hasPermission) return;
 
+    const mrmBlocks = (plan.blocks ?? []).filter(b => b.type === 'down_period');
+    const bedtime   = plan.cycleWindow?.bedtime ?? null;
+
     await Promise.all([
       scheduleAnchorReminder(profile, weekHistory),
       schedulePreSleepReminder(plan),
       scheduleCRPReminder(plan),
       scheduleLogNudge(profile, weekHistory),
+      scheduleMRMReminder(mrmBlocks),
+      bedtime !== null
+        ? scheduleMissedCycleReminder(bedtime, plan.cycleWindow.cycleCount, profile.anchorTime)
+        : Promise.resolve(),
     ]);
   } catch (e) {
     console.error('[notifications] Failed to schedule notifications:', e);
@@ -236,6 +317,8 @@ export async function cancelAllNotifications(): Promise<void> {
     cancelAndClear(NOTIF_KEYS.PRE_SLEEP),
     cancelAndClear(NOTIF_KEYS.CRP),
     cancelAndClear(NOTIF_KEYS.LOG_NUDGE),
+    cancelAndClear(NOTIF_KEYS.MRM),
+    cancelAndClear(NOTIF_KEYS.MISSED_CYCLE),
   ]);
 }
 
