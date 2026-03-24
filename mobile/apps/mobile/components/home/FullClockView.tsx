@@ -82,10 +82,12 @@ interface ArcProps {
 
 function Arc({ startDeg, spanDeg, rOuter, rInner, color, opacity = 1 }: ArcProps) {
   if (spanDeg <= 0) return null;
-  const STEP  = 2;
+  const STEP  = 1;   // 1° steps → no visible gaps
   const count = Math.ceil(spanDeg / STEP);
   const thick = rOuter - rInner;
   const rMid  = rInner + thick / 2;
+  // Chunk width = chord length for STEP degrees + 1px overlap buffer
+  const chunkW = Math.max(4, 2 * rMid * Math.sin((STEP * Math.PI) / 180) + 2);
 
   return (
     <>
@@ -97,13 +99,12 @@ function Arc({ startDeg, spanDeg, rOuter, rInner, color, opacity = 1 }: ArcProps
             key={i}
             style={{
               position:        'absolute',
-              left:            pt.x - 2,
+              left:            pt.x - chunkW / 2,
               top:             pt.y - thick / 2,
-              width:           4,
+              width:           chunkW,
               height:          thick,
               backgroundColor: color,
               opacity,
-              borderRadius:    2,
               transform:       [{ rotate: `${deg}deg` }],
             }}
           />
