@@ -184,8 +184,6 @@ export function RhythmDepthCard() {
   if (!state) return null;
 
   const { level, next, pct } = getProgressToNext(state.signal);
-  const unlocked = getUnlockedContent(state.signal);
-  const shownUnlocks = unlocked.slice(-2); // show last 2 unlocked items
 
   return (
     <>
@@ -193,69 +191,22 @@ export function RhythmDepthCard() {
         onPress={() => setShowJourney(true)}
         style={({ pressed }) => [rc.card, pressed && { opacity: 0.85 }]}
       >
-        {/* ── Top: level + progress ── */}
-        <View style={rc.topRow}>
-          <View style={rc.levelPill}>
-            <View style={[rc.levelDot, { backgroundColor: level.color }]} />
-            <Text style={[rc.levelName, { color: level.color }]}>{level.label}</Text>
+        <View style={rc.row}>
+          {/* Left: dot + name + tagline */}
+          <View style={rc.left}>
+            <View style={rc.nameRow}>
+              <View style={[rc.dot, { backgroundColor: level.color }]} />
+              <Text style={[rc.levelName, { color: level.color }]}>{level.label}</Text>
+            </View>
+            <DepthBar pct={pct} color={level.color} />
+            {next && (
+              <Text style={rc.hint}>Next: {next.label}</Text>
+            )}
           </View>
-          <Text style={rc.viewJourney}>View journey ›</Text>
+
+          {/* Right: chevron */}
+          <Ionicons name="chevron-forward" size={16} color={TEXT_F} />
         </View>
-
-        <Text style={rc.tagline}>{level.tagline}</Text>
-
-        <DepthBar pct={pct} color={level.color} />
-
-        <View style={rc.divider} />
-
-        {/* ── Middle: what you've unlocked ── */}
-        {shownUnlocks.length > 0 && (
-          <View style={rc.section}>
-            <Text style={rc.sectionLabel}>
-              <Ionicons name="checkmark-circle" size={11} color={level.color} /> Unlocked for you
-            </Text>
-            {shownUnlocks.map(u => (
-              <View key={u.id} style={rc.unlockedRow}>
-                <View style={[rc.unlockIcon, { backgroundColor: `${level.color}18` }]}>
-                  <Ionicons name={unlockIcon(u.type)} size={12} color={level.color} />
-                </View>
-                <Text style={rc.unlockedTitle}>{u.title}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* ── Bottom: what's next ── */}
-        {next && next.unlocks[0] && (
-          <>
-            <View style={rc.divider} />
-            <View style={rc.section}>
-              <Text style={rc.sectionLabel}>
-                <Ionicons name="lock-closed-outline" size={11} color={TEXT_F} /> Next unlock — {next.label}
-              </Text>
-              <View style={rc.nextBlock}>
-                <View style={rc.nextIconWrap}>
-                  <Ionicons name={unlockIcon(next.unlocks[0].type)} size={14} color={GOLD} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={rc.nextTitle}>{next.unlocks[0].title}</Text>
-                  <Text style={rc.nextDesc}>{next.unlocks[0].description}</Text>
-                </View>
-              </View>
-            </View>
-          </>
-        )}
-
-        {!next && (
-          <>
-            <View style={rc.divider} />
-            <View style={rc.allUnlockedRow}>
-              <Ionicons name="star" size={14} color={level.color} />
-              <Text style={[rc.allUnlockedTxt, { color: level.color }]}>All content unlocked — R90 Integrated</Text>
-            </View>
-          </>
-        )}
-
       </Pressable>
 
       <JourneyModal
@@ -268,23 +219,11 @@ export function RhythmDepthCard() {
 }
 
 const rc = StyleSheet.create({
-  card:          { backgroundColor: NAVY, borderRadius: 20, padding: 18, gap: 12, borderWidth: 1, borderColor: BORDER },
-  topRow:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  levelPill:     { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  levelDot:      { width: 10, height: 10, borderRadius: 5 },
-  levelName:     { fontSize: 16, fontWeight: '800', letterSpacing: 0.2 },
-  viewJourney:   { fontSize: 12, color: ACCENT, fontWeight: '600' },
-  tagline:       { fontSize: 13, color: TEXT_M, lineHeight: 18 },
-  divider:       { height: 1, backgroundColor: 'rgba(255,255,255,0.07)' },
-  section:       { gap: 8 },
-  sectionLabel:  { fontSize: 11, fontWeight: '700', color: TEXT_F, textTransform: 'uppercase', letterSpacing: 0.8 },
-  unlockedRow:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  unlockIcon:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  unlockedTitle: { fontSize: 13, color: TEXT_W, fontWeight: '500', flex: 1 },
-  nextBlock:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: `${GOLD}0D`, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: `${GOLD}20` },
-  nextIconWrap:  { width: 30, height: 30, borderRadius: 9, backgroundColor: `${GOLD}18`, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  nextTitle:     { fontSize: 13, fontWeight: '700', color: TEXT_W, lineHeight: 18 },
-  nextDesc:      { fontSize: 12, color: TEXT_M, lineHeight: 17, marginTop: 2 },
-  allUnlockedRow:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
-  allUnlockedTxt:{ fontSize: 13, fontWeight: '600' },
+  card:     { backgroundColor: NAVY, borderRadius: 16, paddingVertical: 13, paddingHorizontal: 16, borderWidth: 1, borderColor: BORDER },
+  row:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  left:     { flex: 1, gap: 7 },
+  nameRow:  { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  dot:      { width: 9, height: 9, borderRadius: 5 },
+  levelName:{ fontSize: 14, fontWeight: '800' },
+  hint:     { fontSize: 11, color: TEXT_F },
 });
