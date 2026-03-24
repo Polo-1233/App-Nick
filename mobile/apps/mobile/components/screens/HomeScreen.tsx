@@ -49,7 +49,7 @@ import { OnboardingChatFlow }   from '../OnboardingChatFlow';
 // ─── Utilities & data ──────────────────────────────────────────────────────────
 import { getFlow }              from '../../lib/rhythm-points';
 // getMissedCycleInfo now handled inside action-state.ts
-import { ensureSignupDate } from '../../lib/coach-insights';
+import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
 } from '../../lib/storage';
@@ -87,6 +87,7 @@ export default function HomeScreen() {
   const [streak,             setStreak]              = useState(0);
   const [bannerEvent,        setBannerEvent]         = useState<{ title: string; start_time: string; event_type_hint?: string } | null>(null);
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
+  const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
 
   const hasMountedFocus  = useRef(false);
@@ -106,6 +107,7 @@ export default function HomeScreen() {
       }
       getFlow().then(f => setStreak(f.currentStreak)).catch(() => {});
       void ensureSignupDate();
+      getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
     // Sync action state every 30s
     const id = setInterval(() => {
@@ -208,9 +210,10 @@ export default function HomeScreen() {
     }
   }, [router, goToPage]);
 
-  // ── Secondary cards — calendar banner only (real data) ───────────────────
+  // ── Secondary cards ────────────────────────────────────────────────────────
   const secondaryCards: SecondaryCardData[] = [];
 
+  // Calendar — real data only
   if (bannerEvent && !bannerDismissed) {
     secondaryCards.push({
       type:      'calendar',
@@ -219,6 +222,19 @@ export default function HomeScreen() {
       onDismiss: () => setBannerDismissed(true),
     });
   }
+
+  // Coach insight — "Did you know" daily card
+  const insightMsg = coachInsight?.message
+    ?? '90-minute cycles also exist during the day. That\'s why MRMs matter — they respect your natural rhythm.';
+  secondaryCards.push({
+    type:      'insight',
+    id:        coachInsight?.id ?? 'default-ci',
+    message:   insightMsg,
+    onDismiss: async () => {
+      if (coachInsight) await markInsightSeen(coachInsight.id);
+      setCoachInsight(null);
+    },
+  });
 
   // ─── ONBOARDING: full-screen chat ─────────────────────────────────────────
   if (isOnboarding) {
