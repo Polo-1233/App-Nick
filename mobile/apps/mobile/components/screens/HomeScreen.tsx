@@ -1,54 +1,62 @@
 /**
  * HomeScreen — Rhythm Interface
  *
- * Philosophy: "Where am I in my day? What should I do next?" in < 3 seconds.
+ * Philosophy: 1 screen = 1 decision. Everything serves the action.
  *
- * Sections:
- *   1. Header         — time + profile icon
- *   2. RhythmTimeline — ARP→Sleep horizontal bar, cycles, current position
- *   3. ActionCard     — single primary CTA (context-driven)
- *   4. RLoMessage     — 1-2 lines, tap → chat
- *   5. SecondaryCards — optional contextual cards (scrollable)
- *   6. SleepFooter    — "Tonight: 23:00" always visible
+ * Structure (strict order):
+ *   1. Header         — time + streak + avatar
+ *   2. RhythmTimeline — current position in the day
+ *   3. ActionCard     — THE dominant element, one clear action
+ *   4. RLoMessage     — one calm sentence
+ *   5. SecondaryCards — optional, only if useful data exists
+ *   6. SleepFooter    — tonight's bedtime, subtle
  *
  * Onboarding mode (phase === 'guided_chat'):
- *   Full-screen chat flow. Preserved from previous implementation.
+ *   → delegates entirely to OnboardingChatFlow
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View, Text, StyleSheet, Pressable, ScrollView,
-} from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }       from 'expo-router';
-import { Ionicons }                        from '@expo/vector-icons';
 import AsyncStorage                        from '@react-native-async-storage/async-storage';
 
-import { useDayPlanContext }    from '../../lib/day-plan-context';
-import { useOnboardingPhase }   from '../../lib/onboarding-phase-context';
-import { useChat }              from '../../lib/use-chat';
-import { Analytics }            from '../../lib/analytics';
-import { useTheme }             from '../../lib/theme-context';
-import { usePager }             from '../../lib/pager-context';
-import { useTour }              from '../../lib/tour-context';
-import { RhythmTimeline }       from '../RhythmTimeline';
-import { ActionCard }           from '../ActionCard';
-import { RLoMessageBar }        from '../RLoMessageBar';
-import { SleepFooter }          from '../SleepFooter';
+// ─── App contexts ───────────────────────────────────────────────────────────────
+import { useDayPlanContext }  from '../../lib/day-plan-context';
+import { useOnboardingPhase } from '../../lib/onboarding-phase-context';
+import { useChat }            from '../../lib/use-chat';
+import { useTheme }           from '../../lib/theme-context';
+import { usePager }           from '../../lib/pager-context';
+import { useTour }            from '../../lib/tour-context';
+
+// ─── Home sub-components (clean module) ────────────────────────────────────────
+import {
+  HomeHeader,
+  RhythmTimeline,
+  ActionCard,
+  RLoMessage,
+  SecondaryCards,
+  SleepFooter,
+  type SecondaryCardData,
+} from '../home';
+
+// ─── Shared components ─────────────────────────────────────────────────────────
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { OnboardingChatFlow }   from '../OnboardingChatFlow';
-import { getFlow }              from '../../lib/rhythm-points';
-import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
-import { getMissedCycleInfo }   from '../../lib/missed-cycle';
 import { StreakDetail }         from '../StreakDetail';
+
+// ─── Utilities & data ──────────────────────────────────────────────────────────
+import { getFlow }              from '../../lib/rhythm-points';
+import { getMissedCycleInfo }   from '../../lib/missed-cycle';
+import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
 import {
-  loadProfile, loadWeekHistory, hasCompletedIntro,
-  loadOnboardingData,
+  loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
 } from '../../lib/storage';
 import { getUpcomingEvents, type CalendarEventResponse } from '../../lib/api';
-import type { UserProfile, NextAction, ReadinessState } from '@r90/types';
-import type { MascotEmotion }   from '../ui/MascotImage';
+import type { UserProfile, ReadinessState } from '@r90/types';
+import type { MascotEmotion } from '../ui/MascotImage';
 
+// ─── Helper: R-Lo emotion from streak / readiness ──────────────────────────────
 function getRLoMood(streak: number, readiness: ReadinessState | null | undefined): MascotEmotion {
   if (streak >= 7) return 'Enthousisate';
   if (streak >= 3) return 'encourageant';
@@ -57,120 +65,34 @@ function getRLoMood(streak: number, readiness: ReadinessState | null | undefined
   return 'Reflexion';
 }
 
-// ─── HomeHeader (spec pixel-perfect) ─────────────────────────────────────────
-// height: 60px | left: heure | center: streak | right: avatar
-
-const H_TEXT   = '#002060';
-const H_ACCENT = '#1c9fda';
-
-function HomeHeader({
-  topInset, onProfilePress, streak,
-}: { topInset: number; onProfilePress: () => void; streak: number }) {
-  const [time, setTime] = useState(() => {
-    const d = new Date();
-    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  });
-  const [showStreakDetail, setShowStreakDetail] = useState(false);
-
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      setTime(`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`);
-    };
-    const id = setInterval(tick, 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <>
-      <View style={[hdr.wrap, { paddingTop: topInset + 10 }]}>
-        {/* Left — heure */}
-        <Text style={hdr.time}>{time}</Text>
-
-        {/* Center — streak (optionnel) */}
-        {streak > 0 ? (
-          <Pressable onPress={() => setShowStreakDetail(true)} hitSlop={8} style={hdr.streakPill}>
-            <Text style={hdr.streakEmoji}>🔥</Text>
-            <Text style={hdr.streakNum}>{streak}</Text>
-          </Pressable>
-        ) : (
-          <View />
-        )}
-
-        {/* Right — avatar */}
-        <Pressable onPress={onProfilePress} hitSlop={12} style={hdr.avatarBtn}>
-          <Ionicons name="person-outline" size={17} color={H_TEXT} />
-        </Pressable>
-      </View>
-
-      <StreakDetail visible={showStreakDetail} onClose={() => setShowStreakDetail(false)} />
-    </>
-  );
-}
-
-const hdr = StyleSheet.create({
-  wrap: {
-    height:          60,
-    flexDirection:   'row',
-    alignItems:      'center',
-    justifyContent:  'space-between',
-    paddingHorizontal: 20,
-    paddingBottom:   10,
-  },
-  time: {
-    fontSize:   18,
-    fontWeight: '500',
-    color:      H_TEXT,
-    letterSpacing: 0.2,
-  },
-  streakPill: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             4,
-  },
-  streakEmoji: { fontSize: 14 },
-  streakNum: {
-    fontSize:   14,
-    fontWeight: '600',
-    color:      H_ACCENT,
-  },
-  avatarBtn: {
-    width:           32,
-    height:          32,
-    borderRadius:    16,
-    backgroundColor: '#EAF4FB',
-    alignItems:      'center',
-    justifyContent:  'center',
-  },
-});
-
-// ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
-
+// ─── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const { theme } = useTheme();
+  const { theme }                      = useTheme();
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
-  const { phase, advance }   = useOnboardingPhase();
-  const router               = useRouter();
-  const { goToPage }         = usePager();
-  const insets               = useSafeAreaInsets();
-  const { tourStep, startTour, skipTour } = useTour();
+  const { phase, advance }             = useOnboardingPhase();
+  const router                         = useRouter();
+  const { goToPage }                   = usePager();
+  const insets                         = useSafeAreaInsets();
+  const { startTour, skipTour, tourStep } = useTour();
   const { messages, isStreaming, isThinking, sendMessage, fetchGreeting, injectMessage } = useChat();
 
+  // ── State ──────────────────────────────────────────────────────────────────
   const [profile,            setProfile]            = useState<UserProfile | null>(null);
   const [userName,           setUserName]            = useState<string | null>(null);
+  const [streak,             setStreak]              = useState(0);
   const [bannerEvent,        setBannerEvent]         = useState<CalendarEventResponse | null>(null);
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
-  const [chatOpen,           setChatOpen]            = useState(false);
-  const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
-  const [streak,             setStreak]              = useState(0);
   const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
+  const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
+  const [showStreakDetail,   setShowStreakDetail]     = useState(false);
+
   const hasMountedFocus  = useRef(false);
   const hasRedirected    = useRef(false);
   const hasGreetedPhase  = useRef<string | null>(null);
 
   const isOnboarding = phase === 'guided_chat';
 
-  // ── Load profile ───────────────────────────────────────────────────────────
+  // ── Load profile + streak + insights on mount ──────────────────────────────
   useEffect(() => {
     (async () => {
       const [p, onboarding] = await Promise.all([loadProfile(), loadOnboardingData()]);
@@ -182,21 +104,24 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  // ── Redirect if no intro ───────────────────────────────────────────────────
+  // ── Redirect to onboarding if intro not done ───────────────────────────────
   useEffect(() => {
     if (!needsOnboarding || hasRedirected.current) return;
     hasCompletedIntro().then(done => {
-      if (!done && !hasRedirected.current) { hasRedirected.current = true; router.replace('/onboarding'); }
+      if (!done && !hasRedirected.current) {
+        hasRedirected.current = true;
+        router.replace('/onboarding');
+      }
     });
   }, [needsOnboarding, router]);
 
-  // ── Focus refresh ──────────────────────────────────────────────────────────
+  // ── Refresh plan on focus (silent) ────────────────────────────────────────
   useFocusEffect(useCallback(() => {
     if (!hasMountedFocus.current) { hasMountedFocus.current = true; return; }
     refreshPlan();
   }, [refreshPlan]));
 
-  // ── Greeting (done phase) ──────────────────────────────────────────────────
+  // ── Greeting (done phase only) ─────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'done') return;
     if (hasGreetedPhase.current === phase) return;
@@ -229,22 +154,25 @@ export default function HomeScreen() {
       const lastConfirm = await AsyncStorage.getItem(CONFIRM_DATE_KEY);
       const today       = new Date().toISOString().slice(0, 10);
       if (lastConfirm === today) return;
-      const now     = new Date();
-      const nowMin  = now.getHours() * 60 + now.getMinutes();
-      const arp     = profile.anchorTime;
-      const isMorning = nowMin >= arp && nowMin <= arp + 120;
-      if (isMorning) setShowMorningConfirm(true);
+      const now       = new Date();
+      const nowMins   = now.getHours() * 60 + now.getMinutes();
+      const arp       = profile.anchorTime;
+      if (nowMins >= arp && nowMins <= arp + 120) setShowMorningConfirm(true);
     })();
   }, [isOnboarding, profile]);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
+  // ── Derived plan values ────────────────────────────────────────────────────
   const bedtime     = dayPlan?.cycleWindow?.bedtime  ?? null;
   const wakeTime    = dayPlan?.cycleWindow?.wakeTime ?? (profile?.anchorTime ?? null);
   const blocks      = dayPlan?.blocks ?? [];
   const nextAction  = dayPlan?.nextAction ?? null;
-  const rloText     = dayPlan?.rloMessage?.text ?? (userName ? `Welcome back, ${userName}.` : 'Your rhythm is being calculated…');
-  const missedCycle = getMissedCycleInfo(bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null);
+  const rloText     = dayPlan?.rloMessage?.text
+    ?? (userName ? `Stay consistent today, ${userName}.` : 'Stay consistent today.');
+  const missedCycle = getMissedCycleInfo(
+    bedtime, dayPlan?.cycleWindow?.cycleCount ?? 5, profile?.anchorTime ?? null,
+  );
 
+  // ── Navigation from ActionCard ─────────────────────────────────────────────
   const handleActionPress = useCallback(() => {
     if (!nextAction) return;
     switch (nextAction.type) {
@@ -265,7 +193,40 @@ export default function HomeScreen() {
     }
   }, [nextAction, goToPage, router]);
 
-  // ─── ONBOARDING MODE ──────────────────────────────────────────────────────
+  // ── Secondary cards: only if real data ────────────────────────────────────
+  const secondaryCards: SecondaryCardData[] = [];
+
+  if (bannerEvent && !bannerDismissed) {
+    const evStart = new Date(bannerEvent.start_time)
+      .toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    secondaryCards.push({
+      type:      'calendar',
+      title:     bannerEvent.title,
+      subtitle:  `${evStart} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`,
+      onDismiss: () => setBannerDismissed(true),
+    });
+  }
+
+  if (coachInsight) {
+    secondaryCards.push({
+      type:      'insight',
+      id:        coachInsight.id,
+      message:   coachInsight.message,
+      onDismiss: async () => {
+        await markInsightSeen(coachInsight.id);
+        setCoachInsight(null);
+      },
+    });
+  }
+
+  // Weekly report — Sunday evening or Monday morning
+  const now = new Date();
+  const dow = now.getDay(), h = now.getHours();
+  if ((dow === 0 && h >= 18) || (dow === 1 && h < 12)) {
+    secondaryCards.push({ type: 'weekly', streakDays: streak });
+  }
+
+  // ─── ONBOARDING: full-screen chat ─────────────────────────────────────────
   if (isOnboarding) {
     return (
       <OnboardingChatFlow
@@ -280,124 +241,78 @@ export default function HomeScreen() {
 
   // ─── NORMAL MODE ──────────────────────────────────────────────────────────
   return (
-    <View style={[ms.root, { backgroundColor: theme.colors.background }]}>
-
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <View style={[s.root, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={s.safe} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 32, flexGrow: 1 }}
+          contentContainerStyle={[
+            s.scroll,
+            { paddingBottom: insets.bottom + 32 },
+          ]}
         >
           {/* 1. Header */}
-          <HomeHeader topInset={0} onProfilePress={() => goToPage(3)} streak={streak} />
+          <HomeHeader
+            streak={streak}
+            onAvatarPress={() => goToPage(3)}
+            onStreakPress={() => setShowStreakDetail(true)}
+          />
 
-          {/* 2. Timeline */}
+          {/* 2. Rhythm Timeline */}
           {profile && bedtime && wakeTime ? (
             <RhythmTimeline
               blocks={blocks}
-              wakeTime={wakeTime}
               bedtime={bedtime}
               anchorTime={profile.anchorTime}
             />
           ) : (
-            <View style={{ height: 90, marginHorizontal: 20, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: '#B0C4D8', fontSize: 13 }}>Setting up your rhythm…</Text>
-            </View>
+            <View style={s.timelinePlaceholder} />
           )}
 
-          {/* 3. Action Card */}
-          <ActionCard action={nextAction} missedCycle={missedCycle} onPress={handleActionPress} />
-
-          {/* 4. R-Lo Message */}
-          <RLoMessageBar
-            text={rloText}
-            onTap={() => setChatOpen(true)}
-            emotion={getRLoMood(streak, dayPlan?.readiness)}
+          {/* 3. Action Card — most dominant element */}
+          <ActionCard
+            action={nextAction}
+            missedCycle={missedCycle}
+            onPress={handleActionPress}
           />
 
-          {/* 5. Secondary cards — seulement si utile */}
-          {bannerEvent && !bannerDismissed && (
-            <Pressable
-              onPress={() => setBannerDismissed(true)}
-              style={sc.card}
-            >
-              <Ionicons name="calendar-outline" size={16} color="#1c9fda" />
-              <View style={{ flex: 1 }}>
-                <Text style={sc.cardTitle} numberOfLines={1}>{bannerEvent.title}</Text>
-                <Text style={sc.cardSub} numberOfLines={1}>
-                  {`${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`}
-                </Text>
-              </View>
-            </Pressable>
-          )}
+          {/* 4. R-Lo Message — calm, 1 sentence */}
+          <RLoMessage
+            text={rloText}
+            emotion={getRLoMood(streak, dayPlan?.readiness)}
+            onTap={() => {/* open chat via tab */}}
+          />
 
-          {coachInsight && (
-            <View style={sc.card}>
-              <Text style={sc.cardLabel}>💡</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={sc.cardTitle}>{coachInsight.message}</Text>
-              </View>
-              <Pressable
-                onPress={async () => { await markInsightSeen(coachInsight.id); setCoachInsight(null); }}
-                hitSlop={8}
-              >
-                <Text style={sc.cardDismiss}>✓</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Weekly report — dimanche soir / lundi matin uniquement */}
-          {(()=>{
-            const d=new Date(), dow=d.getDay(), h=d.getHours();
-            if(!((dow===0&&h>=18)||(dow===1&&h<12))) return null;
-            return (
-              <View style={sc.card}>
-                <Text style={sc.cardLabel}>📊</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={sc.cardTitle}>Weekly report</Text>
-                  <Text style={sc.cardSub}>{streak > 0 ? `${streak} days rhythm flow` : 'Check your Insights'}</Text>
-                </View>
-              </View>
-            );
-          })()}
+          {/* 5. Secondary Cards — only rendered if data exists */}
+          <SecondaryCards cards={secondaryCards} />
 
           {/* 6. Sleep Footer */}
-          <View style={{ marginTop: 12 }}>
-            <SleepFooter bedtime={bedtime} />
-          </View>
+          <SleepFooter bedtime={bedtime} />
         </ScrollView>
       </SafeAreaView>
 
-      {/* Morning confirmation modal */}
+      {/* Modals */}
       <MorningConfirmation
         visible={showMorningConfirm}
         firstName={userName}
-        wakeTime={wakeTime !== null ? `${String(Math.floor(wakeTime / 60)).padStart(2,'0')}:${String(wakeTime % 60).padStart(2,'0')}` : '--:--'}
+        wakeTime={wakeTime !== null
+          ? `${String(Math.floor(wakeTime / 60)).padStart(2, '0')}:${String(wakeTime % 60).padStart(2, '0')}`
+          : '--:--'}
         onConfirm={() => setShowMorningConfirm(false)}
         onDismiss={() => setShowMorningConfirm(false)}
+      />
+
+      <StreakDetail
+        visible={showStreakDetail}
+        onClose={() => setShowStreakDetail(false)}
       />
     </View>
   );
 }
 
-const ms = StyleSheet.create({
-  root: { flex: 1 },
-});
-
-// Secondary cards — spec: height 60, bg #F7FAFD, radius 14, padding 12
-const sc = StyleSheet.create({
-  card: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             10,
-    height:          60,
-    backgroundColor: '#F7FAFD',
-    borderRadius:    14,
-    paddingHorizontal: 12,
-    marginHorizontal:  20,
-    marginTop:         10,
-  },
-  cardLabel:   { fontSize: 16 },
-  cardTitle:   { fontSize: 13, fontWeight: '500', color: '#002060', lineHeight: 18 },
-  cardSub:     { fontSize: 12, color: '#6B7A90', marginTop: 1 },
-  cardDismiss: { fontSize: 14, color: '#1c9fda', fontWeight: '600' },
+// ─── Styles ─────────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root:                { flex: 1 },
+  safe:                { flex: 1 },
+  scroll:              { flexGrow: 1 },
+  timelinePlaceholder: { height: 90, marginHorizontal: 20, marginTop: 10 },
 });
