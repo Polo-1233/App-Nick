@@ -23,6 +23,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Analytics } from '../../lib/analytics';
 import { fmtMin as minToHHMM } from '../../lib/time-utils';
+import { useTheme } from '../../lib/theme-context';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -458,6 +459,7 @@ const sh = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
+  const { theme } = useTheme();
   const { dayPlan } = useDayPlanContext();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -470,7 +472,7 @@ export default function CalendarScreen() {
   // Guard — profile not yet loaded: show setup prompt
   if (!profile) {
     return (
-      <SafeAreaView style={s.safe} edges={['top']}>
+      <SafeAreaView style={[s.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 16 }}>
           <MascotImage emotion="rassurante" size="md" />
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff', textAlign: 'center' }}>
@@ -507,7 +509,7 @@ export default function CalendarScreen() {
   const r90Score      = calcR90Score(recentCycles, target);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.content}

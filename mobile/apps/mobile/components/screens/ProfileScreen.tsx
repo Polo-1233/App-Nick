@@ -372,7 +372,7 @@ const pc = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-  const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const { theme, mode: themeMode, setMode: setThemeMode } = useTheme();
   const { session, logout } = useAuth();
   const router = useRouter();
   const { isPremium } = usePremiumGate();
@@ -518,7 +518,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
+    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* ── 1. Identity ── */}

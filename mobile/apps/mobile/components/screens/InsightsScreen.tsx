@@ -208,6 +208,7 @@ function EmptyState() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function InsightsScreen() {
+  const { theme } = useTheme();
   const [loading,         setLoading]         = useState(true);
   const [insights,        setInsights]        = useState<InsightsData | null>(null);
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
@@ -249,7 +250,7 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={s.root} edges={['top']}>
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <ActivityIndicator color={C.accent} style={{ marginTop: 80 }} />
       </SafeAreaView>
     );
@@ -257,7 +258,7 @@ export default function InsightsScreen() {
 
   if (!insights || !profile) {
     return (
-      <SafeAreaView style={s.root} edges={['top']}>
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <ScrollView contentContainerStyle={s.scroll}>
           <View style={s.header}>
             <Text style={s.headerTitle}>Insights</Text>
@@ -276,7 +277,7 @@ export default function InsightsScreen() {
   const rloMsg      = getRhythmInsightMessage(insights.rhythmStrength);
 
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
+    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         <View style={s.header}>
