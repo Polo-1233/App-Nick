@@ -156,6 +156,7 @@ export function AudioPlayer({
   const [posMs,        setPosMs]        = useState(0);
   const [durationMs,   setDurationMs]   = useState(0);
   const [loaded,       setLoaded]       = useState(false);
+  const [error,        setError]        = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   // Load audio
@@ -182,7 +183,12 @@ export function AudioPlayer({
             onComplete();
           }
         });
-      } catch {}
+      } catch {
+        if (mounted) {
+          setError(true);
+          setLoaded(true);
+        }
+      }
     }
     void load();
     return () => {
@@ -190,6 +196,17 @@ export function AudioPlayer({
       soundRef.current?.unloadAsync();
     };
   }, []);
+
+  // Timeout guard: if not loaded after 5 seconds, show error
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!loaded) {
+        setError(true);
+        setLoaded(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [loaded]);
 
   // Progress bar animation
   useEffect(() => {
@@ -231,35 +248,54 @@ export function AudioPlayer({
         <Text style={ap.title}>{title}</Text>
 
         {/* Timer */}
-        {showTimer && loaded && (
+        {showTimer && loaded && !error && (
           <Text style={[ap.timer, { color: accentColor }]}>
             {fmtSeconds(remaining)}
           </Text>
         )}
 
         {/* Progress bar */}
-        <View style={ap.progressBg}>
-          <Animated.View style={[
-            ap.progressFill,
-            {
-              width: progressAnim.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] }),
-              backgroundColor: accentColor,
-            },
-          ]} />
-        </View>
+        {!error && (
+          <View style={ap.progressBg}>
+            <Animated.View style={[
+              ap.progressFill,
+              {
+                width: progressAnim.interpolate({ inputRange: [0,1], outputRange: ['0%','100%'] }),
+                backgroundColor: accentColor,
+              },
+            ]} />
+          </View>
+        )}
+
+        {/* Error state */}
+        {error && (
+          <View style={{ alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <Text style={{ color: MUTED, fontSize: 15, textAlign: 'center' }}>
+              Content coming soon.
+            </Text>
+            <Pressable
+              onPress={onClose}
+              style={{ marginTop: 16, backgroundColor: `${ACCENT}20`, borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 }}
+            >
+              <Text style={{ color: ACCENT, fontWeight: '700', fontSize: 14 }}>Go back</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Play / Pause button */}
-        <Pressable
-          onPress={() => { void togglePlay(); }}
-          style={[ap.playBtn, { borderColor: `${accentColor}60`, backgroundColor: `${accentColor}18` }]}
-        >
-          <Ionicons
-            name={isPlaying ? 'pause' : 'play'}
-            size={36}
-            color={accentColor}
-            style={{ marginLeft: isPlaying ? 0 : 3 }}
-          />
-        </Pressable>
+        {!error && (
+          <Pressable
+            onPress={() => { void togglePlay(); }}
+            style={[ap.playBtn, { borderColor: `${accentColor}60`, backgroundColor: `${accentColor}18` }]}
+          >
+            <Ionicons
+              name={isPlaying ? 'pause' : 'play'}
+              size={36}
+              color={accentColor}
+              style={{ marginLeft: isPlaying ? 0 : 3 }}
+            />
+          </Pressable>
+        )}
       </View>
     </View>
   );
