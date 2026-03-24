@@ -278,15 +278,11 @@ export default function HomeScreen() {
           />
 
           {/* 2. Rhythm Timeline */}
-          {profile && bedtime && wakeTime ? (
-            <RhythmTimeline
-              blocks={blocks}
-              bedtime={bedtime}
-              anchorTime={profile.anchorTime}
-            />
-          ) : (
-            <View style={s.timelinePlaceholder} />
-          )}
+          {/* 2. Timeline — next 3 cycles only, tap to open full clock */}
+          <RhythmTimeline
+            wakeMin={profile?.anchorTime ?? 390}
+            idealCycles={profile?.idealCyclesPerNight ?? 5}
+          />
 
           {/* 3. Action Card — live R90 coach */}
           <ActionCard
