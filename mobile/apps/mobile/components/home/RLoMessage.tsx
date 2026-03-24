@@ -51,11 +51,13 @@ export const RLoMessage = memo(function RLoMessage({
       <Animated.View
         style={[rl.card, { opacity, transform: [{ translateY }] }]}
       >
-        {/* R-Lo avatar */}
+        {/* R-Lo avatar — cropped to show head only */}
         <View style={rl.avatarWrap}>
-          <View style={rl.avatar}>
-            <MascotImage emotion={emotion} size="sm" />
-          </View>
+          <MascotImage
+            emotion={emotion}
+            size="sm"
+            style={rl.mascotImg}
+          />
         </View>
 
         {/* Message */}
@@ -96,15 +98,14 @@ const rl = StyleSheet.create({
     flexShrink:      0,
     backgroundColor: `${ACCENT}25`,
     alignItems:      'center',
-    justifyContent:  'center',
+    justifyContent:  'flex-start', // align image to top so head is visible
   },
-  avatar: {
-    width:        36,
-    height:       36,
-    borderRadius: 18,
-    overflow:     'hidden',
-    alignItems:   'center',
-    justifyContent: 'center',
+  // Image larger than container, shifted up to show just the head
+  mascotImg: {
+    width:      52,
+    height:     52,
+    marginTop:  -4,
+    marginLeft: -8,
   },
   text: {
     flex:       1,
