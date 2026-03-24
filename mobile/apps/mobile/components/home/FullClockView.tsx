@@ -130,14 +130,25 @@ interface FullClockViewProps {
 
 interface Tip { text: string; sub: string; x: number; y: number }
 
+type Layer = 'cycles' | 'energy' | 'mrm' | 'crp' | 'sleep';
+
+const LAYERS: { id: Layer; label: string; icon: string }[] = [
+  { id: 'cycles', label: 'Cycles',  icon: 'refresh-outline'       },
+  { id: 'energy', label: 'Energy',  icon: 'flash-outline'          },
+  { id: 'mrm',    label: 'MRM',     icon: 'radio-button-on-outline'},
+  { id: 'crp',    label: 'CRP',     icon: 'ellipse-outline'        },
+  { id: 'sleep',  label: 'Sleep',   icon: 'moon-outline'           },
+];
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function FullClockView({
   visible, onClose, wakeMin, idealCycles, peakPreference = 'morning',
 }: FullClockViewProps) {
-  const [data,  setData]  = useState(() => computeRhythmData(nowMin(), wakeMin, DAY_CYCLES));
-  const [time,  setTime]  = useState(() => fmtMin(nowMin()));
-  const [tip,   setTip]   = useState<Tip | null>(null);
+  const [data,   setData]   = useState(() => computeRhythmData(nowMin(), wakeMin, DAY_CYCLES));
+  const [time,   setTime]   = useState(() => fmtMin(nowMin()));
+  const [tip,    setTip]    = useState<Tip | null>(null);
+  const [active, setActive] = useState<Layer>('cycles');
 
   const glow      = useRef(new Animated.Value(0.6)).current;
   const glowScale = useRef(new Animated.Value(1)).current;
@@ -269,8 +280,8 @@ export function FullClockView({
                 left: CX - R1_O, top: CY - R1_O,
               }]} />
 
-              {/* ── Energy outer ring (rendered before main so it's behind) ── */}
-              {energyChunks.map((chunks, i) => (
+              {/* ── Energy outer ring ── */}
+              {(active === 'energy' || active === 'cycles') && energyChunks.map((chunks, i) => (
                 <StaticArc key={`e${i}`} chunks={chunks} />
               ))}
 
@@ -279,6 +290,12 @@ export function FullClockView({
                 const seg     = segments[i]!;
                 const isSleep = i >= sleepStart;
                 const isCurr  = seg.isCurrent && isActive;
+
+                // Layer filter — hide non-relevant segments
+                if (active === 'sleep'  && !isSleep)  return null;
+                if (active === 'mrm'    && isSleep)   return null;
+                if (active === 'crp'    && !seg.isCRP) return null;
+                if (active === 'energy' && isSleep)   return null;
                 const midDeg  = i * SEG_DEG + SEG_DEG / 2;
                 const midRad  = (midDeg - 90) * Math.PI / 180;
                 const tx      = CX + R1_M * Math.cos(midRad);
@@ -299,8 +316,8 @@ export function FullClockView({
                 );
               })}
 
-              {/* ── MRM markers (thin inner tick) ── */}
-              {mrmMarkers.map((m, i) => (
+              {/* ── MRM markers ── */}
+              {(active === 'mrm' || active === 'cycles') && mrmMarkers.map((m, i) => (
                 <Pressable
                   key={`mrm${i}`}
                   onPress={() => showTip('MRM', 'Micro reset moment', m.x, m.y)}
@@ -312,8 +329,8 @@ export function FullClockView({
                 />
               ))}
 
-              {/* ── CRP marker (slightly larger dot) ── */}
-              {crpPt && (
+              {/* ── CRP marker ── */}
+              {(active === 'crp' || active === 'cycles') && crpPt && (
                 <Pressable
                   onPress={() => showTip('CRP', 'Controlled recovery period', crpPt.x, crpPt.y)}
                   style={[s.crpMark, { left: crpPt.x - 5, top: crpPt.y - 5 }]}
@@ -380,6 +397,23 @@ export function FullClockView({
 
             </View>
           </Pressable>
+
+          {/* ── Layer selector ── */}
+          <View style={s.layerBar}>
+            {LAYERS.map(({ id, label, icon }) => {
+              const on = active === id;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => setActive(id)}
+                  style={[s.layerChip, on && s.layerChipOn]}
+                >
+                  <Ionicons name={icon as any} size={13} color={on ? '#FFFFFF' : TEXT_M} />
+                  <Text style={[s.layerLabel, on && s.layerLabelOn]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
           {/* ── Cycle list ── */}
           <View style={s.list}>
@@ -492,6 +526,13 @@ const s = StyleSheet.create({
   },
   tipText: { fontSize: 13, fontWeight: '700', color: TEXT_D },
   tipSub:  { fontSize: 11, color: TEXT_M, marginTop: 2 },
+
+  // Layer selector
+  layerBar:     { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center' },
+  layerChip:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(28,159,218,0.08)', borderWidth: 1, borderColor: 'rgba(28,159,218,0.18)' },
+  layerChipOn:  { backgroundColor: ACCENT, borderColor: ACCENT },
+  layerLabel:   { fontSize: 12, fontWeight: '600', color: TEXT_M },
+  layerLabelOn: { color: '#FFFFFF' },
 
   // List
   list:     { width: '100%', paddingHorizontal: 24, marginTop: 28 },
