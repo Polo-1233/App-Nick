@@ -28,6 +28,7 @@ import { useTheme } from "../../lib/theme-context";
 import { PagerContext } from "../../lib/pager-context";
 import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
 import { useTour } from "../../lib/tour-context";
+import { Modal } from "react-native";
 import HomeScreen          from "../../components/screens/HomeScreen";
 import CalendarScreen      from "../../components/screens/CalendarScreen";
 import InsightsScreen      from "../../components/screens/InsightsScreen";
@@ -38,7 +39,7 @@ import ProfileScreen       from "../../components/screens/ProfileScreen";
 
 const ICON_SIZE        = 20;
 const BUBBLE_SIZE      = 36;
-const PAGE_COUNT       = 5; // 0:Home 1:Planning 2:Insights(hidden) 3:Coach 4:Profile
+const PAGE_COUNT       = 4; // 0:Home 1:Planning 2:Coach 3:Profile
 
 // ─── TabIcon ──────────────────────────────────────────────────────────────────
 
@@ -150,23 +151,30 @@ export default function PagerLayout() {
 
   const scrollRef      = useRef<ScrollView>(null);
   const scrollX        = useRef(new Animated.Value(0)).current;
-  const [activeIndex,  setActiveIndex]  = useState(0);
-  const [pagerLocked,  setPagerLocked]  = useState(false);
+  const [activeIndex,    setActiveIndex]    = useState(0);
+  const [pagerLocked,    setPagerLocked]    = useState(false);
+  const [insightsOpen,   setInsightsOpen]   = useState(false);
 
   const goToPage = useCallback(
     (index: number) => {
-      scrollRef.current?.scrollTo({ x: index * screenW, animated: true });
+      if (index === 2) {
+        // Insights n'est plus une page du pager — s'ouvre en modal
+        setInsightsOpen(true);
+        return;
+      }
+      // Remap: 3→2 (Coach), 4→3 (Profile) pour les anciens appelants
+      const mapped = index > 2 ? index - 1 : index;
+      scrollRef.current?.scrollTo({ x: mapped * screenW, animated: true });
     },
     [screenW],
   );
 
   // Per-icon triangle interpolations (peaks at own page, fades to neighbours)
-  // Tab anims — pages: 0=Home 1=Planning 2=Insights(hidden) 3=Coach 4=Profile
-  // Tab bar only shows 4 tabs: Home(0) Planning(1) Coach(3) Profile(4)
-  const anim0 = scrollX.interpolate({ inputRange: [0, screenW],                          outputRange: [1, 0], extrapolate: "clamp" });
-  const anim1 = scrollX.interpolate({ inputRange: [0, screenW, 2 * screenW],             outputRange: [0, 1, 0], extrapolate: "clamp" });
-  const anim3 = scrollX.interpolate({ inputRange: [2 * screenW, 3 * screenW, 4 * screenW], outputRange: [0, 1, 0], extrapolate: "clamp" });
-  const anim4 = scrollX.interpolate({ inputRange: [3 * screenW, 4 * screenW],            outputRange: [0, 1], extrapolate: "clamp" });
+  // Tab anims — 4 pages: 0=Home 1=Planning 2=Coach 3=Profile
+  const anim0 = scrollX.interpolate({ inputRange: [0, screenW],                  outputRange: [1, 0], extrapolate: "clamp" });
+  const anim1 = scrollX.interpolate({ inputRange: [0, screenW, 2 * screenW],     outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim2 = scrollX.interpolate({ inputRange: [screenW, 2 * screenW, 3 * screenW], outputRange: [0, 1, 0], extrapolate: "clamp" });
+  const anim3 = scrollX.interpolate({ inputRange: [2 * screenW, 3 * screenW],    outputRange: [0, 1], extrapolate: "clamp" });
 
   const { tabBarBg, tabBarBorder, tabBarBubble, tabBarIcon } = theme.colors;
 
@@ -200,15 +208,11 @@ export default function PagerLayout() {
         <View style={[styles.page, { width: screenW }]}>
           <CalendarScreen />
         </View>
-        {/* Page 2 — Insights (hidden from tab bar, accessible via Planning shortcut) */}
-        <View style={[styles.page, { width: screenW }]}>
-          <InsightsScreen />
-        </View>
-        {/* Page 3 — Coach */}
+        {/* Page 2 — Coach */}
         <View style={[styles.page, { width: screenW }]}>
           <CoachInsightsScreen />
         </View>
-        {/* Page 4 — Profile */}
+        {/* Page 3 — Profile */}
         <View style={[styles.page, { width: screenW }]}>
           <ProfileScreen />
         </View>
@@ -247,36 +251,47 @@ export default function PagerLayout() {
           />
         </Pressable>
 
-        {/* Coach (page 3) */}
+        {/* Coach (page 2) */}
         <Pressable
           style={[styles.tabItem, isOnboarding && styles.tabLocked]}
           onPress={() => goToPage(3)}
           disabled={isOnboarding}
         >
-          <TabIcon anim={anim3} bubbleColor={tabBarBubble}
+          <TabIcon anim={anim2} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
             label="Coach"
             showTourRing={tourStep === 2}
-            icon={<Ionicons name={activeIndex === 3 ? "book" : "book-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 2 ? "book" : "book-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
           />
         </Pressable>
 
-        {/* Profile (page 4) */}
+        {/* Profile (page 3) */}
         <Pressable
           style={[styles.tabItem, isOnboarding && styles.tabLocked]}
           onPress={() => goToPage(4)}
           disabled={isOnboarding}
         >
-          <TabIcon anim={anim4} bubbleColor={tabBarBubble}
+          <TabIcon anim={anim3} bubbleColor={tabBarBubble}
             iconColor={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon}
             label="Profile"
             showTourRing={tourStep === 3}
-            icon={<Ionicons name={activeIndex === 4 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
+            icon={<Ionicons name={activeIndex === 3 ? "person" : "person-outline"} size={ICON_SIZE} color={isOnboarding ? 'rgba(255,255,255,0.85)' : tabBarIcon} />}
           />
         </Pressable>
       </View>
 
     </View>
+
+    {/* Insights modal — accessible depuis Planning uniquement */}
+    <Modal
+      visible={insightsOpen}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setInsightsOpen(false)}
+    >
+      <InsightsScreen onClose={() => setInsightsOpen(false)} />
+    </Modal>
+
     </PagerContext.Provider>
   );
 }

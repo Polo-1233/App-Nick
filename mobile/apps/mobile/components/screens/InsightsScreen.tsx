@@ -35,7 +35,6 @@ import { Analytics } from '../../lib/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../lib/theme-context';
 import { AmbientBackground } from '../ui/AmbientBackground';
-import { usePager } from '../../lib/pager-context';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -210,9 +209,9 @@ function EmptyState() {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function InsightsScreen() {
-  const { theme }    = useTheme();
-  const { goToPage } = usePager();
+export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
+  const { theme } = useTheme();
+  const back = onClose ?? (() => {});
   const [loading,         setLoading]         = useState(true);
   const [insights,        setInsights]        = useState<InsightsData | null>(null);
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
@@ -254,7 +253,7 @@ export default function InsightsScreen() {
 
   const BackHeader = () => (
     <View style={s.backHeader}>
-      <Pressable onPress={() => goToPage(1)} style={s.backBtn} hitSlop={12}>
+      <Pressable onPress={back} style={s.backBtn} hitSlop={12}>
         <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
         <Text style={[s.backLabel, { color: theme.colors.text }]}>Planning</Text>
       </Pressable>
