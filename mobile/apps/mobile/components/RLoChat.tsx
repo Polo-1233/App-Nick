@@ -169,11 +169,11 @@ export function RLoChat({ visible, onClose }: Props) {
   const [input, setInput] = useState("");
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
+  // Scroll to end when messages update or thinking starts
   useEffect(() => {
-    if (!messages.length) return;
-    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
     return () => clearTimeout(t);
-  }, [messages, isThinking]);
+  }, [messages.length, isThinking]);
 
   function handleSend() {
     const text = input.trim();
@@ -226,34 +226,33 @@ export function RLoChat({ visible, onClose }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={0}
         >
-          {messages.length === 0 ? (
-            /* Empty state */
-            <View style={s.empty}>
-              <View style={[s.emptyAvatar, { backgroundColor: `${c.accent}20` }]}>
-                <Ionicons name="planet-outline" size={32} color={c.accent} />
+          {/* Always use FlatList — empty state inside footer */}
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={m => m.id}
+            contentContainerStyle={[s.list, messages.length === 0 && s.listEmpty]}
+            renderItem={({ item }) => <ChatBubble message={item} />}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={s.empty}>
+                <View style={[s.emptyAvatar, { backgroundColor: `${c.accent}20` }]}>
+                  <Ionicons name="planet-outline" size={32} color={c.accent} />
+                </View>
+                <Text style={[s.emptyTitle, { color: c.text }]}>Ask R-Lo anything</Text>
+                <Text style={[s.emptySub, { color: c.textMuted }]}>
+                  About your sleep, rhythm, or recovery.
+                </Text>
               </View>
-              <Text style={[s.emptyTitle, { color: c.text }]}>Ask R-Lo anything</Text>
-              <Text style={[s.emptySub,   { color: c.textMuted }]}>
-                About your sleep, rhythm, or recovery.
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              ref={listRef}
-              data={messages}
-              keyExtractor={m => m.id}
-              contentContainerStyle={s.list}
-              renderItem={({ item }) => <ChatBubble message={item} />}
-              showsVerticalScrollIndicator={false}
-              ListFooterComponent={
-                isThinking ? (
-                  <View style={[s.thinkingBubble, { backgroundColor: theme.dark ? '#1a2f5a' : '#EAF4FB' }]}>
-                    <TypingDots color={theme.dark ? '#FFFFFF' : '#002060'} />
-                  </View>
-                ) : null
-              }
-            />
-          )}
+            }
+            ListFooterComponent={
+              isThinking ? (
+                <View style={[s.thinkingBubble, { backgroundColor: theme.dark ? '#1a2f5a' : '#1c3d6e' }]}>
+                  <TypingDots color="#FFFFFF" />
+                </View>
+              ) : null
+            }
+          />
 
           {/* ── Suggestion chips — always visible, wrap layout ── */}
           <View style={s.chips}>
@@ -324,7 +323,8 @@ const s = StyleSheet.create({
   emptySub:    { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 
   // Messages
-  list: { padding: 16, paddingBottom: 12, gap: 14 },
+  list:      { padding: 16, paddingBottom: 12, gap: 14 },
+  listEmpty: { flexGrow: 1, justifyContent: 'center' },
   thinkingBubble: {
     alignSelf: 'flex-start',
     borderRadius: 18, borderBottomLeftRadius: 4,
