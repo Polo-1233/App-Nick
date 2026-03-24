@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
 import { View, StyleSheet } from "react-native";
-import { useTheme } from "../../lib/theme-context";
 import { Slot, useRouter } from "expo-router";
 import { DayPlanProvider }         from "../../lib/day-plan-context";
 import { AudioProvider }           from "../../lib/audio-context";
@@ -19,8 +18,7 @@ import { useAuth } from "../../lib/auth-context";
 import { initAppleHealth } from "../../lib/apple-health";
 
 export default function TabsLayout() {
-  const { theme } = useTheme();
-  const router    = useRouter();
+  const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [chatVisible, setChatVisible] = useState(false);
@@ -81,7 +79,7 @@ export default function TabsLayout() {
     <OnboardingPhaseProvider phase={phase} advance={advance}>
       <DayPlanProvider>
         <ChatProvider onOpenChat={openChat}>
-          <View style={[st.root, { backgroundColor: theme.colors.background }]}>
+          <View style={st.root}>
             <Slot />
 
             {/* Tab bar lock — blocks ALL touch events on bottom nav during onboarding */}
@@ -125,7 +123,7 @@ export default function TabsLayout() {
 }
 
 const st = StyleSheet.create({
-  root:    { flex: 1 },
+  root:    { flex: 1, backgroundColor: 'transparent' },
   tabLock: {
     position:        'absolute',
     bottom:          0,
