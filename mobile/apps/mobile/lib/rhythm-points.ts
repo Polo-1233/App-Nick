@@ -18,6 +18,10 @@ export const POINTS = {
   CRP_COMPLETE:      5,
   WINDDOWN_START:    3,
   WINDDOWN_CONTENT:  3,
+  COACH_VIDEO:       1,   // short video watched
+  COACH_AUDIO_SHORT: 3,   // MRM/wind-down audio (< 10 min)
+  COACH_AUDIO_LONG:  5,   // CRP/NSDR audio (≥ 20 min)
+  PROGRAM_DAY:       10,  // program daily step completed
 } as const;
 
 export interface RhythmPointsState {

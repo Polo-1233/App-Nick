@@ -21,6 +21,7 @@ import { useRouter }    from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Analytics }    from '../../lib/analytics';
 import { useTheme }     from '../../lib/theme-context';
+import { addPoints }    from '../../lib/rhythm-points';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import {
   COACH_INSIGHTS,
@@ -253,7 +254,14 @@ function ContentSection({
           <LibraryCard
             key={item.id}
             item={item}
-            onPress={() => { if (item.route) router.push(item.route as any); }}
+            onPress={() => {
+              if (item.route) {
+                // Award points for content engagement
+                const pts = item.type === 'video' ? 1 : item.duration.includes('20') ? 5 : 3;
+                void addPoints(pts, `content_${item.id}`);
+                router.push(item.route as any);
+              }
+            }}
           />
         ))}
       </View>

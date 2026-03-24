@@ -10,6 +10,7 @@ import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { getProactiveTrigger, getLatestWeeklyReport } from './api';
+import { checkMotivationNotifications } from './motivation-notifications';
 
 const CHECK_KEY       = '@r90:lastProactiveCheck';
 const REPORT_KEY      = '@r90:weeklyReportNotified';
@@ -61,6 +62,9 @@ async function checkAndNotify(): Promise<void> {
 
     // Check for weekly report notification
     await checkWeeklyReportNotification();
+
+    // Check gamification motivation notifications
+    await checkMotivationNotifications();
   } catch {
     // Silent failure
   }
