@@ -167,7 +167,7 @@ export function FullClockView({
     ]));
     loop.start();
     return () => loop.stop();
-  }, [visible, glow, glowSz]);
+  }, [visible, glow, glowScale]);
 
   const { segments, currentIdx } = data;
   const energyMap  = getEnergyMap(DAY_CYCLES, peakPreference);
