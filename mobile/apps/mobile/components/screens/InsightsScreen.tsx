@@ -36,6 +36,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../lib/theme-context';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import type { UserProfile, NightRecord } from '@r90/types';
+// (NightRecord used for smoke data)
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -227,20 +228,43 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
         loadWeekHistory(),
         getWearableHistory().catch(() => null),
       ]);
-      if (p) setProfile(p);
 
-      let history = h;
-      if ((!history || history.length === 0) && wearableRes?.ok && wearableRes.data?.data) {
+      // ── SMOKE DATA — remove before production ────────────────────────────
+      const SMOKE_PROFILE: UserProfile = {
+        anchorTime:          390,   // 06:30
+        idealCyclesPerNight: 5,
+        chronotype:          'Neither',
+        weeklyTarget:        35,
+      };
+      const today = new Date();
+      const SMOKE_HISTORY: NightRecord[] = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (13 - i));
+        const cycles = [5, 4, 5, 5, 3, 5, 4, 5, 5, 4, 5, 5, 3, 5][i] ?? 4;
+        return {
+          date:            d.toISOString().slice(0, 10),
+          cyclesCompleted: cycles,
+          anchorTime:      390,
+        };
+      });
+      // ─────────────────────────────────────────────────────────────────────
+
+      const activeProfile = p ?? SMOKE_PROFILE;
+      if (p) setProfile(p); else setProfile(SMOKE_PROFILE);
+
+      let history = (h && h.length > 0) ? h : null;
+      if (!history && wearableRes?.ok && wearableRes.data?.data) {
         const entries = wearableRes.data.data as any[];
         history = entries.map((w: any) => ({
           date:            w.collected_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
           cyclesCompleted: w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4,
-          anchorTime:      p?.anchorTime ?? 390,
+          anchorTime:      activeProfile.anchorTime,
         }));
       }
+      if (!history) history = SMOKE_HISTORY;
 
-      if (history) setRawHistory(history);
-      if (p && history && history.length > 0) setInsights(computeInsights(history, p));
+      setRawHistory(history);
+      setInsights(computeInsights(history, activeProfile));
       setLoading(false);
     }
     void load();
