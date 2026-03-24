@@ -64,8 +64,13 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 
   // Visible window: currentIdx-0 to currentIdx+2
   const { segments, currentIdx, totalCycles } = data;
-  // Show current + next 2, or first 3 if before day start
-  const startIdx   = Math.max(0, currentIdx >= 0 ? currentIdx : 0);
+  // Show current + next 2
+  // If past bedtime (currentIdx >= totalCycles), show last VISIBLE cycles
+  // If before day start (currentIdx === -1), show first VISIBLE cycles
+  const clampedIdx = currentIdx >= totalCycles
+    ? totalCycles - 1         // past bedtime → anchor to last cycle
+    : Math.max(0, currentIdx);
+  const startIdx   = Math.max(0, Math.min(clampedIdx, totalCycles - VISIBLE));
   const endIdx     = Math.min(totalCycles - 1, startIdx + VISIBLE - 1);
   const visible    = segments.slice(startIdx, endIdx + 1);
   const visCount   = Math.max(1, visible.length);
@@ -73,18 +78,22 @@ export const RhythmTimeline = memo(function RhythmTimeline({
   // Segment width
   const segW = (TW - (visCount - 1) * GAP) / Math.max(visCount, 1);
 
-  // Cursor position within visible area — guard against currentIdx = -1
-  const currentSeg    = currentIdx >= 0 ? segments[currentIdx] : null;
+  // Cursor position within visible area
+  // currentIdx === -1 → before day, currentIdx >= totalCycles → past bedtime → no cursor
+  const isActiveCycle = currentIdx >= 0 && currentIdx < totalCycles;
+  const currentSeg    = isActiveCycle ? segments[currentIdx] : null;
   const progressInCycle = currentSeg
     ? Math.max(0, Math.min(1, ((data.nowMin - currentSeg.startMin + 1440) % 1440) / 90))
     : 0;
-  const cursorX = (currentIdx >= 0 && currentIdx >= startIdx)
+  const cursorX = (isActiveCycle && currentIdx >= startIdx && currentIdx <= endIdx)
     ? (currentIdx - startIdx) * (segW + GAP) + progressInCycle * segW
-    : -100; // off-screen if no current cycle
+    : -100; // off-screen if no active cycle
 
-  const cycleLabel = currentIdx >= 0 && currentIdx < totalCycles
+  const cycleLabel = isActiveCycle
     ? `Cycle ${currentIdx + 1}/${totalCycles}`
-    : `${totalCycles} cycles`;
+    : currentIdx < 0
+      ? `${totalCycles} cycles today`
+      : `Day complete · ${totalCycles} cycles`;
 
   return (
     <>
@@ -94,7 +103,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
         <View style={[tl.iconRow, { width: TW }]}>
           <Ionicons name="sunny" size={14} color={GOLD} />
           <View style={{ flex: 1 }} />
-          {data.currentIdx >= 0 && data.currentIdx < totalCycles - 1 && (
+          {(isActiveCycle || currentIdx >= totalCycles) && (
             <Text style={tl.tapHint}>View full rhythm ›</Text>
           )}
           <View style={{ flex: 1 }} />
@@ -131,8 +140,8 @@ export const RhythmTimeline = memo(function RhythmTimeline({
             </View>
           ))}
 
-          {/* Animated cursor */}
-          {currentIdx >= startIdx && currentIdx <= endIdx && (
+          {/* Animated cursor — only when inside an active cycle */}
+          {isActiveCycle && currentIdx >= startIdx && currentIdx <= endIdx && (
             <Animated.View
               pointerEvents="none"
               style={[tl.cursor, {
