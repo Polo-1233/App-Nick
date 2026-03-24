@@ -12,11 +12,11 @@ import { memo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const DEEP   = '#1a2980';   // slightly lighter than DEEP for secondary
-const CARD   = '#1E3A6E';
-const ACCENT = '#1c9fda';
-const GOLD   = '#F5A623';
-const WHITE  = '#FFFFFF';
+const ACCENT     = '#1c9fda';
+const GOLD       = '#F5A623';
+const CARD_BG    = '#EAF4FB';   // soft blue on white bg
+const TEXT_MAIN  = '#002060';
+const TEXT_MUTED = '#5A7A9A';
 
 export interface CalendarCard  { type: 'calendar';  title: string; subtitle: string; onDismiss: () => void }
 export interface InsightCard   { type: 'insight';   id: string; message: string; onDismiss: () => void }
@@ -40,7 +40,7 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
               <Text style={sc.title} numberOfLines={1}>{card.title}</Text>
               <Text style={sc.sub}   numberOfLines={1}>{card.subtitle}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
           </Pressable>
         );
 
@@ -70,7 +70,7 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
                 {card.streakDays > 0 ? `${card.streakDays} days rhythm flow` : 'Check your Insights'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.3)" />
+            <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
           </View>
         );
 
@@ -86,31 +86,31 @@ const sc = StyleSheet.create({
     marginTop: 16,
   },
   card: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             12,
-    marginHorizontal: 20,
-    paddingVertical:  12,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               12,
+    marginHorizontal:  20,
+    paddingVertical:   12,
     paddingHorizontal: 14,
-    borderRadius:    14,
-    backgroundColor: '#1A3560',
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 2 },
-    shadowOpacity:   0.08,
-    shadowRadius:    8,
-    elevation:       2,
+    borderRadius:      14,
+    backgroundColor:   CARD_BG,
+    shadowColor:       '#002060',
+    shadowOffset:      { width: 0, height: 2 },
+    shadowOpacity:     0.05,
+    shadowRadius:      8,
+    elevation:         1,
   },
   iconWrap: {
-    width:          34,
-    height:         34,
-    borderRadius:   10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems:     'center',
-    justifyContent: 'center',
+    width:           34,
+    height:          34,
+    borderRadius:    10,
+    backgroundColor: `${ACCENT}18`,
+    alignItems:      'center',
+    justifyContent:  'center',
   },
   body:    { flex: 1 },
-  label:   { fontSize: 10, fontWeight: '700', color: GOLD,  letterSpacing: 0.8, marginBottom: 2 },
-  title:   { fontSize: 13, fontWeight: '600', color: WHITE, lineHeight: 18 },
-  sub:     { fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  label:   { fontSize: 10, fontWeight: '700', color: GOLD,       letterSpacing: 0.8, marginBottom: 2 },
+  title:   { fontSize: 13, fontWeight: '600', color: TEXT_MAIN,  lineHeight: 18 },
+  sub:     { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
   dismiss: { fontSize: 14, color: ACCENT, fontWeight: '700' },
 });

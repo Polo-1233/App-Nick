@@ -110,19 +110,19 @@ export const RhythmTimeline = memo(function RhythmTimeline({
                 {
                   left:   x1,
                   width:  w,
-                  height: isCurrent ? 20 : 14,
-                  top:    isCurrent ? 31  : 34,
+                  height: isCurrent ? 24 : 16,
+                  top:    isCurrent ? 35  : 39,
                   backgroundColor: isCurrent
                     ? ACCENT
                     : isPast ? CYCLE_DONE : CYCLE_IDLE,
-                  borderRadius: isCurrent ? 7 : 5,
-                  opacity: isPast ? 0.6 : 1,
+                  borderRadius: isCurrent ? 8 : 5,
+                  opacity: isPast ? 0.55 : 1,
                   ...(isCurrent && {
                     shadowColor:   ACCENT,
                     shadowOffset:  { width: 0, height: 0 },
-                    shadowOpacity: 0.45,
-                    shadowRadius:  8,
-                    elevation:     3,
+                    shadowOpacity: 0.5,
+                    shadowRadius:  10,
+                    elevation:     4,
                   }),
                 },
               ]}
@@ -130,30 +130,30 @@ export const RhythmTimeline = memo(function RhythmTimeline({
           );
         })}
 
-        {/* MRM dots */}
+        {/* MRM dots — sit on track */}
         {mrmBlocks.map((b, i) => (
-          <View key={`mrm-${i}`} style={[tl.mrmDot, { left: xOf(b.start) - 3 }]} />
+          <View key={`mrm-${i}`} style={[tl.mrmDot, { left: xOf(b.start) - 3.5 }]} />
         ))}
 
         {/* CRP rings */}
         {crpBlocks.map((b, i) => (
-          <View key={`crp-${i}`} style={[tl.crpRing, { left: xOf(b.start) - 5 }]} />
+          <View key={`crp-${i}`} style={[tl.crpRing, { left: xOf(b.start) - 6 }]} />
         ))}
 
-        {/* Sun marker — left (ARP) */}
+        {/* Sun marker — anchored to left edge, above track */}
         <View style={tl.sunMarker}>
-          <Ionicons name="sunny" size={14} color={GOLD} />
+          <Ionicons name="sunny" size={15} color={GOLD} />
         </View>
 
-        {/* Moon marker — right (sleep) */}
-        <View style={[tl.moonMarker, { left: TW - 14 }]}>
-          <Ionicons name="moon" size={12} color={ACCENT} />
+        {/* Moon marker — anchored to right edge */}
+        <View style={[tl.moonMarker, { left: TW - 16 }]}>
+          <Ionicons name="moon" size={13} color={ACCENT} />
         </View>
 
-        {/* Cursor */}
+        {/* Animated cursor at current position */}
         <Animated.View
           pointerEvents="none"
-          style={[tl.cursor, { left: nowX - 5, transform: [{ scale: pulse }] }]}
+          style={[tl.cursor, { left: nowX - 6, transform: [{ scale: pulse }] }]}
         />
 
       </View>
@@ -170,20 +170,20 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 
 const tl = StyleSheet.create({
   outer: {
-    marginTop:    12,
-    alignItems:   'center',
+    marginTop:        14,
+    paddingHorizontal: 20,
   },
   container: {
-    height:     80,
-    position:   'relative',
+    height:   96,
+    position: 'relative',
   },
   track: {
     position:        'absolute',
     left:            0,
     right:           0,
-    top:             41,
-    height:          4,
-    borderRadius:    2,
+    top:             47,
+    height:          6,
+    borderRadius:    3,
     backgroundColor: TRACK_COLOR,
   },
   cycle: {
@@ -191,70 +191,70 @@ const tl = StyleSheet.create({
   },
   mrmDot: {
     position:        'absolute',
-    top:             39,
-    width:           6,
-    height:          6,
-    borderRadius:    3,
+    top:             44,
+    width:           7,
+    height:          7,
+    borderRadius:    3.5,
     backgroundColor: '#A8CADE',
   },
   crpRing: {
     position:        'absolute',
-    top:             37,
-    width:           10,
-    height:          10,
-    borderRadius:    5,
+    top:             42,
+    width:           12,
+    height:          12,
+    borderRadius:    6,
     borderWidth:     1.5,
     borderColor:     GOLD,
     backgroundColor: 'transparent',
   },
   sunMarker: {
     position:       'absolute',
-    left:           -4,
-    top:            30,
-    width:          20,
-    height:         20,
+    left:           -2,
+    top:            34,
+    width:          22,
+    height:         22,
     alignItems:     'center',
     justifyContent: 'center',
   },
   moonMarker: {
     position:       'absolute',
-    top:            32,
-    width:          14,
-    height:         14,
+    top:            36,
+    width:          16,
+    height:         16,
     alignItems:     'center',
     justifyContent: 'center',
   },
   cursor: {
     position:        'absolute',
-    top:             36,
-    width:           10,
-    height:          10,
-    borderRadius:    5,
+    top:             41,
+    width:           12,
+    height:          12,
+    borderRadius:    6,
     backgroundColor: ACCENT,
     shadowColor:     ACCENT,
     shadowOffset:    { width: 0, height: 0 },
-    shadowOpacity:   0.7,
-    shadowRadius:    6,
-    elevation:       4,
+    shadowOpacity:   0.8,
+    shadowRadius:    8,
+    elevation:       5,
   },
   labels: {
     flexDirection:  'row',
     justifyContent: 'space-between',
     alignItems:     'center',
-    marginTop:       6,
-    paddingHorizontal: 4,
+    marginTop:       8,
   },
   labelSide: {
-    fontSize:  11,
+    fontSize:  12,
     color:     TEXT_MUTED,
-    width:     44,
+    width:     48,
+    fontWeight: '500',
   },
   labelCenter: {
     fontSize:   12,
-    fontWeight: '600',
+    fontWeight: '700',
     color:      TEXT_LABEL,
     textAlign:  'center',
     flex:       1,
-    opacity:    0.7,
+    letterSpacing: 0.3,
   },
 });
