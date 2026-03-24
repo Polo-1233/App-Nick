@@ -525,11 +525,11 @@ export default function ProfileScreen() {
 
         {/* ── 1. Identity ── */}
         <View style={s.identity}>
-          <View style={[s.avatar, { backgroundColor: C.accent }]}>
+          <View style={[s.avatar, { backgroundColor: theme.colors.accent }]}>
             <Text style={s.avatarText}>{avatarLetter}</Text>
           </View>
-          <Text style={s.name}>{displayName}</Text>
-          <Text style={s.nameSub}>R90 rhythm active</Text>
+          <Text style={[s.name, { color: theme.colors.text }]}>{displayName}</Text>
+          <Text style={[s.nameSub, { color: theme.colors.textMuted }]}>R90 rhythm active</Text>
         </View>
 
         {/* ── 2. Premium card ── */}
@@ -541,7 +541,7 @@ export default function ProfileScreen() {
         {/* ── 3. Account menu — grouped ── */}
         {MENU_SECTIONS.map(({ title, items }) => (
           <View key={title} style={s.section}>
-            <Text style={s.sectionTitle}>{title}</Text>
+            <Text style={[s.sectionTitle, { color: theme.colors.textMuted }]}>{title}</Text>
             <View style={s.menu}>
               {items.map(({ icon, label, sub, onPress }, i) => (
                 <Pressable
@@ -606,7 +606,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        <Text style={s.version}>R-Lo · Sleep Coach v1.0.0</Text>
+        <Text style={[s.version, { color: theme.colors.textMuted }]}>R-Lo · Sleep Coach v1.0.0</Text>
       </ScrollView>
 
       <DataSecurityModal
