@@ -260,25 +260,39 @@ export function RLoChat({ visible, onClose }: Props) {
             }
           />
 
-          {/* ── Suggestion chips — carousel horizontal ── */}
-          <FlatList
-            data={CHIPS}
-            keyExtractor={(_, i) => String(i)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.chips}
-            style={s.chipsRow}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => setInput(item)}
-                style={[s.chip, { borderColor: chipBorder }]}
-              >
-                <Text style={[s.chipTxt, { color: chipText }]} numberOfLines={1}>
-                  {item}
-                </Text>
-              </Pressable>
-            )}
-          />
+          {/* ── Suggestion chips — carousel horizontal + dots ── */}
+          <View>
+            <FlatList
+              data={CHIPS}
+              keyExtractor={(_, i) => String(i)}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.chips}
+              style={s.chipsRow}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => setInput(item)}
+                  style={[s.chip, { borderColor: chipBorder }]}
+                >
+                  <Text style={[s.chipTxt, { color: chipText }]} numberOfLines={1}>
+                    {item}
+                  </Text>
+                </Pressable>
+              )}
+            />
+            {/* Scroll indicator dots */}
+            <View style={s.scrollDots}>
+              {[0, 1, 2].map(i => (
+                <View
+                  key={i}
+                  style={[
+                    s.scrollDot,
+                    { backgroundColor: i === 0 ? c.accent : c.borderSub },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
 
           {/* ── Input bar ── */}
           <View style={[s.bar, { borderTopColor: c.borderSub }]}>
@@ -347,6 +361,18 @@ const s = StyleSheet.create({
 
   // Suggestion chips — horizontal carousel
   chipsRow: { flexShrink: 0, height: 44 },
+  scrollDots: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    alignItems:     'center',
+    gap:            5,
+    paddingVertical: 4,
+  },
+  scrollDot: {
+    width:        5,
+    height:       5,
+    borderRadius: 2.5,
+  },
   chips: {
     paddingHorizontal: 14,
     paddingVertical:    6,
