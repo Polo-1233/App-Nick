@@ -529,7 +529,9 @@ export default function ProfileScreen() {
             <Text style={s.avatarText}>{avatarLetter}</Text>
           </View>
           <Text style={[s.name, { color: theme.colors.text }]}>{displayName}</Text>
-          <Text style={[s.nameSub, { color: theme.colors.textMuted }]}>R90 rhythm active</Text>
+          <View style={s.rhythmBadge}>
+            <Text style={s.rhythmBadgeText}>R90 rhythm active</Text>
+          </View>
         </View>
 
         {/* ── 2. Premium card ── */}
@@ -645,8 +647,9 @@ const s = StyleSheet.create({
   identity: { alignItems: 'center', paddingTop: 40, paddingBottom: 32, gap: 8 },
   avatar:   { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 28, fontWeight: '700', color: '#0a0a3a' },
-  name:     { fontSize: 22, fontWeight: '700', color: C.text },
-  nameSub:  { fontSize: 13, color: C.textMuted },
+  name:           { fontSize: 22, fontWeight: '700', color: C.text },
+  rhythmBadge:    { backgroundColor: C.accent, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginTop: 2 },
+  rhythmBadgeText:{ fontSize: 13, fontWeight: '600', color: '#FFFFFF', letterSpacing: 0.2 },
 
   // Menu
   section:      { marginTop: 8 },
