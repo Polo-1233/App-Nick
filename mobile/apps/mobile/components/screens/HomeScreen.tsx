@@ -34,12 +34,10 @@ import { useTour }            from '../../lib/tour-context';
 
 // ─── Home sub-components (clean module) ────────────────────────────────────────
 import {
-  HomeHeader,
   RhythmTimeline,
   ActionCard,
   RLoMessage,
   SecondaryCards,
-  SleepFooter,
   type SecondaryCardData,
 } from '../home';
 
@@ -47,16 +45,15 @@ import {
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { OnboardingChatFlow }   from '../OnboardingChatFlow';
-import { StreakDetail }         from '../StreakDetail';
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
 import { getFlow }              from '../../lib/rhythm-points';
 // getMissedCycleInfo now handled inside action-state.ts
-import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
+import { ensureSignupDate } from '../../lib/coach-insights';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
 } from '../../lib/storage';
-import { getUpcomingEvents, type CalendarEventResponse } from '../../lib/api';
+import { getUpcomingEvents } from '../../lib/api';
 import type { UserProfile, ReadinessState } from '@r90/types';
 import type { MascotEmotion } from '../ui/MascotImage';
 
@@ -88,11 +85,9 @@ export default function HomeScreen() {
   );
   const [userName,           setUserName]            = useState<string | null>(null);
   const [streak,             setStreak]              = useState(0);
-  const [bannerEvent,        setBannerEvent]         = useState<CalendarEventResponse | null>(null);
+  const [bannerEvent,        setBannerEvent]         = useState<{ title: string; start_time: string; event_type_hint?: string } | null>(null);
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
-  const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
-  const [showStreakDetail,   setShowStreakDetail]     = useState(false);
 
   const hasMountedFocus  = useRef(false);
   const hasRedirected    = useRef(false);
@@ -111,7 +106,6 @@ export default function HomeScreen() {
       }
       getFlow().then(f => setStreak(f.currentStreak)).catch(() => {});
       void ensureSignupDate();
-      getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
     // Sync action state every 30s
     const id = setInterval(() => {
@@ -214,36 +208,15 @@ export default function HomeScreen() {
     }
   }, [router, goToPage]);
 
-  // ── Secondary cards ────────────────────────────────────────────────────────
-  // TODO: remove mock data before production
+  // ── Secondary cards — calendar banner only (real data) ───────────────────
   const secondaryCards: SecondaryCardData[] = [];
 
-  // Calendar — real data or mock
-  const calendarTitle    = bannerEvent?.title    ?? 'Team dinner';
-  const calendarSubtitle = bannerEvent
-    ? `${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`
-    : '19:30 — Event';
-  if (!bannerDismissed) {
+  if (bannerEvent && !bannerDismissed) {
     secondaryCards.push({
       type:      'calendar',
-      title:     calendarTitle,
-      subtitle:  calendarSubtitle,
+      title:     bannerEvent.title,
+      subtitle:  `${new Date(bannerEvent.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} — ${bannerEvent.event_type_hint === 'travel' ? 'Travel' : 'Event'}`,
       onDismiss: () => setBannerDismissed(true),
-    });
-  }
-
-  // Coach insight — real data or mock
-  const insightMsg = coachInsight?.message
-    ?? '90-minute cycles also exist during the day. That\'s why MRMs matter — they respect your natural rhythm.';
-  if (!coachInsight || coachInsight) { // always show
-    secondaryCards.push({
-      type:      'insight',
-      id:        coachInsight?.id ?? 'mock-ci-01',
-      message:   insightMsg,
-      onDismiss: async () => {
-        if (coachInsight) await markInsightSeen(coachInsight.id);
-        setCoachInsight(null);
-      },
     });
   }
 
@@ -310,10 +283,6 @@ export default function HomeScreen() {
         onDismiss={() => setShowMorningConfirm(false)}
       />
 
-      <StreakDetail
-        visible={showStreakDetail}
-        onClose={() => setShowStreakDetail(false)}
-      />
     </AmbientBackground>
   );
 }

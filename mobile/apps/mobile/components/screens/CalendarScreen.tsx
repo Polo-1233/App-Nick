@@ -106,45 +106,6 @@ function buildWeek(profile: UserProfile): WeekDay[] {
   });
 }
 
-// ─── Insight generator ────────────────────────────────────────────────────────
-
-function buildInsights(
-  profile: UserProfile,
-  recentCycles: number[],
-  wearableNote: string | null,
-): string[] {
-  const insights: string[] = [];
-
-  // Wearable-driven insight (real data)
-  if (wearableNote) {
-    insights.push(wearableNote);
-  }
-
-  // Cycle adherence
-  if (recentCycles.length >= 3) {
-    const avg = recentCycles.reduce((a, b) => a + b, 0) / recentCycles.length;
-    if (avg >= profile.idealCyclesPerNight - 0.3) {
-      insights.push(
-        `You've averaged ${avg.toFixed(1)} cycles over the last ${recentCycles.length} nights — right on target.`,
-      );
-    } else {
-      const deficit = profile.idealCyclesPerNight - avg;
-      insights.push(
-        `You're running ${deficit.toFixed(1)} cycles below your target this week. Consider an earlier wind-down tonight.`,
-      );
-    }
-  }
-
-  // Wake time consistency note
-  insights.push(
-    `Your ARP is ${minToHHMM(profile.anchorTime)}. Keeping your wake time consistent is the single most important R90 habit.`,
-  );
-
-  return insights.slice(0, 3);
-}
-
-
-
 // ─── R90 Score calculator ─────────────────────────────────────────────────────
 
 function calcR90Score(recentCycles: number[], target: number): number {
@@ -735,8 +696,6 @@ export default function CalendarScreen() {
 
   const recentCycles  = dayPlan?.readiness?.recentCycles ?? [5, 4, 5];
   const target        = activeProfile.idealCyclesPerNight;
-  const wearableNote  = dayPlan?.rloMessage?.text ?? null;
-
   // Wearable-adjusted cycles: if readiness zone is orange, recommend +1
   const zone            = dayPlan?.readiness?.zone ?? null;
   const adjustedCycles  = zone === 'orange' ? Math.min(target + 1, 6) : target;
