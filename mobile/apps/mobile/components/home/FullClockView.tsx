@@ -139,8 +139,8 @@ export function FullClockView({
   const [time,  setTime]  = useState(() => fmtMin(nowMin()));
   const [tip,   setTip]   = useState<Tip | null>(null);
 
-  const glow   = useRef(new Animated.Value(0.6)).current;
-  const glowSz = useRef(new Animated.Value(10)).current;
+  const glow      = useRef(new Animated.Value(0.6)).current;
+  const glowScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!visible) return;
@@ -157,12 +157,12 @@ export function FullClockView({
     if (!visible) return;
     const loop = Animated.loop(Animated.sequence([
       Animated.parallel([
-        Animated.timing(glow,   { toValue: 0,    duration: 1200, useNativeDriver: true }),
-        Animated.timing(glowSz, { toValue: 22,   duration: 1200, useNativeDriver: true }),
+        Animated.timing(glow,      { toValue: 0,   duration: 1200, useNativeDriver: true }),
+        Animated.timing(glowScale, { toValue: 2.2, duration: 1200, useNativeDriver: true }),
       ]),
       Animated.parallel([
-        Animated.timing(glow,   { toValue: 0.6,  duration: 0, useNativeDriver: true }),
-        Animated.timing(glowSz, { toValue: 10,   duration: 0, useNativeDriver: true }),
+        Animated.timing(glow,      { toValue: 0.6, duration: 0, useNativeDriver: true }),
+        Animated.timing(glowScale, { toValue: 1,   duration: 0, useNativeDriver: true }),
       ]),
     ]));
     loop.start();
@@ -346,14 +346,10 @@ export function FullClockView({
               {isActive && (
                 <>
                   <Animated.View style={[s.cursorGlow, {
-                    left:   cursorPt.x - 11,
-                    top:    cursorPt.y - 11,
-                    width:  glowSz,
-                    height: glowSz,
-                    borderRadius: 11,
+                    left:    cursorPt.x - 11,
+                    top:     cursorPt.y - 11,
                     opacity: glow,
-                    marginLeft: Animated.subtract(new Animated.Value(0), Animated.divide(glowSz, 2)),
-                    marginTop:  Animated.subtract(new Animated.Value(0), Animated.divide(glowSz, 2)),
+                    transform: [{ scale: glowScale }],
                   }]} />
                   <View style={[s.cursorDot, { left: cursorPt.x - 6, top: cursorPt.y - 6 }]} />
                 </>
@@ -429,6 +425,9 @@ const s = StyleSheet.create({
   // Cursor
   cursorGlow: {
     position:        'absolute',
+    width:           22,
+    height:          22,
+    borderRadius:    11,
     backgroundColor: ACCENT,
   },
   cursorDot: {
