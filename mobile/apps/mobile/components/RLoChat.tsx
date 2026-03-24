@@ -248,7 +248,7 @@ export function RLoChat({ visible, onClose }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[s.safe, { backgroundColor: c.background }]}>
+      <SafeAreaView style={[s.safe, { backgroundColor: c.background }]} edges={['top', 'left', 'right']}>
 
         {/* Header */}
         <View style={[s.header, { backgroundColor: c.surface, borderBottomColor: c.borderSub }]}>
@@ -493,7 +493,8 @@ const s = StyleSheet.create({
     flexDirection:     "row",
     alignItems:        "flex-end",
     paddingHorizontal: 12,
-    paddingVertical:   10,
+    paddingTop:        10,
+    paddingBottom:     10,
     gap:               8,
     borderTopWidth:    StyleSheet.hairlineWidth,
   },
