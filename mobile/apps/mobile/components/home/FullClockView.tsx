@@ -34,22 +34,21 @@ const R   = D / 2;
 const CX  = R;
 const CY  = R;
 
-const N     = 16;                     // 16 × 90min = 24h
-const SDEG  = 360 / N;                // 22.5° per segment
-const GDEG  = 3;                      // gap between segments
-const VDEG  = SDEG - GDEG;            // visible arc degrees
+const N     = 16;
+const SDEG  = 360 / N;    // 22.5° per segment
+const GDEG  = 3.5;         // gap in degrees
+const VDEG  = SDEG - GDEG;
 
-// Ring 1 — outer ring (thick)
-const R1 = R - 19;    // mid radius
-const H1 = 34;        // height
+// Rings — mid radii and thicknesses
+const R1 = R - 18;   // outer ring mid radius
+const H1 = 36;       // outer ring thickness
 
-// Ring 2 — inner ring (same segments, thinner)
-const R2 = R - 62;
-const H2 = 22;
+const R2 = R - 64;   // inner ring mid radius
+const H2 = 22;       // inner ring thickness
 
-// Width fills the full arc chord with slight overlap for clean look
-function segW(r: number) {
-  return 2 * r * Math.sin((VDEG / 2) * (Math.PI / 180)) * 1.08;
+// Arc length (not chord) — guarantees full coverage without gaps
+function segW(r: number): number {
+  return r * VDEG * (Math.PI / 180);
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -157,43 +156,45 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
             {Array.from({ length: N }, (_, i) => {
               const isSleep = i >= sleepStart;
               const midDeg  = i * SDEG;
-              const midRad  = (midDeg - 90) * (Math.PI / 180);
-              const x = CX + R1 * Math.cos(midRad);
-              const y = CY + R1 * Math.sin(midRad);
-              const w = segW(R1);
+              const w1 = segW(R1);
 
-              // Sleep layer — highlight sleep + optimal bedtime windows
-              const sleepHighlight    = layer === 'sleep' && isSleep;
-              const isBedtimeOpt      = layer === 'sleep' && bedtimeSegments.includes(i);
-              // Recovery layer — highlight CRP segment
-              const seg = segments[i];
+              const sleepHighlight = layer === 'sleep' && isSleep;
+              const isBedtimeOpt   = layer === 'sleep' && bedtimeSegments.includes(i);
+              const seg            = segments[i];
               const recHighlight   = layer === 'recovery' && seg?.isCRP && !isSleep;
 
               const baseOpacity = isSleep ? 0.18 : 0.75;
-              const opacity     = sleepHighlight  ? 0.80
-                : isBedtimeOpt  ? 0.80
-                : recHighlight  ? 0.80
+              const opacity = sleepHighlight ? 0.80
+                : isBedtimeOpt ? 0.80
+                : recHighlight ? 0.80
                 : baseOpacity;
-              const color       = sleepHighlight ? NAVY
-                : isBedtimeOpt  ? NAVY
-                : recHighlight  ? '#D97706'
-                : NAVY;
+              const color = recHighlight ? '#D97706' : NAVY;
 
               return (
+                // Outer wrapper: anchored at clock center, rotated
                 <View
                   key={`b${i}`}
                   style={{
+                    position:  'absolute',
+                    left:      CX,
+                    top:       CY,
+                    width:     0,
+                    height:    0,
+                    transform: [{ rotate: `${midDeg}deg` }],
+                  }}
+                >
+                  {/* Inner: shift outward (up = toward top of ring) */}
+                  <View style={{
                     position:        'absolute',
-                    width:           w,
+                    width:           w1,
                     height:          H1,
                     borderRadius:    5,
                     backgroundColor: color,
                     opacity,
-                    left:            x - w / 2,
-                    top:             y - H1 / 2,
-                    transform:       [{ rotate: `${midDeg}deg` }],
-                  }}
-                />
+                    left:            -w1 / 2,
+                    top:             -(R1 + H1 / 2),
+                  }} />
+                </View>
               );
             })}
 
@@ -214,30 +215,14 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
 
               return (
                 <View key={`pre${bi}`}>
-                  {/* Pre-sleep arc — same color as sleep, 50% opacity */}
-                  <View style={{
-                    position:        'absolute',
-                    width:           pw,
-                    height:          H1,
-                    borderRadius:    5,
-                    backgroundColor: NAVY,
-                    opacity:         0.40,
-                    left:            px - pw / 2,
-                    top:             py - H1 / 2,
-                    transform:       [{ rotate: `${preDeg}deg` }],
-                  }} />
-                  {/* Optimal bedtime tick — thin bright line */}
-                  <View style={{
-                    position:        'absolute',
-                    width:           4,
-                    height:          H1 + 12,
-                    borderRadius:    2,
-                    backgroundColor: CYAN,
-                    opacity:         1,
-                    left:            tx - 2,
-                    top:             ty - (H1 + 12) / 2,
-                    transform:       [{ rotate: `${tickDeg}deg` }],
-                  }} />
+                  {/* Pre-sleep arc */}
+                  <View style={{ position: 'absolute', left: CX, top: CY, width: 0, height: 0, transform: [{ rotate: `${preDeg}deg` }] }}>
+                    <View style={{ position: 'absolute', width: pw, height: H1, borderRadius: 5, backgroundColor: NAVY, opacity: 0.40, left: -pw / 2, top: -(R1 + H1 / 2) }} />
+                  </View>
+                  {/* Bedtime tick */}
+                  <View style={{ position: 'absolute', left: CX, top: CY, width: 0, height: 0, transform: [{ rotate: `${tickDeg}deg` }] }}>
+                    <View style={{ position: 'absolute', width: 4, height: H1 + 14, borderRadius: 2, backgroundColor: CYAN, opacity: 1, left: -2, top: -(R1 + (H1 + 14) / 2) }} />
+                  </View>
                 </View>
               );
             })}
@@ -251,26 +236,30 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPref
                 : energy?.level === 'neutral'          ? 0.75
                 : 0.75;
               const midDeg = i * SDEG;
-              const midRad = (midDeg - 90) * (Math.PI / 180);
-              const x = CX + R2 * Math.cos(midRad);
-              const y = CY + R2 * Math.sin(midRad);
-              const w = segW(R2);
-
+              const w2 = segW(R2);
               return (
                 <View
                   key={`e${i}`}
                   style={{
+                    position:  'absolute',
+                    left:      CX,
+                    top:       CY,
+                    width:     0,
+                    height:    0,
+                    transform: [{ rotate: `${midDeg}deg` }],
+                  }}
+                >
+                  <View style={{
                     position:        'absolute',
-                    width:           w,
+                    width:           w2,
                     height:          H2,
                     borderRadius:    4,
                     backgroundColor: CYAN,
                     opacity,
-                    left:            x - w / 2,
-                    top:             y - H2 / 2,
-                    transform:       [{ rotate: `${midDeg}deg` }],
-                  }}
-                />
+                    left:            -w2 / 2,
+                    top:             -(R2 + H2 / 2),
+                  }} />
+                </View>
               );
             })}
 
