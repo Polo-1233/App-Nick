@@ -388,13 +388,21 @@ export default function HomeScreen() {
 
   const handleActionPress = useCallback(() => {
     if (!nextAction) return;
-    if (nextAction.type === 'take_crp' || nextAction.type === 'crp_reminder') {
-      // Navigate to CRP / recovery flow — Planning tab for now
-      goToPage(1);
-    } else if (nextAction.type === 'start_pre_sleep' || nextAction.type === 'go_to_sleep') {
-      router.push('/wind-down');
-    } else {
-      goToPage(1);
+    switch (nextAction.type) {
+      case 'take_crp':
+      case 'crp_reminder':
+        router.push('/crp-player');
+        break;
+      case 'take_mrm':
+      case 'mrm_reminder':
+        router.push('/mrm-player');
+        break;
+      case 'start_pre_sleep':
+      case 'go_to_sleep':
+        router.push('/wind-down');
+        break;
+      default:
+        goToPage(1); // fallback: Planning tab
     }
   }, [nextAction, goToPage, router]);
 
