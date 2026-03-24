@@ -159,7 +159,12 @@ export function FullClockView({
     return () => loop.stop();
   }, [visible, pulse]);
 
-  const { segments, totalCycles, currentIdx } = data;
+  // Full day = 16 cycles of 90 min (24h ÷ 90 = 16)
+  const FULL_DAY_CYCLES = 16;
+  const fullData    = computeRhythmData(nowMin(), wakeMin, FULL_DAY_CYCLES);
+  const { segments, currentIdx } = fullData;
+  const totalCycles = FULL_DAY_CYCLES;
+
   const energyMap  = getEnergyMap(totalCycles, peakPreference);
   const now        = nowMin();
 
@@ -168,24 +173,28 @@ export function FullClockView({
   const elapsed    = currentSeg ? ((now - currentSeg.startMin + 1440) % 1440) : 0;
   const progressPct = Math.min(1, elapsed / CYCLE);
 
-  const cycleLabel = isActive
-    ? `Cycle ${currentIdx + 1} of ${totalCycles}`
-    : currentIdx < 0 ? `${totalCycles} cycles today` : 'Day complete';
+  // For labels, use idealCycles from props
+  const userCycleLabel = isActive
+    ? `Cycle ${currentIdx + 1} · ${idealCycles} sleep cycles`
+    : currentIdx < 0 ? `${idealCycles} sleep cycles planned` : 'Day complete';
 
   const remaining = isActive ? Math.max(0, CYCLE - elapsed) : 0;
 
-  // Each cycle occupies exactly 360/totalCycles degrees → full circle
-  const segDeg = 360 / totalCycles;
+  // 16 equal segments → 22.5° each
+  const segDeg = 360 / FULL_DAY_CYCLES;
 
-  // Cursor position: cycle index + progress within cycle, mapped to 360°
+  // Cursor position in ring
   const clampedIdx = currentIdx >= totalCycles ? totalCycles - 1 : Math.max(0, currentIdx);
   const nowDeg     = isActive
     ? clampedIdx * segDeg + progressPct * segDeg
     : clampedIdx * segDeg;
 
-  // Inner arc: from start of current cycle to cursor
+  // Inner arc: progress within current cycle
   const innerArcStart = isActive ? clampedIdx * segDeg : 0;
   const innerArcSpan  = isActive ? progressPct * segDeg : 0;
+
+  // Sleep window indices (last idealCycles cycles of the day = sleep)
+  const sleepStartIdx = FULL_DAY_CYCLES - idealCycles;
 
   return (
     <Modal
@@ -223,18 +232,21 @@ export function FullClockView({
 
                 const isCurr  = seg.isCurrent && isActive;
                 const isPast  = seg.isPast || (!isActive && currentIdx >= totalCycles);
+                const isSleep = i >= sleepStartIdx;
                 const energy  = energyMap[i];
 
-                const color   = NAVY;
+                const color   = isSleep ? `rgba(10,24,64,0.9)` : NAVY;
                 const opacity = isCurr
                   ? 1
                   : isPast
-                    ? 0.65
-                    : energy?.level === 'low'
-                      ? 0.15
-                      : energy?.level === 'high'
-                        ? 0.45
-                        : 0.28;
+                    ? 0.55
+                    : isSleep
+                      ? 0.30
+                      : energy?.level === 'low'
+                        ? 0.15
+                        : energy?.level === 'high'
+                          ? 0.45
+                          : 0.28;
 
                 const midDeg  = i * segDeg + segDeg / 2;
 
@@ -312,10 +324,9 @@ export function FullClockView({
                 );
               })()}
 
-              {/* ── Sleep marker ── */}
+              {/* ── Sleep marker — début du bloc sommeil ── */}
               {(() => {
-                if (totalCycles < 1) return null;
-                const sleepDeg = (totalCycles - 1) * segDeg + segDeg / 2;
+                const sleepDeg = sleepStartIdx * segDeg;
                 const pt       = polar(R_OUT_O + 16, sleepDeg);
                 return (
                   <View style={[s.markerWrap, { left: pt.x - 8, top: pt.y - 8 }]}>
@@ -328,7 +339,7 @@ export function FullClockView({
               <View style={s.center} pointerEvents="none">
                 <Text style={s.timeStr}>{timeStr}</Text>
                 <Text style={s.r90Label}>R90</Text>
-                <Text style={s.cycleLabel}>{cycleLabel}</Text>
+                <Text style={s.cycleLabel}>{userCycleLabel}</Text>
                 {remaining > 0 && (
                   <Text style={s.remaining}>{Math.round(remaining)} min left</Text>
                 )}
@@ -363,7 +374,7 @@ export function FullClockView({
                     {fmtMin(seg.startMin)} — {fmtMin(seg.endMin)}
                   </Text>
                   <Text style={s.cycleMeta}>
-                    {seg.isSleep ? 'Sleep' : seg.isCRP ? 'CRP' : `Cycle ${i + 1}`}
+                    {i >= sleepStartIdx ? 'Sleep' : seg.isCRP ? 'CRP' : `Cycle ${i + 1}`}
                   </Text>
                   {energy && !seg.isPast && (
                     <View style={[s.energyDot, {
