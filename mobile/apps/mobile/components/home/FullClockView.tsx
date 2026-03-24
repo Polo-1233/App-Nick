@@ -160,9 +160,8 @@ export function FullClockView({
   }, [visible, pulse]);
 
   const { segments, totalCycles, currentIdx } = data;
-  const energyMap = getEnergyMap(totalCycles, peakPreference);
-  const now       = nowMin();
-  const nowDeg    = minToDeg(wakeMin, now);
+  const energyMap  = getEnergyMap(totalCycles, peakPreference);
+  const now        = nowMin();
 
   const isActive   = currentIdx >= 0 && currentIdx < totalCycles;
   const currentSeg = isActive ? segments[currentIdx] : null;
@@ -175,9 +174,18 @@ export function FullClockView({
 
   const remaining = isActive ? Math.max(0, CYCLE - elapsed) : 0;
 
-  // Inner arc: spans from start of current cycle to current position
-  const innerArcStart = isActive ? minToDeg(wakeMin, currentSeg!.startMin) : 0;
-  const innerArcSpan  = isActive ? progressPct * (360 / totalCycles) : 0;
+  // Each cycle occupies exactly 360/totalCycles degrees → full circle
+  const segDeg = 360 / totalCycles;
+
+  // Cursor position: cycle index + progress within cycle, mapped to 360°
+  const clampedIdx = currentIdx >= totalCycles ? totalCycles - 1 : Math.max(0, currentIdx);
+  const nowDeg     = isActive
+    ? clampedIdx * segDeg + progressPct * segDeg
+    : clampedIdx * segDeg;
+
+  // Inner arc: from start of current cycle to cursor
+  const innerArcStart = isActive ? clampedIdx * segDeg : 0;
+  const innerArcSpan  = isActive ? progressPct * segDeg : 0;
 
   return (
     <Modal
@@ -208,10 +216,9 @@ export function FullClockView({
               {/* Inner ring base */}
               <View style={s.innerRingBg} />
 
-              {/* ── Outer ring: cycle segments ── */}
+              {/* ── Outer ring: cycle segments — full 360° ── */}
               {segments.map((seg, i) => {
-                const segDeg    = 360 / totalCycles;
-                const startDeg  = minToDeg(wakeMin, seg.startMin) + SEG_GAP / 2;
+                const startDeg  = i * segDeg + SEG_GAP / 2;
                 const spanDeg   = segDeg - SEG_GAP;
 
                 const isCurr  = seg.isCurrent && isActive;
@@ -229,7 +236,7 @@ export function FullClockView({
                         ? 0.45
                         : 0.28;
 
-                const midDeg = startDeg + spanDeg / 2;
+                const midDeg  = i * segDeg + segDeg / 2;
 
                 return (
                   <Pressable
@@ -307,9 +314,8 @@ export function FullClockView({
 
               {/* ── Sleep marker ── */}
               {(() => {
-                const sleepSeg = segments[totalCycles - 1];
-                if (!sleepSeg) return null;
-                const sleepDeg = minToDeg(wakeMin, sleepSeg.startMin);
+                if (totalCycles < 1) return null;
+                const sleepDeg = (totalCycles - 1) * segDeg + segDeg / 2;
                 const pt       = polar(R_OUT_O + 16, sleepDeg);
                 return (
                   <View style={[s.markerWrap, { left: pt.x - 8, top: pt.y - 8 }]}>
