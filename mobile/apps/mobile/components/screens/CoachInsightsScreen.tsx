@@ -153,11 +153,11 @@ function LibraryCard({
       onPress={item.available ? onPress : undefined}
       style={({ pressed }) => [lc.card, pressed && item.available && { opacity: 0.75 }]}
     >
-      <View style={[lc.iconWrap, { backgroundColor: item.available ? `${ACCENT}20` : `rgba(255,255,255,0.06)` }]}>
+      <View style={[lc.iconWrap, { backgroundColor: item.available ? `${ACCENT}20` : `rgba(255,255,255,0.10)` }]}>
         <Ionicons
           name={typeIcon(item.type)}
           size={16}
-          color={item.available ? ACCENT : TEXT_F}
+          color={item.available ? ACCENT : TEXT_M}
         />
       </View>
       <View style={lc.body}>
@@ -201,10 +201,11 @@ const lc = StyleSheet.create({
     fontSize:   13,
     fontWeight: '600',
     color:      TEXT_W,
+    flex:       1,
   },
   sub: {
     fontSize: 11,
-    color:    TEXT_F,
+    color:    TEXT_M,
   },
   right: {
     alignItems: 'flex-end',
@@ -225,20 +226,24 @@ const lc = StyleSheet.create({
 // ─── Content Section ──────────────────────────────────────────────────────────
 function ContentSection({
   title,
-  emoji,
+  icon,
+  iconColor,
   items,
   router,
 }: {
-  title:  string;
-  emoji:  string;
-  items:  ContentItem[];
-  router: ReturnType<typeof useRouter>;
+  title:     string;
+  icon:      keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  items:     ContentItem[];
+  router:    ReturnType<typeof useRouter>;
 }) {
   return (
     <View style={cs.wrap}>
       {/* Header */}
       <View style={cs.header}>
-        <Text style={cs.emoji}>{emoji}</Text>
+        <View style={[cs.iconWrap, { backgroundColor: `${iconColor}18` }]}>
+          <Ionicons name={icon} size={13} color={iconColor} />
+        </View>
         <Text style={cs.title}>{title}</Text>
       </View>
 
@@ -271,8 +276,12 @@ const cs = StyleSheet.create({
     gap:           8,
     marginBottom:  8,
   },
-  emoji: {
-    fontSize: 16,
+  iconWrap: {
+    width:          24,
+    height:         24,
+    borderRadius:   7,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize:   13,
@@ -459,21 +468,24 @@ export default function CoachInsightsScreen() {
 
           <ContentSection
             title="Wind Down"
-            emoji="🌙"
+            icon="moon-outline"
+            iconColor="#A78BFA"
             items={WIND_DOWN_CONTENT}
             router={router}
           />
 
           <ContentSection
             title="MRM Library"
-            emoji="⚡"
+            icon="flash-outline"
+            iconColor={GOLD}
             items={MRM_CONTENT}
             router={router}
           />
 
           <ContentSection
             title="CRP Library"
-            emoji="🧘"
+            icon="fitness-outline"
+            iconColor="#3DDC97"
             items={CRP_CONTENT}
             router={router}
           />
