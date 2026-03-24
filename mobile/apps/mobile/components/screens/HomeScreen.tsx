@@ -23,7 +23,8 @@ import AsyncStorage                        from '@react-native-async-storage/asy
 
 // ─── App contexts ───────────────────────────────────────────────────────────────
 import { useDayPlanContext }      from '../../lib/day-plan-context';
-import { type ActionCardState }   from '../../lib/action-state';
+import { type ActionCardState, getCurrentActionState } from '../../lib/action-state';
+import { nowMin as getNowMin }    from '../../lib/time-utils';
 import { useOnboardingPhase } from '../../lib/onboarding-phase-context';
 import { useChat }            from '../../lib/use-chat';
 import { useTheme }           from '../../lib/theme-context';
@@ -81,6 +82,9 @@ export default function HomeScreen() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [profile,            setProfile]            = useState<UserProfile | null>(null);
+  const [actionState,        setActionState]         = useState(() =>
+    getCurrentActionState(getNowMin(), 390, 5).state
+  );
   const [userName,           setUserName]            = useState<string | null>(null);
   const [streak,             setStreak]              = useState(0);
   const [bannerEvent,        setBannerEvent]         = useState<CalendarEventResponse | null>(null);
@@ -100,11 +104,23 @@ export default function HomeScreen() {
     (async () => {
       const [p, onboarding] = await Promise.all([loadProfile(), loadOnboardingData()]);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
-      if (p) setProfile(p);
+      if (p) {
+        setProfile(p);
+        setActionState(getCurrentActionState(getNowMin(), p.anchorTime, p.idealCyclesPerNight).state);
+      }
       getFlow().then(f => setStreak(f.currentStreak)).catch(() => {});
       void ensureSignupDate();
       getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
+    // Sync action state every 30s
+    const id = setInterval(() => {
+      setActionState(prev => {
+        const wakeMin = profile?.anchorTime ?? 390;
+        const cycles  = profile?.idealCyclesPerNight ?? 5;
+        return getCurrentActionState(getNowMin(), wakeMin, cycles).state;
+      });
+    }, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // ── Redirect to onboarding if intro not done ───────────────────────────────
@@ -279,11 +295,11 @@ export default function HomeScreen() {
             onPress={handleActionPress}
           />
 
-          {/* 4. R-Lo Message — tap opens chat */}
+          {/* 4. R-Lo — contextual companion */}
           <RLoMessage
-            text={rloText}
-            emotion={getRLoMood(streak, dayPlan?.readiness)}
-            onTap={openChat}
+            actionState={actionState}
+            wakeMin={profile?.anchorTime ?? 390}
+            onChatTap={openChat}
           />
 
           {/* 5. Secondary Cards — only rendered if data exists */}
