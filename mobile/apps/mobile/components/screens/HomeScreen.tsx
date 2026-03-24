@@ -44,6 +44,7 @@ import {
 } from '../home';
 
 // ─── Shared components ─────────────────────────────────────────────────────────
+import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { OnboardingChatFlow }   from '../OnboardingChatFlow';
 import { StreakDetail }         from '../StreakDetail';
@@ -261,7 +262,7 @@ export default function HomeScreen() {
 
   // ─── NORMAL MODE ──────────────────────────────────────────────────────────
   return (
-    <View style={[s.root, { backgroundColor: theme.colors.background }]}>
+    <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
       <SafeAreaView style={s.safe} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -320,7 +321,7 @@ export default function HomeScreen() {
         visible={showStreakDetail}
         onClose={() => setShowStreakDetail(false)}
       />
-    </View>
+    </AmbientBackground>
   );
 }
 

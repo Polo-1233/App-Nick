@@ -38,6 +38,7 @@ import {
   setOnboardingPhase,
 } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
+import { AmbientBackground } from '../ui/AmbientBackground';
 import type { ThemeMode } from '../../lib/theme';
 import { useAuth } from '../../lib/auth-context';
 import { HapticsLight } from '../../utils/haptics';
@@ -518,7 +519,8 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         {/* ── 1. Identity ── */}
@@ -629,6 +631,7 @@ export default function ProfileScreen() {
         />
       )}
     </SafeAreaView>
+    </AmbientBackground>
   );
 }
 

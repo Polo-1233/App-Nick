@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons }    from '@expo/vector-icons';
 import { MascotImage } from '../ui/MascotImage';
+import { AmbientBackground } from '../ui/AmbientBackground';
 import { useDayPlanContext } from '../../lib/day-plan-context';
 import { loadProfile } from '../../lib/storage';
 import type { UserProfile } from '@r90/types';
@@ -695,7 +696,8 @@ export default function CalendarScreen() {
   ).state;
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <AmbientBackground wakeMin={activeProfile.anchorTime} style={{ flex: 1 }}>
+    <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.content}
@@ -750,13 +752,14 @@ export default function CalendarScreen() {
 
       </ScrollView>
     </SafeAreaView>
+    </AmbientBackground>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: BG },
+  safe:           { flex: 1, backgroundColor: 'transparent' },
   scroll:         { flex: 1 },
   content:        { padding: 20, paddingBottom: 120, gap: 24 },
   header:         { gap: 4 },

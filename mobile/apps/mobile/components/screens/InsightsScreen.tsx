@@ -34,6 +34,7 @@ import {
 import { Analytics } from '../../lib/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../lib/theme-context';
+import { AmbientBackground } from '../ui/AmbientBackground';
 import type { UserProfile, NightRecord } from '@r90/types';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -251,22 +252,26 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
-        <ActivityIndicator color={C.accent} style={{ marginTop: 80 }} />
-      </SafeAreaView>
+      <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ActivityIndicator color={C.accent} style={{ marginTop: 80 }} />
+        </SafeAreaView>
+      </AmbientBackground>
     );
   }
 
   if (!insights || !profile) {
     return (
-      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
-        <ScrollView contentContainerStyle={s.scroll}>
-          <View style={s.header}>
-            <Text style={s.headerTitle}>Insights</Text>
-          </View>
-          <EmptyState />
-        </ScrollView>
-      </SafeAreaView>
+      <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <ScrollView contentContainerStyle={s.scroll}>
+            <View style={s.header}>
+              <Text style={s.headerTitle}>Insights</Text>
+            </View>
+            <EmptyState />
+          </ScrollView>
+        </SafeAreaView>
+      </AmbientBackground>
     );
   }
 
@@ -278,7 +283,8 @@ export default function InsightsScreen() {
   const rloMsg      = getRhythmInsightMessage(insights.rhythmStrength);
 
   return (
-    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <AmbientBackground wakeMin={profile.anchorTime} style={s.root}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
         <View style={s.header}>
@@ -324,6 +330,7 @@ export default function InsightsScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
+    </AmbientBackground>
   );
 }
 
