@@ -731,11 +731,14 @@ export default function CalendarScreen() {
         </View>
 
         {/* ── R-Lo — même card que la homepage ── */}
-        <RLoMessage
-          actionState={actionState}
-          wakeMin={activeProfile.anchorTime}
-          onChatTap={openChat}
-        />
+        {/* marginHorizontal: -20 annule le padding interne du composant pour aligner avec les autres cards */}
+        <View style={{ marginHorizontal: -20 }}>
+          <RLoMessage
+            actionState={actionState}
+            wakeMin={activeProfile.anchorTime}
+            onChatTap={openChat}
+          />
+        </View>
 
         {/* ── Tips & Advice ── */}
         <PlanningTipsCard
