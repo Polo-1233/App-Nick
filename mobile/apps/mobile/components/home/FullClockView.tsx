@@ -36,8 +36,8 @@ const TEXT_F   = '#9BB5CC';
 const BG       = '#F5F9FF';
 
 // Ring colors
-const C_WAKE   = ACCENT;                          // active cycles
-const C_SLEEP  = '#0a1840';                       // sleep zone
+const C_WAKE   = NAVY;                            // cycles = navy (like reference image)
+const C_SLEEP  = '#0a1840';                       // sleep zone = deeper navy
 const C_RING   = 'rgba(28,159,218,0.09)';         // base ring (empty)
 const C_ENERGY = ACCENT;                          // energy outer ring (opacity varies)
 const C_CURSOR = '#FFFFFF';
@@ -49,22 +49,22 @@ const R        = D / 2;
 const CX       = R;
 const CY       = R;
 
-// Main ring (inner thick)
-const R1_O  = R - 4;                    // outer radius
-const R1_I  = R - 46;                   // inner radius  (42px thick)
+// Main ring
+const R1_O  = R - 6;                    // outer radius
+const R1_I  = R - 50;                   // inner radius (44px thick)
 const R1_M  = (R1_O + R1_I) / 2;
 
-// Energy ring (outer thin)
-const R2_O  = R - 52;                   // just inside main ring
-const R2_I  = R - 62;                   // 10px thick — very subtle
+// Energy ring (thin, just inside main ring)
+const R2_O  = R - 58;
+const R2_I  = R - 66;
 const R2_M  = (R2_O + R2_I) / 2;
 
-const DAY_CYCLES  = 16;                 // 24h ÷ 90min
-const SEG_DEG     = 360 / DAY_CYCLES;  // 22.5° per cycle
-const GAP_DEG     = 6;                 // gap between segments
-const ARC_DEG     = SEG_DEG - GAP_DEG; // 16.5° of actual arc
+const DAY_CYCLES  = 16;
+const SEG_DEG     = 360 / DAY_CYCLES;  // 22.5°
+const GAP_DEG     = 8;                 // clean gap
+const ARC_DEG     = SEG_DEG - GAP_DEG; // 14.5° arc
 
-// ─── Arc renderer — smooth fill via 0.5° radial chunks ────────────────────────
+// ─── Arc renderer — smooth fill + rounded caps ────────────────────────────────
 
 function arcChunks(
   startDeg: number,
@@ -79,16 +79,24 @@ function arcChunks(
   const cnt  = Math.ceil(spanDeg / STEP);
   const h    = rO - rI;
   const rM   = rI + h / 2;
-  // chord width at this radius for STEP degrees + generous overlap
   const w    = Math.max(3, 2 * rM * Math.sin((STEP * Math.PI) / 180) * 1.6 + 1);
 
-  return Array.from({ length: cnt }, (_, i) => {
+  const chunks = Array.from({ length: cnt }, (_, i) => {
     const deg = startDeg + i * STEP + STEP / 2;
     const rad = (deg - 90) * (Math.PI / 180);
-    const x   = CX + rM * Math.cos(rad);
-    const y   = CY + rM * Math.sin(rad);
-    return { x, y, w, h, deg, color, opacity };
+    return { x: CX + rM * Math.cos(rad), y: CY + rM * Math.sin(rad), w, h, deg, color, opacity, cap: false };
   });
+
+  // Rounded caps — circles at start and end of arc
+  const capRadius = h / 2;
+  const addCap = (deg: number) => {
+    const rad = (deg - 90) * (Math.PI / 180);
+    chunks.push({ x: CX + rM * Math.cos(rad), y: CY + rM * Math.sin(rad), w: h, h, deg: 0, color, opacity, cap: true });
+  };
+  addCap(startDeg);
+  addCap(startDeg + spanDeg);
+
+  return chunks;
 }
 
 // Static arc — memo'd to avoid re-render on every frame
@@ -110,7 +118,8 @@ const StaticArc = memo(function StaticArc({
             height:          c.h,
             backgroundColor: c.color,
             opacity:         c.opacity,
-            transform:       [{ rotate: `${c.deg}deg` }],
+            borderRadius:    c.cap ? c.h / 2 : 0,
+            transform:       c.cap ? undefined : [{ rotate: `${c.deg}deg` }],
           }}
         />
       ))}
@@ -210,13 +219,13 @@ export function FullClockView({
     const isPast   = seg.isPast || (!isActive && currentIdx >= DAY_CYCLES);
     const energy   = energyMap[i];
 
-    const color    = isSleep ? C_SLEEP : C_WAKE;
+    const color    = isCurr ? ACCENT : isSleep ? C_SLEEP : C_WAKE;
     const opacity  = isCurr   ? 1
-      : isPast    ? 0.50
-      : isSleep   ? 0.70
-      : energy?.level === 'high'    ? 0.65
-      : energy?.level === 'neutral' ? 0.38
-      : 0.18;
+      : isPast    ? 0.45
+      : isSleep   ? 0.65
+      : energy?.level === 'high'    ? 0.85
+      : energy?.level === 'neutral' ? 0.65
+      : 0.35;
 
     return arcChunks(start, ARC_DEG, R1_O, R1_I, color, opacity);
   });
