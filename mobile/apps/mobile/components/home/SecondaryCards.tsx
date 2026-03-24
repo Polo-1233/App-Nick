@@ -47,7 +47,7 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
         if (card.type === 'insight') return (
           <View key={i} style={sc.card}>
             <View style={sc.iconWrap}>
-              <Text style={{ fontSize: 16 }}>💡</Text>
+              <Text style={{ fontSize: 16 }}>🔆</Text>
             </View>
             <View style={sc.body}>
               <Text style={sc.label}>DID YOU KNOW?</Text>
