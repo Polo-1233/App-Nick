@@ -489,13 +489,14 @@ const sc = StyleSheet.create({
 // ─── Section header ───────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
+  const { theme } = useTheme();
   return (
-    <Text style={sh.title}>{title}</Text>
+    <Text style={[sh.title, { color: theme.colors.textMuted }]}>{title}</Text>
   );
 }
 
 const sh = StyleSheet.create({
-  title: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED, letterSpacing: 1.2, textTransform: 'uppercase' },
+  title: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -559,8 +560,8 @@ export default function CalendarScreen() {
       >
         {/* ── Header ── */}
         <View style={s.header}>
-          <Text style={s.title}>Planning</Text>
-          <Text style={s.date}>{todayLabel()}</Text>
+          <Text style={[s.title, { color: theme.colors.text }]}>Planning</Text>
+          <Text style={[s.date, { color: theme.colors.textMuted }]}>{todayLabel()}</Text>
         </View>
 
         {/* ── Tonight ── */}
