@@ -23,8 +23,11 @@ import type { UserProfile } from '@r90/types';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Analytics } from '../../lib/analytics';
-import { fmtMin as minToHHMM } from '../../lib/time-utils';
+import { fmtMin as minToHHMM, nowMin as getNowMin } from '../../lib/time-utils';
 import { useTheme } from '../../lib/theme-context';
+import { useChatContext } from '../../lib/chat-context';
+import { getCurrentActionState } from '../../lib/action-state';
+import { RLoMessage } from '../home/RLoMessage';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -141,55 +144,7 @@ function buildInsights(
   return insights.slice(0, 3);
 }
 
-// ─── R-Lo insight card (style homepage) ──────────────────────────────────────
 
-function RLoInsightCard({ text }: { text: string }) {
-  return (
-    <View style={ri.card}>
-      {/* Avatar */}
-      <View style={ri.avatarWrap}>
-        <MascotImage emotion="encourageant" size="sm" style={ri.avatarImg} />
-      </View>
-      {/* Message */}
-      <Text style={ri.text} numberOfLines={3}>{text}</Text>
-    </View>
-  );
-}
-
-const ri = StyleSheet.create({
-  card: {
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               12,
-    padding:           16,
-    borderRadius:      18,
-    backgroundColor:   '#1a1f6e',
-    borderWidth:       1,
-    borderColor:       'rgba(28,159,218,0.2)',
-    shadowColor:       '#000',
-    shadowOffset:      { width: 0, height: 2 },
-    shadowOpacity:     0.06,
-    shadowRadius:      10,
-    elevation:         2,
-  },
-  avatarWrap: {
-    width:           34,
-    height:          34,
-    borderRadius:    17,
-    overflow:        'hidden',
-    backgroundColor: 'rgba(28,159,218,0.2)',
-    flexShrink:      0,
-  },
-  avatarImg: {
-    width: 50, height: 50, marginTop: -8, marginLeft: -8,
-  },
-  text: {
-    flex:      1,
-    fontSize:  13,
-    color:     'rgba(255,255,255,0.85)',
-    lineHeight: 18,
-  },
-});
 
 // ─── R90 Score calculator ─────────────────────────────────────────────────────
 
@@ -685,8 +640,9 @@ const sh = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
-  const { theme } = useTheme();
-  const { dayPlan } = useDayPlanContext();
+  const { theme }    = useTheme();
+  const { dayPlan }  = useDayPlanContext();
+  const { openChat } = useChatContext();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useFocusEffect(useCallback(() => { Analytics.screenViewed('planning'); }, []));
@@ -727,12 +683,16 @@ export default function CalendarScreen() {
   const week       = buildWeek(activeProfile);
   const todayIdx   = week.findIndex(d => d.isToday);
 
-  // Insights
-  const insights = buildInsights(activeProfile, recentCycles, wearableNote);
-
   // R90 Score
   const totalAchieved = recentCycles.reduce((a, b) => a + b, 0);
   const r90Score      = calcR90Score(recentCycles, target);
+
+  // R-Lo message — same engine as home
+  const actionState = getCurrentActionState(
+    getNowMin(),
+    activeProfile.anchorTime,
+    activeProfile.idealCyclesPerNight,
+  ).state;
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -776,10 +736,12 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* ── R-Lo insight card — style homepage ── */}
-        {insights.length > 0 && (
-          <RLoInsightCard text={insights[0]!} />
-        )}
+        {/* ── R-Lo — même card que la homepage ── */}
+        <RLoMessage
+          actionState={actionState}
+          wakeMin={activeProfile.anchorTime}
+          onChatTap={openChat}
+        />
 
         {/* ── Tips & Advice ── */}
         <PlanningTipsCard
