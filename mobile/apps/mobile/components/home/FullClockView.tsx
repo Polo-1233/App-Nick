@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons }     from '@expo/vector-icons';
 import { nowMin, fmtMin } from '../../lib/time-utils';
 import { computeRhythmData, type RhythmSegment, CYCLE } from '../../lib/rhythm-clock';
+import { getEnergyMap, energyOpacity, type PeakPreference } from '../../lib/energy-model';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const ACCENT      = '#1c9fda';
@@ -139,14 +140,14 @@ interface ArcSliceProps {
   startDeg: number;
   spanDeg:  number;
   color:    string;
+  opacity?: number;
   ro:       number;
   ri:       number;
 }
 
-function ArcSlice({ startDeg, spanDeg, color, ro, ri }: ArcSliceProps) {
+function ArcSlice({ startDeg, spanDeg, color, opacity = 1, ro, ri }: ArcSliceProps) {
   if (spanDeg <= 0) return null;
 
-  // We subdivide wide arcs into 2° chunks rendered as radial lines
   const chunks: JSX.Element[] = [];
   const CHUNK  = 2;
   const count  = Math.ceil(spanDeg / CHUNK);
@@ -166,6 +167,7 @@ function ArcSlice({ startDeg, spanDeg, color, ro, ri }: ArcSliceProps) {
           height:          thick,
           backgroundColor: color,
           borderRadius:    1,
+          opacity,
           transform:       [{ rotate: `${deg}deg` }],
         }}
       />
@@ -228,13 +230,14 @@ interface Tooltip {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface FullClockViewProps {
-  visible:     boolean;
-  onClose:     () => void;
-  wakeMin:     number;
-  idealCycles: number;
+  visible:          boolean;
+  onClose:          () => void;
+  wakeMin:          number;
+  idealCycles:      number;
+  peakPreference?:  PeakPreference;
 }
 
-export function FullClockView({ visible, onClose, wakeMin, idealCycles }: FullClockViewProps) {
+export function FullClockView({ visible, onClose, wakeMin, idealCycles, peakPreference = 'morning' }: FullClockViewProps) {
   const [data,    setData]    = useState(() => computeRhythmData(nowMin(), wakeMin, idealCycles));
   const [timeStr, setTime]    = useState(() => fmtMin(nowMin()));
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
@@ -265,6 +268,9 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles }: FullCl
   }, [visible]);
 
   const { segments, totalCycles, currentIdx } = data;
+
+  // Energy map — one entry per cycle
+  const energyMap = getEnergyMap(totalCycles, peakPreference);
 
   // Current cursor angle
   const nowMins    = nowMin();
@@ -304,29 +310,40 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles }: FullCl
               {/* ── Background ring (empty) ── */}
               <View style={fc.ringBg} />
 
-              {/* ── Colored arc slices per segment ── */}
+              {/* ── Colored arc slices per segment — energy layer ── */}
               {segments.map((seg, i) => {
                 const startDeg = minToDeg(wakeMin, seg.startMin);
                 const endDeg   = minToDeg(wakeMin, seg.endMin);
                 const span     = ((endDeg - startDeg) + 360) % 360 || 360 / totalCycles;
                 const gapDeg   = (SEG_GAP / DAY_MIN) * 360;
-                const color    = seg.isSleep
-                  ? RING_SLEEP
-                  : seg.isCurrent
-                  ? RING_CURR
-                  : seg.isPast
-                  ? RING_PAST
-                  : RING_EMPTY;
+
+                const baseColor = seg.isSleep ? RING_SLEEP : RING_CURR;
+                const energy    = energyMap[i];
+                const opacity   = seg.isSleep
+                  ? 0.6
+                  : energyOpacity(energy?.level ?? 'neutral', seg.isCurrent, seg.isPast);
+                const midDeg    = startDeg + span / 2;
 
                 return (
-                  <ArcSlice
+                  <Pressable
                     key={i}
-                    startDeg={startDeg + gapDeg}
-                    spanDeg={span - gapDeg * 2}
-                    color={color}
-                    ro={RING_O}
-                    ri={RING_I}
-                  />
+                    style={{ position: 'absolute', width: CLOCK_D, height: CLOCK_D }}
+                    onPress={() => energy && showTooltip(
+                      energy.tooltip,
+                      `Cycle ${i + 1}`,
+                      midDeg,
+                      RING_MID,
+                    )}
+                  >
+                    <ArcSlice
+                      startDeg={startDeg + gapDeg}
+                      spanDeg={span - gapDeg * 2}
+                      color={baseColor}
+                      opacity={opacity}
+                      ro={RING_O}
+                      ri={RING_I}
+                    />
+                  </Pressable>
                 );
               })}
 
@@ -454,10 +471,10 @@ export function FullClockView({ visible, onClose, wakeMin, idealCycles }: FullCl
           {/* Legend */}
           <View style={fc.legend}>
             {[
-              { color: RING_CURR,  label: 'Current cycle' },
-              { color: RING_PAST,  label: 'Past cycles' },
-              { color: RING_EMPTY, label: 'Upcoming' },
-              { color: RING_SLEEP, label: 'Sleep window' },
+              { color: RING_CURR,               label: 'Current cycle' },
+              { color: RING_PAST,               label: 'Past cycles' },
+              { color: `${RING_CURR}40`,        label: 'Low energy' },
+              { color: RING_SLEEP,              label: 'Sleep window' },
             ].map(({ color, label }) => (
               <View key={label} style={fc.legendItem}>
                 <View style={[fc.legendDot, { backgroundColor: color }]} />
