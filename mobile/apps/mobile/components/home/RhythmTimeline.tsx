@@ -64,20 +64,23 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 
   // Visible window: currentIdx-0 to currentIdx+2
   const { segments, currentIdx, totalCycles } = data;
-  const startIdx   = Math.max(0, currentIdx);
+  // Show current + next 2, or first 3 if before day start
+  const startIdx   = Math.max(0, currentIdx >= 0 ? currentIdx : 0);
   const endIdx     = Math.min(totalCycles - 1, startIdx + VISIBLE - 1);
   const visible    = segments.slice(startIdx, endIdx + 1);
-  const visCount   = visible.length;
+  const visCount   = Math.max(1, visible.length);
 
   // Segment width
   const segW = (TW - (visCount - 1) * GAP) / Math.max(visCount, 1);
 
-  // Cursor position within visible area
-  const progressInCycle = ((data.nowMin - segments[currentIdx]?.startMin + 1440) % 1440) / 90;
-  const clampedProgress = Math.max(0, Math.min(1, progressInCycle));
-  const cursorX = currentIdx >= startIdx
-    ? (currentIdx - startIdx) * (segW + GAP) + clampedProgress * segW
+  // Cursor position within visible area — guard against currentIdx = -1
+  const currentSeg    = currentIdx >= 0 ? segments[currentIdx] : null;
+  const progressInCycle = currentSeg
+    ? Math.max(0, Math.min(1, ((data.nowMin - currentSeg.startMin + 1440) % 1440) / 90))
     : 0;
+  const cursorX = (currentIdx >= 0 && currentIdx >= startIdx)
+    ? (currentIdx - startIdx) * (segW + GAP) + progressInCycle * segW
+    : -100; // off-screen if no current cycle
 
   const cycleLabel = currentIdx >= 0 && currentIdx < totalCycles
     ? `Cycle ${currentIdx + 1}/${totalCycles}`

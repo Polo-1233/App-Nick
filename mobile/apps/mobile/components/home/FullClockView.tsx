@@ -21,7 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons }     from '@expo/vector-icons';
-import Svg, { Path, Circle, G, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Circle, G } from 'react-native-svg';
 import { nowMin, fmtMin } from '../../lib/time-utils';
 import { computeRhythmData, type RhythmSegment, CYCLE } from '../../lib/rhythm-clock';
 
