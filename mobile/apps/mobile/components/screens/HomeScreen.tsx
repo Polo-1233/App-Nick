@@ -305,8 +305,7 @@ export default function HomeScreen() {
           {/* 5. Secondary Cards — only rendered if data exists */}
           <SecondaryCards cards={secondaryCards} />
 
-          {/* 6. Sleep Footer */}
-          <SleepFooter bedtime={bedtime} />
+          {/* Sleep footer removed */}
         </ScrollView>
       </SafeAreaView>
 
