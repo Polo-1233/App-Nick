@@ -1,20 +1,17 @@
 /**
- * Onboarding — 5-screen intro pager (slides 0–4).
+ * Onboarding — 3-screen intro pager (slides 0–2).
  *
  * Slides:
- *   0 — Premium intro     "Most sleep problems aren't sleep problems"
- *   1 — Cognitive intro   "Sleep is the result of your entire day"
- *   2 — Authority         The R90 Method / Nick Littlehales
- *   3 — Meet R-Lo         Mascot introduction
- *   4 — R-Lo focus        Home preview + R-Lo chat bubble preview
+ *   0 — "Your sleep is the result of your entire day"
+ *   1 — "One anchor point: your wake time" (Nick Littlehales / R90 Method)
+ *   2 — Meet R-Lo (plan mockup + CTA "Create my plan")
  *
- * Layout (slides 0–2):
- *   ProgressBar → TitleBlock → (flex:1) BreathingCircle → Button
- *   Title sits above the circle; explanatory text lives inside the circle.
+ * Layout:
+ *   ProgressBar → TitleBlock → (flex:1) content area → Button
  *
  * On finish: bootstraps the backend user record, marks intro complete,
- * then routes to /(tabs). Data collection (name, wake time, sleep issue,
- * chronotype) happens via the overlay flow in /(tabs)/_layout.tsx.
+ * then routes to /(tabs). Data collection (name, wake time, goal)
+ * happens via the guided chat flow in HomeScreen (OnboardingChatFlow).
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
