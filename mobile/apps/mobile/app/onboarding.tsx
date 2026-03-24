@@ -48,9 +48,7 @@ import { Button } from '../components/ui/Button';
 
 const TOTAL_PAGES = 3;
 
-const DAYS_ABR            = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
-const CAL_PREVIEW_HEIGHTS = [28, 44, 20, 52, 36, 16, 32] as const;
-const HOME_STAT_WIDTHS    = [88, 56, 72] as const;
+
 
 const ACCENT  = '#1c9fda';   // turquoise brand accent
 const BG      = '#0a0a3a';
@@ -73,7 +71,6 @@ export default function OnboardingScreen() {
   const [saving, setSaving] = useState(false);
 
   const isNavigating = useRef(false);
-  const translateX        = useRef(new Animated.Value(0)).current; // kept for compat, unused
   const pageTransition    = useRef(new Animated.Value(1)).current;
   const pulseAnim       = useRef(new Animated.Value(1)).current;
   const breatheAnim     = useRef(new Animated.Value(0)).current;
@@ -82,16 +79,12 @@ export default function OnboardingScreen() {
   const btnPressAnim    = useRef(new Animated.Value(1)).current;
   const circlePulse1      = useRef(new Animated.Value(1)).current;
   const circlePulse2      = useRef(new Animated.Value(1)).current;
-  // Slide 3 — isolated animations (scope: slide only)
-  const slide3MascotScale = useRef(new Animated.Value(1)).current;
-  const slide3GlowOpacity = useRef(new Animated.Value(0.15)).current;
+
   const fadeAnim0    = useRef(new Animated.Value(0)).current;
   const fadeAnim1    = useRef(new Animated.Value(0)).current;
   const fadeAnim2    = useRef(new Animated.Value(0)).current;
-  const fadeAnim3    = useRef(new Animated.Value(0)).current;
-  const fadeAnim4    = useRef(new Animated.Value(0)).current;
-  const dotsAnim     = useRef(new Animated.Value(0)).current;
-  const messageAnim  = useRef(new Animated.Value(0)).current;
+
+
 
 
   // ── Breathing circle — starts on mount, runs forever ─────────────────────
@@ -184,42 +177,6 @@ export default function OnboardingScreen() {
       }).start();
     }
   }, [page, fadeAnim2]);
-
-  // ── Slide 3 (plan mockup): fade-in ───────────────────────────────────────
-  useEffect(() => {
-    if (page !== 3) return;
-    fadeAnim3.setValue(0);
-    Animated.timing(fadeAnim3, { toValue: 1, duration: 600, delay: 80, useNativeDriver: true }).start();
-  }, [page, fadeAnim3]);
-
-  // ── Slide 4 (Meet R-Lo): fade-in + isolated mascot/glow animations ────────
-  useEffect(() => {
-    if (page !== 4) return;
-    fadeAnim4.setValue(0);
-    Animated.timing(fadeAnim4, { toValue: 1, duration: 700, delay: 80, useNativeDriver: true }).start();
-
-    // Mascot breathing: scale 1 → 1.03, 2500ms easeInOut loop
-    slide3MascotScale.setValue(1);
-    const mascotLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(slide3MascotScale, { toValue: 1.03, duration: 2500, useNativeDriver: true }),
-        Animated.timing(slide3MascotScale, { toValue: 1.00, duration: 2500, useNativeDriver: true }),
-      ]),
-    );
-    mascotLoop.start();
-
-    // Glow pulse: opacity 0.15 → 0.25, 3000ms loop
-    slide3GlowOpacity.setValue(0.15);
-    const glowLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(slide3GlowOpacity, { toValue: 0.25, duration: 3000, useNativeDriver: true }),
-        Animated.timing(slide3GlowOpacity, { toValue: 0.15, duration: 3000, useNativeDriver: true }),
-      ]),
-    );
-    glowLoop.start();
-
-    return () => { mascotLoop.stop(); glowLoop.stop(); };
-  }, [page, fadeAnim4, slide3MascotScale, slide3GlowOpacity]);
 
   
 
@@ -435,90 +392,7 @@ export default function OnboardingScreen() {
 
 
 
-            {/* slide 4 removed */}
-            {false && <View style={s.slide4}>
 
-              {/* Title — centered in top third */}
-              <Animated.View style={[s.slide4Title, { opacity: fadeAnim4 }]}>
-                <Text style={s.slideTitle}>{"Your rhythm.\nYour coach."}</Text>
-              </Animated.View>
-
-              {/* Dimmed static home-screen skeleton (backdrop) */}
-              <View style={s.slide4Preview} pointerEvents="none">
-                {/* Greeting bar */}
-                <View style={s.slide4GreetRow}>
-                  <View style={s.slide4GreetText}>
-                    <View style={s.slide4GreetLine1} />
-                    <View style={s.slide4GreetLine2} />
-                  </View>
-                  <View style={s.slide4Avatar} />
-                </View>
-
-                {/* Cycle ring + stat chips */}
-                <View style={s.slide4RingRow}>
-                  <View style={s.slide4Ring}>
-                    <View style={s.slide4RingInner} />
-                  </View>
-                  <View style={s.slide4Chips}>
-                    {HOME_STAT_WIDTHS.map((w, i) => (
-                      <View key={i} style={[s.slide4Chip, { width: w }]} />
-                    ))}
-                  </View>
-                </View>
-
-                {/* Calendar strip */}
-                <View style={s.slide4Cal}>
-                  {DAYS_ABR.map((day, i) => (
-                    <View key={i} style={s.slide4CalCol}>
-                      <View style={[s.slide4CalBar, { height: CAL_PREVIEW_HEIGHTS[i] }]} />
-                      <Text style={s.slide4CalDay}>{day}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-
-              {/* Semi-transparent scrim — dims preview, focuses eye on chat */}
-              <View style={s.slide4Scrim} pointerEvents="none" />
-
-              {/* R-Lo chat bubble — centered, full brightness */}
-              <Animated.View style={[s.slide4ChatArea, { opacity: fadeAnim4 }]}>
-                <Animated.View
-                  style={{
-                    alignSelf:  'flex-end',
-                    marginBottom: 6,
-                    transform: [{ scale: breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.03] }) }],
-                  }}
-                >
-                  <MascotImage emotion="rassurante" size="sm" />
-                </Animated.View>
-
-                <View style={s.slide4Bubble}>
-                  {/* Message text — always laid out to size the bubble */}
-                  <Animated.Text style={[s.slide4MsgText, { opacity: messageAnim }]}>
-                    {"Hi.\n\nI'm R-Lo.\n\nLet's understand\nyour rhythm."}
-                  </Animated.Text>
-
-                  {/* Typing dots — absolute overlay, fades out when message arrives */}
-                  <Animated.View
-                    style={[
-                      StyleSheet.absoluteFill,
-                      s.slide4DotsRow,
-                      { opacity: messageAnim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [1, 0, 0] }) },
-                    ]}
-                  >
-                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 1.0, 0.3, 0.3, 0.3] }) }]} />
-                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 0.3, 1.0, 0.3, 0.3] }) }]} />
-                    <Animated.View style={[s.slide4Dot, { opacity: dotsAnim.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0.3, 0.3, 0.3, 1.0, 0.3] }) }]} />
-                  </Animated.View>
-                </View>
-              </Animated.View>
-
-              {/* Dimmed tab-bar silhouette */}
-              <View style={s.slide4TabBar} pointerEvents="none">
-                {[0, 1, 2, 3].map(i => <View key={i} style={s.slide4TabDot} />)}
-              </View>
-
-            </View>}
 
           </Animated.View>
         </View>
@@ -1016,173 +890,5 @@ const s = StyleSheet.create({
     lineHeight: 26,
   },
 
-  // ── Slide 4 — R-Lo focus / home preview ──────────────────────────────────
-  slide4: {
-    flex:     1,
-    overflow: 'hidden',
-  },
-  slide4Title: {
-    position:          'absolute',
-    top:               0,
-    left:              0,
-    right:             0,
-    alignItems:        'center',
-    justifyContent:    'center',
-    height:            '38%',
-    zIndex:            10,
-    paddingHorizontal: 24,
-  },
-  slide4Preview: {
-    position:          'absolute',
-    top:               0,
-    left:              0,
-    right:             0,
-    bottom:            0,
-    paddingHorizontal: 24,
-    paddingTop:        16,
-    opacity:           0.22,
-    gap:               20,
-  },
-  slide4GreetRow: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'center',
-  },
-  slide4GreetText:  { gap: 6 },
-  slide4GreetLine1: {
-    width:           110,
-    height:          10,
-    borderRadius:    5,
-    backgroundColor: TEXT,
-  },
-  slide4GreetLine2: {
-    width:           72,
-    height:          8,
-    borderRadius:    4,
-    backgroundColor: TEXT_SUB,
-  },
-  slide4Avatar: {
-    width:           36,
-    height:          36,
-    borderRadius:    18,
-    backgroundColor: SURFACE,
-    borderWidth:     1,
-    borderColor:     BORDER,
-  },
-  slide4RingRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           20,
-  },
-  slide4Ring: {
-    width:           80,
-    height:          80,
-    borderRadius:    40,
-    borderWidth:     6,
-    borderColor:     ACCENT,
-    justifyContent:  'center',
-    alignItems:      'center',
-  },
-  slide4RingInner: {
-    width:           50,
-    height:          12,
-    borderRadius:    6,
-    backgroundColor: TEXT_SUB,
-  },
-  slide4Chips: { gap: 8 },
-  slide4Chip: {
-    height:          12,
-    borderRadius:    6,
-    backgroundColor: SURFACE,
-    borderWidth:     1,
-    borderColor:     BORDER,
-  },
-  slide4Cal: {
-    flexDirection:  'row',
-    justifyContent: 'space-between',
-    alignItems:     'flex-end',
-  },
-  slide4CalCol: {
-    alignItems: 'center',
-    gap:        4,
-  },
-  slide4CalBar: {
-    width:           28,
-    borderRadius:    6,
-    backgroundColor: ACCENT,
-  },
-  slide4CalDay: {
-    fontSize:   10,
-    fontFamily: 'Inter-Medium',
-    color:      TEXT_MUTED,
-  },
-  slide4Scrim: {
-    position:        'absolute',
-    top:             0,
-    left:            0,
-    right:           0,
-    bottom:          0,
-    backgroundColor: 'rgba(11,18,32,0.58)',
-  },
-  slide4ChatArea: {
-    position:          'absolute',
-    top:               '40%',
-    left:              0,
-    right:             0,
-    bottom:            56,
-    flexDirection:     'row',
-    justifyContent:    'center',
-    alignItems:        'center',
-    paddingHorizontal: 28,
-    gap:               12,
-  },
-  slide4Bubble: {
-    flex:                1,
-    backgroundColor:     SURFACE,
-    borderRadius:        18,
-    borderTopLeftRadius: 4,
-    padding:             20,
-    borderWidth:         1,
-    borderColor:         BORDER,
-    minHeight:           120,
-  },
-  slide4DotsRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:            8,
-  },
-  slide4Dot: {
-    width:           9,
-    height:          9,
-    borderRadius:    4.5,
-    backgroundColor: TEXT_SUB,
-  },
-  slide4MsgText: {
-    fontSize:   18,
-    fontFamily: 'Inter-Regular',
-    fontWeight: '400',
-    color:      TEXT,
-    lineHeight: 30,
-  },
-  slide4TabBar: {
-    position:          'absolute',
-    bottom:            0,
-    left:              0,
-    right:             0,
-    height:            56,
-    backgroundColor:   BG,
-    borderTopWidth:    1,
-    borderTopColor:    BORDER,
-    flexDirection:     'row',
-    justifyContent:    'space-around',
-    alignItems:        'center',
-    opacity:           0.22,
-  },
-  slide4TabDot: {
-    width:           28,
-    height:          28,
-    borderRadius:    14,
-    backgroundColor: SURFACE,
-  },
+
 });
