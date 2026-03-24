@@ -1,3 +1,4 @@
+// V2 — not accessible from UI navigation. File kept for future reactivation.
 /**
  * life-events.tsx — Log significant life events
  *

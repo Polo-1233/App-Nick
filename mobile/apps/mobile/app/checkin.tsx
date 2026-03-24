@@ -1,3 +1,4 @@
+// V2 — not accessible from UI navigation. Superseded by MorningConfirmation modal.
 /**
  * checkin.tsx — Daily Check-In screen
  * Fetches dynamic questions from GET /screen/checkin
