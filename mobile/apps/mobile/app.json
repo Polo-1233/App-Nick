@@ -4,11 +4,17 @@
     "slug": "r90-navigator",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": ["r90", "com.googleusercontent.apps.736295281381-8pln69g3rrac4gqo3oqgocvff8p3vhks", "com.googleusercontent.apps.736295281381-qti1irrli674l98qqcf3ojlla5ss1dkn"],
+    "scheme": [
+      "r90",
+      "com.googleusercontent.apps.736295281381-8pln69g3rrac4gqo3oqgocvff8p3vhks",
+      "com.googleusercontent.apps.736295281381-qti1irrli674l98qqcf3ojlla5ss1dkn"
+    ],
     "userInterfaceStyle": "dark",
     "icon": "./assets/images/icon.png",
     "newArchEnabled": false,
-    "assetBundlePatterns": ["assets/**/*"],
+    "assetBundlePatterns": [
+      "assets/**/*"
+    ],
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
@@ -44,6 +50,7 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
+      "@sentry/react-native",
       [
         "expo-navigation-bar",
         {
@@ -79,7 +86,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "@sentry/react-native"
     ],
     "extra": {
       "router": {},

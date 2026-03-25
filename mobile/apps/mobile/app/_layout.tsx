@@ -8,7 +8,11 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
+import { initSentry } from '../lib/sentry';
 import { hasCompletedIntro, getOnboardingPhase } from '../lib/storage';
+
+// Init Sentry immediately — before any component renders
+initSentry();
 import { ThemeProvider, useTheme } from '../lib/theme-context';
 import { TourProvider } from '../lib/tour-context';
 import { configurePurchases } from '../lib/purchases';
@@ -19,6 +23,7 @@ import { initProactiveNotifications } from '../lib/proactive-notifications';
 import { initAnalytics } from '../lib/analytics';
 import { scheduleDailyNotifications } from '../lib/daily-notifications';
 import { loadProfile } from '../lib/storage';
+import { recordFirstAppOpen, recordNotificationTapWake } from '../lib/wake-detection';
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -33,7 +38,11 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     this.state = { hasError: false };
   }
   static getDerivedStateFromError(): EBState { return { hasError: true }; }
-  componentDidCatch(error: Error) { console.error('[RootErrorBoundary]', error); }
+  componentDidCatch(error: Error) {
+    console.error('[RootErrorBoundary]', error);
+    // Report to Sentry
+    try { require('../lib/sentry').Sentry.captureException(error); } catch {}
+  }
   render() {
     if (this.state.hasError) {
       return (
@@ -171,6 +180,8 @@ function RootLayoutInner() {
     if (!isAuthenticated || authLoading) return;
     void syncCalendarToBackend();
     initProactiveNotifications();
+    // Record first morning app open for wake detection
+    void recordFirstAppOpen();
     // Schedule daily morning + evening notifications
     void loadProfile().then(profile => {
       if (!profile) return;
@@ -179,6 +190,12 @@ function RootLayoutInner() {
       const preSleep    = ((bedtime - 90) + 1440) % 1440;
       void scheduleDailyNotifications(wake, preSleep);
     });
+
+    // Also record first-app-open on foreground transitions
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void recordFirstAppOpen();
+    });
+    return () => sub.remove();
   }, [isAuthenticated, authLoading]);
 
   // Deep-link into the app when the user taps a local notification.
@@ -188,6 +205,10 @@ function RootLayoutInner() {
       const data  = response.notification.request.content.data as Record<string, unknown>;
       const type  = typeof data?.type  === 'string' ? data.type  : null;
       const route = typeof data?.route === 'string' ? data.route : null;
+      // Record morning notification tap as wake signal
+      if (type === 'morning') {
+        void recordNotificationTapWake();
+      }
       if (type === 'morning' || type === 'evening') {
         router.push('/(tabs)');
       } else if (type === 'mrm') {
