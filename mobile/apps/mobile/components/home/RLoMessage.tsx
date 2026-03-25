@@ -14,7 +14,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { MascotImage } from '../ui/MascotImage';
-import { getRLoMessage, type RLoMessage as RLoMsg } from '../../lib/rlo-message';
+import { getRLoMessage, type RLoMessage as RLoMsg, type BehaviorContext } from '../../lib/rlo-message';
 import { getRLoMood, type MoodInput } from '../../lib/rlo-mood';
 import type { ActionState } from '../../lib/action-state';
 import { nowMin } from '../../lib/time-utils';
@@ -29,27 +29,28 @@ interface RLoMessageProps {
   actionState: ActionState;
   wakeMin:     number;
   onChatTap:   () => void;
-  mood?:       MoodInput;  // streak + zone → R-LO emotion
+  mood?:       MoodInput;
+  behavior?:   BehaviorContext;  // NEW: behavioral data for personalized messages
 }
 
 export const RLoMessage = memo(function RLoMessage({
-  actionState, wakeMin, onChatTap, mood,
+  actionState, wakeMin, onChatTap, mood, behavior,
 }: RLoMessageProps) {
   const emotion = mood ? getRLoMood(mood) : 'rassurante';
   const now        = new Date();
   const hourOfDay  = now.getHours();
   const dayOfWeek  = now.getDay();
-  const insightSeed = Math.floor(Date.now() / (1000 * 60 * 60 * 24)); // changes daily
+  const insightSeed = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
 
   const [msg, setMsg] = useState<RLoMsg>(() =>
-    getRLoMessage({ actionState, wakeMin, hourOfDay, dayOfWeek, insightSeed })
+    getRLoMessage({ actionState, wakeMin, hourOfDay, dayOfWeek, insightSeed, behavior })
   );
 
-  // Update message when action state changes
+  // Update message when action state or behavior changes
   useEffect(() => {
-    const next = getRLoMessage({ actionState, wakeMin, hourOfDay, dayOfWeek, insightSeed });
+    const next = getRLoMessage({ actionState, wakeMin, hourOfDay, dayOfWeek, insightSeed, behavior });
     setMsg(next);
-  }, [actionState, wakeMin]);
+  }, [actionState, wakeMin, behavior?.streak, behavior?.winddownsThisWeek]);
 
   // Fade in on message change
   const opacity    = useRef(new Animated.Value(0)).current;
@@ -109,9 +110,9 @@ const rl = StyleSheet.create({
     paddingVertical:  14,
     paddingHorizontal: 16,
     borderRadius:     18,
-    backgroundColor:  '#1a1f6e',
+    backgroundColor:  '#1c1c7a',   // surface2 from theme
     borderWidth:      1,
-    borderColor:      `${ACCENT}20`,
+    borderColor:      `${ACCENT}18`,
     shadowColor:      '#000',
     shadowOffset:     { width: 0, height: 2 },
     shadowOpacity:    0.06,
@@ -127,10 +128,8 @@ const rl = StyleSheet.create({
     flexShrink:      0,
   },
   avatarImg: {
-    width:      50,
-    height:     50,
-    marginTop:  -8,
-    marginLeft: -8,
+    width:      34,
+    height:     34,
   },
   body: {
     flex: 1,

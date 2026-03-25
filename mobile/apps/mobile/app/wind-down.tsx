@@ -43,7 +43,7 @@ const ACCENT = '#1c9fda';   // darkTheme.accent
 const TEXT   = '#FFFFFF';    // darkTheme.text
 const MUTED  = '#6B8CAE';   // darkTheme.textMuted
 
-type WindDownPhase = 'intro' | 'checklist' | 'content' | 'notif_ask' | 'goodnight';
+type WindDownPhase = 'intro' | 'checklist' | 'content' | 'notif_ask' | 'mood_check' | 'goodnight';
 
 const CHECKLIST = [
   { id: 'lights',   label: 'Lights dimmed?' },
@@ -174,8 +174,11 @@ function ContentPhase({
       <Pressable onPress={onClose} style={s.closeBtn}>
         <Ionicons name="close" size={22} color={MUTED} />
       </Pressable>
-      <Text style={ph.title}>Tonight</Text>
+      <Text style={ph.title}>Tonight's episode</Text>
       <View style={ct.card}>
+        {content.episode && (
+          <Text style={ct.cardEpisode}>Episode {content.episode}</Text>
+        )}
         <Text style={ct.cardTitle}>{content.title}</Text>
         <Text style={ct.cardSub}>{content.description}</Text>
         <Text style={ct.cardDur}>{Math.round(content.duration / 60)} min</Text>
@@ -275,7 +278,77 @@ const na = StyleSheet.create({
   },
 });
 
-// ─── Phase 5 — Goodnight ──────────────────────────────────────────────────────
+// ─── Phase: Mood check (before goodnight) ─────────────────────────────────────
+const EVENING_MOODS = [
+  { id: 'calm',     icon: 'leaf-outline'    as const, label: 'Calm' },
+  { id: 'neutral',  icon: 'remove-outline'  as const, label: 'Neutral' },
+  { id: 'stressed', icon: 'pulse-outline'   as const, label: 'Stressed' },
+  { id: 'tired',    icon: 'moon-outline'    as const, label: 'Tired' },
+  { id: 'wired',    icon: 'flash-outline'   as const, label: 'Wired' },
+];
+
+function MoodCheckPhase({ onNext }: { onNext: () => void }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  function handleSelect(moodId: string) {
+    HapticsLight();
+    // Store mood for R-Lo personalization
+    AsyncStorage.setItem('@r90:eveningMood:latest', JSON.stringify({
+      mood: moodId,
+      date: new Date().toISOString().slice(0, 10),
+    })).catch(() => {});
+    // Brief pause then advance
+    setTimeout(onNext, 400);
+  }
+
+  return (
+    <View style={mc.wrap}>
+      <Animated.View style={[mc.content, { opacity }]}>
+        <Text style={mc.title}>How are you feeling?</Text>
+        <Text style={mc.sub}>One tap. No judgement.</Text>
+        <View style={mc.moods}>
+          {EVENING_MOODS.map(m => (
+            <Pressable key={m.id} style={mc.moodBtn} onPress={() => handleSelect(m.id)}>
+              <Ionicons name={m.icon} size={22} color={MUTED} />
+              <Text style={mc.moodLabel}>{m.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable onPress={onNext} style={mc.skipBtn}>
+          <Text style={mc.skipText}>Skip</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+const mc = StyleSheet.create({
+  wrap: {
+    flex: 1, backgroundColor: BG,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  content: { alignItems: 'center', gap: 20 },
+  title: { fontSize: 20, fontWeight: '600', color: TEXT, textAlign: 'center' },
+  sub: { fontSize: 14, color: MUTED, textAlign: 'center' },
+  moods: {
+    flexDirection: 'row', gap: 12, marginTop: 8,
+  },
+  moodBtn: {
+    alignItems: 'center', gap: 6,
+    backgroundColor: CARD, borderRadius: 14,
+    padding: 14, width: 58,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+  },
+  moodLabel: { fontSize: 10, color: MUTED, fontWeight: '600' },
+  skipBtn: { paddingVertical: 12 },
+  skipText: { fontSize: 14, fontWeight: '600', color: MUTED },
+});
+
+// ─── Phase: Goodnight ────────────────────────────────────────────────────────
 function GoodnightPhase({ onClose }: { onClose: () => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -308,12 +381,12 @@ export default function WindDownScreen() {
 
   const next = useCallback((p: WindDownPhase) => setPhase(p), []);
 
-  // After content: go to notif_ask if needed, otherwise straight to goodnight
+  // After content: notif_ask (if needed) → mood_check → goodnight
   const handleContentComplete = useCallback(() => {
     if (showNotifAsk) {
       next('notif_ask');
     } else {
-      next('goodnight');
+      next('mood_check');
     }
   }, [showNotifAsk, next]);
 
@@ -356,7 +429,11 @@ export default function WindDownScreen() {
       )}
 
       {phase === 'notif_ask' && (
-        <NotifAskPhase onNext={() => next('goodnight')} />
+        <NotifAskPhase onNext={() => next('mood_check')} />
+      )}
+
+      {phase === 'mood_check' && (
+        <MoodCheckPhase onNext={() => next('goodnight')} />
       )}
 
       {phase === 'goodnight' && (
@@ -393,6 +470,7 @@ const cl = StyleSheet.create({
 
 const ct = StyleSheet.create({
   card:     { backgroundColor: CARD, borderRadius: 18, padding: 20, width: '100%', gap: 8 },
+  cardEpisode: { fontSize: 11, fontWeight: '700', color: ACCENT, letterSpacing: 1, textTransform: 'uppercase' as const },
   cardTitle:{ fontSize: 18, fontWeight: '700', color: TEXT },
   cardSub:  { fontSize: 14, color: MUTED, lineHeight: 20 },
   cardDur:  { fontSize: 12, color: ACCENT, fontWeight: '600' },

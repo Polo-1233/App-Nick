@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Animated } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect }       from 'expo-router';
 import AsyncStorage                        from '@react-native-async-storage/async-storage';
@@ -59,6 +59,9 @@ import { RhythmPointsToast }     from '../RhythmPointsToast';
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
 import { getFlow }              from '../../lib/rhythm-points';
+import { getDepth, getProgressToNext, type RhythmDepthState } from '../../lib/rhythm-depth';
+import { WeeklyRecap, shouldShowWeeklyRecap } from '../WeeklyRecap';
+import { usePremiumGate } from '../../lib/use-premium-gate';
 import { isMilestone, getMilestoneMessage } from '../../lib/rlo-mood';
 // getMissedCycleInfo now handled inside action-state.ts
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
@@ -74,6 +77,7 @@ import type { UserProfile, ReadinessState } from '@r90/types';
 export default function HomeScreen() {
   const { theme }                      = useTheme();
   const { openChat }                   = useChatContext();
+  const { isPremium }                  = usePremiumGate();
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
   const { phase, advance }             = useOnboardingPhase();
   const router                         = useRouter();
@@ -89,6 +93,12 @@ export default function HomeScreen() {
   );
   const [userName,           setUserName]            = useState<string | null>(null);
   const [streak,             setStreak]              = useState(0);
+  const [depthInfo,          setDepthInfo]           = useState<{ levelLabel: string; levelColor: string; nextLabel: string | null; pct: number } | null>(null);
+  const [rhythmScore,        setRhythmScore]         = useState<number | null>(null); // 0-100%
+  const [showRecap,          setShowRecap]           = useState(false);
+  const [showLevelUp,        setShowLevelUp]         = useState<{ level: string; color: string } | null>(null);
+  const [behaviorCtx,        setBehaviorCtx]         = useState<import('../../lib/rlo-message').BehaviorContext | undefined>(undefined);
+  const streakBounce = useRef(new Animated.Value(1)).current;
   const [bannerEvent,        setBannerEvent]         = useState<{ title: string; start_time: string; event_type_hint?: string } | null>(null);
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
   const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
@@ -129,7 +139,32 @@ export default function HomeScreen() {
       }
       if (onboarding?.firstName) setUserName(onboarding.firstName);
       getFlow().then(f => { if (f.currentStreak > 0) setStreak(f.currentStreak); }).catch(() => {});
+      // Load rhythm score from week history
+      loadWeekHistory().then(h => {
+        if (h && h.length > 0 && p) {
+          const totalCycles = h.reduce((s, n) => s + n.cyclesCompleted, 0);
+          const weekTarget  = p.idealCyclesPerNight * 7;
+          setRhythmScore(Math.min(100, Math.round((totalCycles / weekTarget) * 100)));
+        }
+      }).catch(() => {});
+      // Load rhythm depth + build behavior context for R-Lo
+      Promise.all([getDepth(), getFlow()]).then(([d, f]) => {
+        const { level, next, pct } = getProgressToNext(d.signal);
+        setDepthInfo({ levelLabel: level.label, levelColor: level.color, nextLabel: next?.label ?? null, pct });
+        setBehaviorCtx({
+          streak:             f.currentStreak,
+          bestStreak:         f.bestStreak,
+          weekAligned:        f.weekAligned,
+          depthLevel:         level.label,
+          totalDaysActive:    d.totalDaysActive,
+          winddownsThisWeek:  0,  // would need to query — acceptable default
+          crpsThisWeek:       0,
+          missedMornings:     f.currentStreak === 0 && f.bestStreak > 0 ? 1 : 0,
+        });
+      }).catch(() => {});
       void ensureSignupDate();
+      // Check for weekly recap (Sunday evening / Monday morning)
+      shouldShowWeeklyRecap().then(show => { if (show) setShowRecap(true); }).catch(() => {});
       getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
     // Sync action state every 30s
@@ -318,17 +353,36 @@ export default function HomeScreen() {
             { paddingBottom: insets.bottom + 32 },
           ]}
         >
-          {/* Streak badge */}
-          {/* DEMO banner — remove before production */}
-          <View style={sh.demoBanner}>
-            <Text style={sh.demoText}>DEMO MODE — Sample data</Text>
-          </View>
-
-          {streak > 0 && (
-            <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakBadge}>
-              <Ionicons name="flame" size={14} color="#D97706" />
-              <Text style={sh.streakCount}>{streak} day{streak > 1 ? 's' : ''}</Text>
-            </Pressable>
+          {/* Progression row — streak + depth level */}
+          {(streak > 0 || depthInfo) && (
+            <Animated.View style={[sh.progressRow, { transform: [{ scale: streakBounce }] }]}>
+              <Pressable onPress={() => setShowStreakDetail(true)} style={sh.progressBadge}>
+                {/* Streak */}
+                {streak > 0 && (
+                  <>
+                    <Ionicons name="flame" size={13} color="#D97706" />
+                    <Text style={sh.streakCount}>{streak}</Text>
+                  </>
+                )}
+                {/* Rhythm Score */}
+                {rhythmScore !== null && (
+                  <>
+                    {streak > 0 && <View style={sh.badgeSep} />}
+                    <Text style={[sh.rhythmScore, {
+                      color: rhythmScore >= 80 ? '#F5A623' : rhythmScore >= 60 ? '#1c9fda' : '#6B8CAE',
+                    }]}>{rhythmScore}%</Text>
+                  </>
+                )}
+                {/* Depth level */}
+                {depthInfo && (
+                  <>
+                    <View style={sh.badgeSep} />
+                    <View style={[sh.levelDot, { backgroundColor: depthInfo.levelColor }]} />
+                    <Text style={[sh.levelLabel, { color: depthInfo.levelColor }]}>{depthInfo.levelLabel}</Text>
+                  </>
+                )}
+              </Pressable>
+            </Animated.View>
           )}
 
           {/* 2. Rhythm Timeline */}
@@ -344,12 +398,13 @@ export default function HomeScreen() {
             onPress={handleActionPress}
           />
 
-          {/* 4. R-Lo — contextual companion */}
+          {/* 4. R-Lo — contextual companion with behavioral awareness */}
           <RLoMessage
             actionState={actionState}
             wakeMin={profile?.anchorTime ?? 390}
             onChatTap={openChat}
             mood={{ streak, zone: dayPlan?.readiness?.zone ?? null }}
+            behavior={behaviorCtx}
           />
 
           {/* 5. Secondary Cards — only rendered if data exists */}
@@ -366,7 +421,29 @@ export default function HomeScreen() {
         wakeTime={wakeTime !== null
           ? `${String(Math.floor(wakeTime / 60)).padStart(2, '0')}:${String(wakeTime % 60).padStart(2, '0')}`
           : '--:--'}
-        onConfirm={() => setShowMorningConfirm(false)}
+        onConfirm={() => {
+          setShowMorningConfirm(false);
+          // Refresh streak, depth, and bounce the badge
+          getFlow().then(f => {
+            if (f.currentStreak > 0) {
+              setStreak(f.currentStreak);
+              Animated.sequence([
+                Animated.timing(streakBounce, { toValue: 1.3, duration: 150, useNativeDriver: true }),
+                Animated.spring(streakBounce, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 8 }),
+              ]).start();
+            }
+          }).catch(() => {});
+          // Check for level-up
+          getDepth().then(d => {
+            const { level, next, pct } = getProgressToNext(d.signal);
+            const prevLabel = depthInfo?.levelLabel;
+            setDepthInfo({ levelLabel: level.label, levelColor: level.color, nextLabel: next?.label ?? null, pct });
+            // Level up detected!
+            if (prevLabel && prevLabel !== level.label) {
+              setShowLevelUp({ level: level.label, color: level.color });
+            }
+          }).catch(() => {});
+        }}
         onDismiss={() => setShowMorningConfirm(false)}
       />
 
@@ -380,6 +457,31 @@ export default function HomeScreen() {
         label="Rhythm Points"
         visible={showToast}
       />
+
+      {/* Weekly recap (Sunday evening) */}
+      <WeeklyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
+
+      {/* Level-up celebration */}
+      {showLevelUp && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => setShowLevelUp(null)}>
+          <View style={lu.overlay}>
+            <View style={lu.card}>
+              <MascotImage emotion="celebration" size="md" />
+              <Text style={lu.badge}>LEVEL UP</Text>
+              <Text style={[lu.level, { color: showLevelUp.color }]}>{showLevelUp.level}</Text>
+              <Text style={lu.msg}>Your rhythm is deepening. New content unlocked.</Text>
+              <Pressable style={[lu.btn, { backgroundColor: showLevelUp.color }]} onPress={() => setShowLevelUp(null)}>
+                <Text style={lu.btnText}>Continue →</Text>
+              </Pressable>
+              {!isPremium && (
+                <Pressable style={lu.premiumBtn} onPress={() => { setShowLevelUp(null); router.push('/premium'); }}>
+                  <Text style={lu.premiumBtnText}>Unlock all {showLevelUp.level} content</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Layer 1 — Home orientation spotlight (shown once) */}
       <RLoSpotlight
@@ -423,13 +525,15 @@ const sh = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  streakBadge: {
+  progressRow: {
+    alignSelf:   'flex-end',
+    marginRight: 20,
+    marginTop:   12,
+  },
+  progressBadge: {
     flexDirection:   'row',
     alignItems:      'center',
-    gap:             5,
-    alignSelf:       'flex-end',
-    marginRight:     20,
-    marginTop:       12,
+    gap:             6,
     backgroundColor: 'rgba(245,166,35,0.12)',
     borderRadius:    20,
     paddingHorizontal: 12,
@@ -438,5 +542,69 @@ const sh = StyleSheet.create({
     borderColor:     'rgba(245,166,35,0.25)',
   },
 
-  streakCount: { fontSize: 12, fontWeight: '700', color: '#D97706' },
+  streakCount:  { fontSize: 12, fontWeight: '700', color: '#D97706' },
+  badgeSep:     { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 2 },
+  rhythmScore:  { fontSize: 12, fontWeight: '800', letterSpacing: -0.3 },
+  levelDot:     { width: 6, height: 6, borderRadius: 3 },
+  levelLabel:   { fontSize: 11, fontWeight: '700' },
+});
+
+// ─── Level-up celebration styles ────────────────────────────────────────────
+
+const lu = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  card: {
+    backgroundColor: '#141466',
+    borderRadius: 28,
+    padding: 32,
+    alignItems: 'center',
+    gap: 16,
+    marginHorizontal: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  badge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#F5A623',
+    letterSpacing: 2,
+  },
+  level: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  msg: {
+    fontSize: 14,
+    color: '#A8C4E0',
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  btn: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  btnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  premiumBtn: {
+    paddingVertical: 10,
+  },
+  premiumBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1c9fda',
+  },
 });

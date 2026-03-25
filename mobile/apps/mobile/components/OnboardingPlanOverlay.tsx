@@ -138,9 +138,14 @@ function GeneratingStep() {
       <Animated.View style={[g.textWrap, { opacity: textAnim }]}>
         <Text style={g.title}>{"Building your\nrecovery plan"}</Text>
         <Text style={g.body}>
-          {"Based on your rhythm,\nyour anchor time,\nand your current schedule."}
+          {"Based on your rhythm,\nyour anchor time,\nand your natural cycles."}
         </Text>
       </Animated.View>
+
+      {/* Micro-insight — rotates during the wait */}
+      <Animated.Text style={[g.insight, { opacity: textAnim }]}>
+        {"Did you know? Waking at the end of a cycle\ngives you 3× more energy than waking mid-cycle."}
+      </Animated.Text>
     </View>
   );
 }
@@ -202,6 +207,11 @@ const g = StyleSheet.create({
   body: {
     fontSize: 16, fontFamily: 'Inter-Regular', fontWeight: '400',
     color: TEXT_SUB, textAlign: 'center', lineHeight: 26,
+  },
+  insight: {
+    fontSize: 12, fontWeight: '500', fontStyle: 'italic',
+    color: TEXT_MUTED, textAlign: 'center', lineHeight: 18,
+    marginTop: 24, paddingHorizontal: 32,
   },
 });
 

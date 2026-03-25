@@ -96,6 +96,55 @@ async function request<T>(
 const get = <T>(path: string) => request<T>('GET', path);
 const post = <T>(path: string, body: unknown) => request<T>('POST', path, body);
 
+// ─── Stale-while-revalidate GET cache ────────────────────────────────────────
+// Serves cached data instantly, refreshes in background.
+// Cache entries expire after TTL_MS but stale data is returned while refreshing.
+
+const HTTP_CACHE = new Map<string, { data: unknown; fetchedAt: number }>();
+const DEFAULT_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Cached GET — returns stale data instantly if available, refreshes in background.
+ * Falls back to network if no cache.
+ */
+async function cachedGet<T>(path: string, ttlMs = DEFAULT_TTL_MS): Promise<ApiResponse<T>> {
+  const cached = HTTP_CACHE.get(path);
+  const now = Date.now();
+
+  // Fresh cache — return immediately
+  if (cached && now - cached.fetchedAt < ttlMs) {
+    return { ok: true, data: cached.data as T, status: 200 };
+  }
+
+  // Stale cache — return it but refresh in background
+  if (cached) {
+    // Background refresh (fire and forget)
+    get<T>(path).then(res => {
+      if (res.ok && res.data) {
+        HTTP_CACHE.set(path, { data: res.data, fetchedAt: Date.now() });
+      }
+    }).catch(() => {});
+    return { ok: true, data: cached.data as T, status: 200 };
+  }
+
+  // No cache — fetch and cache
+  const res = await get<T>(path);
+  if (res.ok && res.data) {
+    HTTP_CACHE.set(path, { data: res.data, fetchedAt: Date.now() });
+  }
+  return res;
+}
+
+/** Invalidate a specific cache entry (call after mutations). */
+export function invalidateCache(path: string): void {
+  HTTP_CACHE.delete(path);
+}
+
+/** Clear all cached responses. */
+export function clearCache(): void {
+  HTTP_CACHE.clear();
+}
+
 // ─── /users ───────────────────────────────────────────────────────────────────
 
 export interface CreateUserResponse {
@@ -205,7 +254,7 @@ export interface HomeScreenPayload {
 }
 
 export async function getHomeScreenPayload(): Promise<ApiResponse<HomeScreenPayload>> {
-  return get('/screen/home');
+  return cachedGet('/screen/home', 60_000); // 1 min TTL — refreshes frequently
 }
 
 // ─── /screen/day-plan ─────────────────────────────────────────────────────────
@@ -409,7 +458,7 @@ export interface CalendarEventResponse {
 }
 
 export async function getUpcomingEvents(hours = 24): Promise<ApiResponse<{ events: CalendarEventResponse[] }>> {
-  return request('GET', `/calendar/upcoming?hours=${hours}`);
+  return cachedGet(`/calendar/upcoming?hours=${hours}`, 5 * 60_000); // 5 min TTL
 }
 
 // ─── /summaries ──────────────────────────────────────────────────────────────
@@ -426,7 +475,7 @@ export interface WeeklySummaryResponse {
 }
 
 export async function getWeeklySummaries(limit = 4): Promise<ApiResponse<{ summaries: WeeklySummaryResponse[] }>> {
-  return request('GET', `/summaries/recent?limit=${limit}`);
+  return cachedGet(`/summaries/recent?limit=${limit}`, 10 * 60_000); // 10 min TTL
 }
 
 // ─── /reports ────────────────────────────────────────────────────────────────

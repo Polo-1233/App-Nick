@@ -1,47 +1,54 @@
 /**
- * notifications.ts — R90 Navigator push notification scheduler
+ * notifications.ts — R90 Navigator local notification scheduler
  *
- * Schedules local notifications for the four core R90 reminders:
+ * SIMPLIFIED notification system (post-audit cleanup):
  *
- *   N1 — Anchor reminder:  fires AT anchor time if no night logged yet
- *   N2 — Pre-sleep:        fires at preSleepStart (90 min before bedtime)
- *   N3 — CRP window:       fires at 13:00 when zone is Yellow or Orange
- *   N4 — Log nudge:        fires at anchor + 30 min if last night not logged
+ *   N1 — Morning:       single morning notification at ARP + 15 min (merged anchor + briefing)
+ *   N3 — CRP window:    fires at 13:00 when zone is Yellow or Orange
+ *   N_MRM — Micro reset: next upcoming MRM (max 3 per day)
+ *   N5 — Missed cycle:  15 min after bedtime if no wind-down started
+ *
+ * REMOVED (redundant / anxiety-inducing):
+ *   N2 — Pre-sleep:     removed — wind-down.ts handles this
+ *   N4 — Log nudge:     removed — pressuring, contrary to R90 philosophy
+ *   D2 — Evening prep:  removed — duplicate of wind-down notification
  *
  * Design rules:
  *   - All notifications are LOCAL (no backend required)
- *   - Never fire during the sleep window (bedtime → anchor)
+ *   - Target: max 4-5 notifications per day
+ *   - Never fire during sleep window (bedtime → anchor)
  *   - All are idempotent — safe to call on every app open
- *   - User can toggle each category in Settings (future)
- *   - Requires notifications permission (checked before scheduling)
- *
- * Storage keys (all versioned):
- *   @r90:notif:anchor:v1    — notification id for N1
- *   @r90:notif:preSleep:v1  — notification id for N2
- *   @r90:notif:crp:v1       — notification id for N3
- *   @r90:notif:logNudge:v1  — notification id for N4
+ *   - Requires notifications permission
  */
 
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { DayPlan, UserProfile, NightRecord, TimeBlock } from '@r90/types';
+import { getFlow } from './rhythm-points';
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
 const NOTIF_KEYS = {
-  ANCHOR:       '@r90:notif:anchor:v1',
-  PRE_SLEEP:    '@r90:notif:preSleep:v1',
+  MORNING:      '@r90:notif:morning:v1',
   CRP:          '@r90:notif:crp:v1',
-  LOG_NUDGE:    '@r90:notif:logNudge:v1',
   MRM:          '@r90:notif:mrm:v1',
   MISSED_CYCLE: '@r90:notif:missedCycle:v1',
+  MRM_COUNT:    '@r90:notif:mrmCount:v1',  // tracks how many MRM notifs sent today
 } as const;
+
+// Legacy keys — cancelled on upgrade but no longer scheduled
+const LEGACY_KEYS = [
+  '@r90:notif:anchor:v1',
+  '@r90:notif:preSleep:v1',
+  '@r90:notif:logNudge:v1',
+];
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MAX_MRM_PER_DAY = 3;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Build a Date for a MinuteOfDay today (or tomorrow if the time has passed).
- */
 function minuteOfDayToDate(minutes: number, allowTomorrow = true): Date {
   const now = new Date();
   const target = new Date();
@@ -52,9 +59,6 @@ function minuteOfDayToDate(minutes: number, allowTomorrow = true): Date {
   return target;
 }
 
-/**
- * Cancel a previously scheduled notification, then clear its stored id.
- */
 async function cancelAndClear(storageKey: string): Promise<void> {
   try {
     const id = await AsyncStorage.getItem(storageKey);
@@ -63,22 +67,17 @@ async function cancelAndClear(storageKey: string): Promise<void> {
       await AsyncStorage.removeItem(storageKey);
     }
   } catch {
-    // non-critical — ignore
+    // non-critical
   }
 }
 
-/**
- * Schedule a local notification and persist its id to AsyncStorage.
- * Cancels any previously scheduled notification for that key first.
- */
 async function scheduleOnce(
   storageKey: string,
   content: Notifications.NotificationContentInput,
   trigger: Date,
 ): Promise<void> {
   await cancelAndClear(storageKey);
-  const trigger_in_future = trigger > new Date();
-  if (!trigger_in_future) return;
+  if (trigger <= new Date()) return;
 
   const id = await Notifications.scheduleNotificationAsync({
     content,
@@ -87,69 +86,48 @@ async function scheduleOnce(
   await AsyncStorage.setItem(storageKey, id);
 }
 
-// ─── Permission guard ─────────────────────────────────────────────────────────
-
 async function hasNotificationPermission(): Promise<boolean> {
   const { status } = await Notifications.getPermissionsAsync();
   return status === 'granted';
 }
 
-// ─── Today's date string ──────────────────────────────────────────────────────
-
 function todayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// ─── Individual schedulers ────────────────────────────────────────────────────
-
+// ─── N1 — Morning notification (single touchpoint) ──────────────────────────
 /**
- * N1 — Anchor reminder.
- * Fires at anchor time if the user hasn't logged last night yet.
- * Only scheduled when the current night record for today is missing.
+ * Fires at ARP + 15 min. The only morning notification.
+ * Replaces the old separate anchor reminder + daily morning briefing.
  */
-async function scheduleAnchorReminder(
+async function scheduleMorningNotification(
   profile: UserProfile,
-  weekHistory: NightRecord[],
 ): Promise<void> {
-  const today = todayStr();
-  const alreadyLogged = weekHistory.some(r => r.date === today);
+  const morningMin = (profile.anchorTime + 15) % 1440;
 
-  if (alreadyLogged) {
-    await cancelAndClear(NOTIF_KEYS.ANCHOR);
-    return;
-  }
+  // Include streak in notification body if active
+  let body = 'Your rhythm is set. Tap to confirm your wake-up.';
+  try {
+    const flow = await getFlow();
+    if (flow.currentStreak >= 3) {
+      body = `Day ${flow.currentStreak + 1} 🔥 — Tap to confirm your wake-up.`;
+    }
+  } catch {}
 
   await scheduleOnce(
-    NOTIF_KEYS.ANCHOR,
+    NOTIF_KEYS.MORNING,
     {
-      title: 'R90 — Good morning',
-      body: 'Log last night to keep your weekly tracking on track.',
-      data: { route: '/log-night' },
+      title: 'R90 — Good morning ☀️',
+      body,
+      data: { route: '/(tabs)', type: 'morning' },
     },
-    minuteOfDayToDate(profile.anchorTime),
+    minuteOfDayToDate(morningMin),
   );
 }
 
+// ─── N3 — CRP window ─────────────────────────────────────────────────────────
 /**
- * N2 — Pre-sleep reminder.
- * Fires at preSleepStart (90 min before bedtime).
- */
-async function schedulePreSleepReminder(plan: DayPlan): Promise<void> {
-  await scheduleOnce(
-    NOTIF_KEYS.PRE_SLEEP,
-    {
-      title: 'Wind-down time',
-      body: 'Start stepping away from screens. Bedtime in 90 minutes.',
-      data: { route: '/wind-down' },
-    },
-    minuteOfDayToDate(plan.cycleWindow.preSleepStart),
-  );
-}
-
-/**
- * N3 — CRP window notification.
- * Fires at 13:00 when zone is Yellow or Orange.
- * Skipped on Green days.
+ * Fires at 13:00 when zone is Yellow or Orange. Skipped on Green days.
  */
 async function scheduleCRPReminder(plan: DayPlan): Promise<void> {
   if (plan.readiness.zone === 'green') {
@@ -161,53 +139,34 @@ async function scheduleCRPReminder(plan: DayPlan): Promise<void> {
   await scheduleOnce(
     NOTIF_KEYS.CRP,
     {
-      title: 'CRP window open',
-      body: 'Your recovery window is open. Even 30 minutes will help.',
+      title: 'Recovery time',
+      body: 'Your CRP window is open. 20 minutes to recharge.',
       data: { route: '/crp-player', type: 'crp' },
     },
     minuteOfDayToDate(CRP_WINDOW_OPEN, false),
   );
 }
 
+// ─── N_MRM — Micro Recovery Moment (max 3 per day) ──────────────────────────
 /**
- * N4 — Log nudge.
- * Fires at anchor + 30 min if the previous night has not been logged.
- */
-async function scheduleLogNudge(
-  profile: UserProfile,
-  weekHistory: NightRecord[],
-): Promise<void> {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-  const alreadyLogged = weekHistory.some(r => r.date === yesterdayStr);
-
-  if (alreadyLogged) {
-    await cancelAndClear(NOTIF_KEYS.LOG_NUDGE);
-    return;
-  }
-
-  const NUDGE_OFFSET = 30; // minutes after anchor
-  const nudgeTime = (profile.anchorTime + NUDGE_OFFSET) % 1440;
-
-  await scheduleOnce(
-    NOTIF_KEYS.LOG_NUDGE,
-    {
-      title: 'Log last night',
-      body: 'Don\'t forget to log your sleep cycles to keep your T7 accurate.',
-      data: { route: '/log-night' },
-    },
-    minuteOfDayToDate(nudgeTime),
-  );
-}
-
-/**
- * N_MRM — MRM (Micro Recovery Moment) notification.
- * Fires at the next upcoming MRM (down_period block) at least 5 min in the future.
- * Only one MRM notification scheduled at a time — rescheduled on each plan refresh.
+ * Schedules the next upcoming MRM notification.
+ * Tracks how many MRM notifs have been sent today — stops at MAX_MRM_PER_DAY.
+ * Only one scheduled at a time; rescheduled on each plan refresh.
  */
 async function scheduleMRMReminder(mrmBlocks: TimeBlock[]): Promise<void> {
   await cancelAndClear(NOTIF_KEYS.MRM);
+
+  // Check daily MRM count
+  const countRaw = await AsyncStorage.getItem(NOTIF_KEYS.MRM_COUNT).catch(() => null);
+  let mrmCount = 0;
+  if (countRaw) {
+    try {
+      const parsed = JSON.parse(countRaw) as { date: string; count: number };
+      if (parsed.date === todayStr()) mrmCount = parsed.count;
+    } catch {}
+  }
+
+  if (mrmCount >= MAX_MRM_PER_DAY) return;
 
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
@@ -231,28 +190,30 @@ async function scheduleMRMReminder(mrmBlocks: TimeBlock[]): Promise<void> {
     },
     triggerDate,
   );
+
+  // Increment daily count
+  await AsyncStorage.setItem(NOTIF_KEYS.MRM_COUNT, JSON.stringify({
+    date: todayStr(),
+    count: mrmCount + 1,
+  }));
 }
 
+// ─── N5 — Missed cycle ──────────────────────────────────────────────────────
 /**
- * N5 — Missed cycle reminder.
- * Fires 15 minutes after ideal bedtime if the user hasn't started wind-down.
- * Only fires if remaining cycles ≥ 3 (still worth sleeping).
- * Not fired if cyclesRemaining < 3 (too late, unhelpful).
+ * Fires 15 min after ideal bedtime if remaining cycles ≥ 3.
  */
 async function scheduleMissedCycleReminder(
-  bedtime:    number,
+  bedtime: number,
   cycleCount: number,
-  anchorTime: number,
 ): Promise<void> {
   await cancelAndClear(NOTIF_KEYS.MISSED_CYCLE);
 
-  const MISSED_CYCLE_OFFSET = 15; // minutes after bedtime
+  const MISSED_CYCLE_OFFSET = 15;
   const triggerMin = (bedtime + MISSED_CYCLE_OFFSET) % 1440;
   const triggerDate = minuteOfDayToDate(triggerMin, false);
 
   if (triggerDate <= new Date()) return;
 
-  // Compute next window time at schedule time
   const cyclesMissed = Math.ceil(MISSED_CYCLE_OFFSET / 90);
   const remaining = cycleCount - cyclesMissed;
   if (remaining < 3) return;
@@ -278,7 +239,6 @@ async function scheduleMissedCycleReminder(
 /**
  * Schedule all R90 notifications for today.
  * Safe to call on every app open — idempotent.
- * Silently skips if notifications permission is not granted.
  */
 export async function scheduleAllNotifications(
   profile: UserProfile,
@@ -289,42 +249,41 @@ export async function scheduleAllNotifications(
     const hasPermission = await hasNotificationPermission();
     if (!hasPermission) return;
 
+    // Clean up legacy notification keys from old version
+    await Promise.allSettled(LEGACY_KEYS.map(k => cancelAndClear(k)));
+
     const mrmBlocks = (plan.blocks ?? []).filter(b => b.type === 'down_period');
-    const bedtime   = plan.cycleWindow?.bedtime ?? null;
+    const bedtime = plan.cycleWindow?.bedtime ?? null;
 
     await Promise.all([
-      scheduleAnchorReminder(profile, weekHistory),
-      schedulePreSleepReminder(plan),
+      scheduleMorningNotification(profile),
       scheduleCRPReminder(plan),
-      scheduleLogNudge(profile, weekHistory),
       scheduleMRMReminder(mrmBlocks),
       bedtime !== null
-        ? scheduleMissedCycleReminder(bedtime, plan.cycleWindow.cycleCount, profile.anchorTime)
+        ? scheduleMissedCycleReminder(bedtime, plan.cycleWindow.cycleCount)
         : Promise.resolve(),
     ]);
   } catch (e) {
-    console.error('[notifications] Failed to schedule notifications:', e);
+    console.error('[notifications] Failed to schedule:', e);
   }
 }
 
 /**
  * Cancel all R90 notifications.
- * Call on profile reset or when the user disables notifications.
  */
 export async function cancelAllNotifications(): Promise<void> {
   await Promise.allSettled([
-    cancelAndClear(NOTIF_KEYS.ANCHOR),
-    cancelAndClear(NOTIF_KEYS.PRE_SLEEP),
+    cancelAndClear(NOTIF_KEYS.MORNING),
     cancelAndClear(NOTIF_KEYS.CRP),
-    cancelAndClear(NOTIF_KEYS.LOG_NUDGE),
     cancelAndClear(NOTIF_KEYS.MRM),
     cancelAndClear(NOTIF_KEYS.MISSED_CYCLE),
+    // Also clean up legacy
+    ...LEGACY_KEYS.map(k => cancelAndClear(k)),
   ]);
 }
 
 /**
- * Handle a notification tap and return the target route (if any).
- * Use in _layout.tsx with Notifications.addNotificationResponseReceivedListener.
+ * Handle a notification tap and return the target route.
  */
 export function getRouteFromNotification(
   response: Notifications.NotificationResponse

@@ -130,11 +130,21 @@ export const ActionCard = memo(function ActionCard({
 
         {/* CTA button — full width, animated pulse if urgent */}
         {cardState.cta !== null && (
-          <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
-            <View style={[ac.cta, { backgroundColor: ctaColor }]}>
-              <Text style={ac.ctaTxt}>{cardState.cta}</Text>
-            </View>
-          </Animated.View>
+          <View style={{ gap: 6 }}>
+            <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
+              <View style={[ac.cta, { backgroundColor: ctaColor }]}>
+                <Text style={ac.ctaTxt}>{cardState.cta}</Text>
+              </View>
+            </Animated.View>
+            {/* Points hint — micro-incentive */}
+            <Text style={ac.pointsHint}>
+              {cardState.state === 'morning'      ? '+5 Rhythm Points' :
+               cardState.state === 'mrm_active'   ? '+2 Rhythm Points' :
+               cardState.state === 'crp_active'   ? '+5 Rhythm Points' :
+               cardState.state === 'winddown'      ? '+3 Rhythm Points' :
+               null}
+            </Text>
+          </View>
         )}
 
       </Animated.View>
@@ -152,11 +162,12 @@ const ac = StyleSheet.create({
     borderRadius:      24,
     backgroundColor:   DEEP,
     gap:               10,
-    shadowColor:       DEEP,
-    shadowOffset:      { width: 0, height: 8 },
-    shadowOpacity:     0.22,
-    shadowRadius:      24,
-    elevation:         6,
+    // Subtle shadow — premium feel, not aggressive float
+    shadowColor:       '#000',
+    shadowOffset:      { width: 0, height: 4 },
+    shadowOpacity:     0.10,
+    shadowRadius:      12,
+    elevation:         4,
   },
   badge: {
     flexDirection:     'row',
@@ -200,5 +211,12 @@ const ac = StyleSheet.create({
     fontWeight:    '700',
     color:         WHITE,
     letterSpacing: 0.2,
+  },
+  pointsHint: {
+    fontSize:   11,
+    fontWeight: '600',
+    color:      'rgba(255,255,255,0.35)',
+    textAlign:  'center',
+    letterSpacing: 0.3,
   },
 });

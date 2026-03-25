@@ -27,7 +27,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../lib/theme-context";
 import { PagerContext } from "../../lib/pager-context";
 import { useOnboardingPhase } from "../../lib/onboarding-phase-context";
-import { useTour } from "../../lib/tour-context";
+// Tour system removed — replaced by onboarding-guide
+import { useChatContext } from "../../lib/chat-context";
 import { Modal } from "react-native";
 import HomeScreen          from "../../components/screens/HomeScreen";
 import CalendarScreen      from "../../components/screens/CalendarScreen";
@@ -141,7 +142,8 @@ const ti = StyleSheet.create({
 export default function PagerLayout() {
   const { theme }          = useTheme();
   const { phase }          = useOnboardingPhase();
-  const { tourStep }       = useTour();
+  const tourStep = null; // Tour removed — onboarding-guide handles intro
+  const { openChat }       = useChatContext();
   const isOnboarding       = phase === 'guided_chat';
   const { width: screenW } = useWindowDimensions();
   const insets             = useSafeAreaInsets();
@@ -217,6 +219,17 @@ export default function PagerLayout() {
           <ProfileScreen />
         </View>
       </Animated.ScrollView>
+
+      {/* ── R-Lo floating chat button — accessible from all tabs ── */}
+      {!isOnboarding && activeIndex !== 0 && (
+        <Pressable
+          onPress={openChat}
+          style={[styles.chatFab, { bottom: tabBarHeight + 12 }]}
+          hitSlop={8}
+        >
+          <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+        </Pressable>
+      )}
 
       {/* ── Custom tab bar ── */}
       <View
@@ -306,6 +319,22 @@ const styles = StyleSheet.create({
     flexDirection:  "row",
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop:     6,
+  },
+  chatFab: {
+    position:        'absolute',
+    right:           20,
+    width:           44,
+    height:          44,
+    borderRadius:    22,
+    backgroundColor: '#1c9fda',
+    alignItems:      'center',
+    justifyContent:  'center',
+    shadowColor:     '#1c9fda',
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.30,
+    shadowRadius:    8,
+    elevation:       6,
+    zIndex:          50,
   },
   tabLocked: { opacity: 0.78 },
   tabItem: {

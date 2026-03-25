@@ -27,6 +27,16 @@ import { Analytics } from '../../lib/analytics';
 import { fmtMin as minToHHMM } from '../../lib/time-utils';
 import { useTheme } from '../../lib/theme-context';
 import { usePager } from '../../lib/pager-context';
+import { requestCalendar } from '../../lib/permissions';
+import { connectGoogleCalendar } from '../../lib/google-calendar';
+import {
+  shouldShowCalendarPrompt,
+  dismissCalendarPrompt,
+  markCalendarGranted,
+} from '../../lib/contextual-permissions';
+import { RLoTooltip } from '../RLoGuide';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../../lib/onboarding-guide';
+import { HapticsLight } from '../../utils/haptics';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -663,39 +673,117 @@ const sh = StyleSheet.create({
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
+// ─── Calendar Connect Card (inline, contextual) ────────────────────────────
+
+function CalendarConnectCard({
+  onConnect,
+  onDismiss,
+}: {
+  onConnect: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <View style={cc.card}>
+      <View style={cc.iconRow}>
+        <View style={cc.iconWrap}>
+          <Ionicons name="calendar-outline" size={20} color={ACCENT} />
+        </View>
+        <Pressable onPress={onDismiss} hitSlop={12}>
+          <Ionicons name="close" size={18} color={TEXT_MUTED} />
+        </Pressable>
+      </View>
+      <Text style={cc.title}>See your rhythm + your life</Text>
+      <Text style={cc.sub}>
+        Connect your calendar so R-Lo can detect schedule conflicts and adjust your sleep window.
+      </Text>
+      <View style={cc.btnRow}>
+        <Pressable style={cc.connectBtn} onPress={onConnect}>
+          <Ionicons name="calendar" size={15} color="#fff" />
+          <Text style={cc.connectBtnText}>Connect calendar</Text>
+        </Pressable>
+        <Pressable style={cc.notNowBtn} onPress={onDismiss}>
+          <Text style={cc.notNowText}>Not now</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const cc = StyleSheet.create({
+  card: {
+    backgroundColor: CARD,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(28,159,218,0.12)',
+    gap: 10,
+  },
+  iconRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  iconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(28,159,218,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  title: {
+    fontSize: 18, fontWeight: '700', color: TEXT,
+  },
+  sub: {
+    fontSize: 14, color: TEXT_SUB, lineHeight: 21,
+  },
+  btnRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4,
+  },
+  connectBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: ACCENT, borderRadius: 14,
+    paddingVertical: 12, paddingHorizontal: 20,
+  },
+  connectBtnText: {
+    fontSize: 14, fontWeight: '700', color: '#fff',
+  },
+  notNowBtn: {
+    paddingVertical: 12, paddingHorizontal: 8,
+  },
+  notNowText: {
+    fontSize: 14, fontWeight: '600', color: TEXT_MUTED,
+  },
+});
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
 export default function CalendarScreen() {
   const { theme }    = useTheme();
   const { dayPlan }  = useDayPlanContext();
   const { goToPage } = usePager();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [showCalendarCard, setShowCalendarCard] = useState(false);
+  const [showPlanningTip,  setShowPlanningTip]  = useState(false);
 
-  useFocusEffect(useCallback(() => { Analytics.screenViewed('planning'); }, []));
+  useFocusEffect(useCallback(() => {
+    Analytics.screenViewed('planning');
+    shouldShowGuide(GUIDE_KEYS.FEAT_PLANNING).then(setShowPlanningTip).catch(() => {});
+  }, []));
 
   useEffect(() => {
     loadProfile().then(p => { if (p) setProfile(p); });
+    shouldShowCalendarPrompt().then(setShowCalendarCard).catch(() => {});
   }, []);
 
-  // SMOKE fallback — always show the screen even without real profile
-  const SMOKE_PROFILE: UserProfile = {
-    anchorTime:          390,   // 06:30
-    idealCyclesPerNight: 5,
-    chronotype:          'Neither',
-    weeklyTarget:        35,
+  // Default profile if not yet loaded (user just signed up)
+  const DEFAULT_PROFILE: UserProfile = {
+    anchorTime: 390, idealCyclesPerNight: 5, chronotype: 'Neither', weeklyTarget: 35,
   };
+  const activeProfile: UserProfile = profile ?? DEFAULT_PROFILE;
 
-  const activeProfile: UserProfile = profile ?? SMOKE_PROFILE;
-
-  // ── SMOKE DATA — remove before production ────────────────────────────────
-  const SMOKE_RECENT_CYCLES = [5, 4, 5, 5, 3, 5, 4];
-  const SMOKE_ZONE: 'green' | 'yellow' | 'orange' = 'yellow';
-  const SMOKE_WEARABLE = true;
-  // ──────────────────────────────────────────────────────────────────────────
-
-  const recentCycles  = dayPlan?.readiness?.recentCycles ?? SMOKE_RECENT_CYCLES;
-  const target        = activeProfile.idealCyclesPerNight;
-  const zone            = dayPlan?.readiness?.zone ?? SMOKE_ZONE;
-  const adjustedCycles  = zone === 'orange' ? Math.min(target + 1, 6) : target;
-  const wearableActive  = dayPlan?.readiness ? true : SMOKE_WEARABLE;
+  const recentCycles   = dayPlan?.readiness?.recentCycles ?? [];
+  const target         = activeProfile.idealCyclesPerNight;
+  const zone           = dayPlan?.readiness?.zone ?? 'green';
+  const adjustedCycles = zone === 'orange' ? Math.min(target + 1, 6) : target;
+  const wearableActive = dayPlan?.readiness ? true : false;
 
   // Week
   const week       = buildWeek(activeProfile);
@@ -720,6 +808,34 @@ export default function CalendarScreen() {
           <Text style={[s.title, { color: theme.colors.text }]}>Planning</Text>
           <Text style={[s.date, { color: theme.colors.textMuted }]}>{todayLabel()}</Text>
         </View>
+
+        {/* Layer 2 tooltip — shown once on first Planning visit */}
+        {showPlanningTip && !showCalendarCard && (
+          <RLoTooltip
+            visible={showPlanningTip}
+            message="Your week at a glance. R-Lo plans your rhythm around your life."
+            onDismiss={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_PLANNING);
+              setShowPlanningTip(false);
+            }}
+          />
+        )}
+
+        {/* ── Calendar Connect (contextual, shown once) ── */}
+        {showCalendarCard && (
+          <CalendarConnectCard
+            onConnect={async () => {
+              HapticsLight();
+              const result = await requestCalendar();
+              if (result === 'granted') await markCalendarGranted();
+              setShowCalendarCard(false);
+            }}
+            onDismiss={async () => {
+              await dismissCalendarPrompt();
+              setShowCalendarCard(false);
+            }}
+          />
+        )}
 
         {/* ── Tonight ── */}
         <TonightCard

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getFlow, getPoints } from '../lib/rhythm-points';
 import { getTier, getProgressToNextTier } from '../lib/rhythm-tiers';
 import { getRLoMood, getMoodMessage } from '../lib/rlo-mood';
+import { getDepth, getProgressToNext, type RhythmDepthState } from '../lib/rhythm-depth';
 import { MascotImage } from './ui/MascotImage';
 import type { RhythmFlowState, RhythmPointsState } from '../lib/rhythm-points';
 
@@ -142,13 +143,14 @@ const tp = StyleSheet.create({
 export function StreakDetail({ visible, onClose }: StreakDetailProps) {
   const [flow,    setFlow]    = useState<RhythmFlowState | null>(null);
   const [points,  setPoints]  = useState<RhythmPointsState | null>(null);
+  const [depth,   setDepth]   = useState<RhythmDepthState | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     setLoading(true);
-    Promise.all([getFlow(), getPoints()])
-      .then(([f, p]) => { setFlow(f); setPoints(p); })
+    Promise.all([getFlow(), getPoints(), getDepth()])
+      .then(([f, p, d]) => { setFlow(f); setPoints(p); setDepth(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [visible]);
@@ -201,6 +203,22 @@ export function StreakDetail({ visible, onClose }: StreakDetailProps) {
 
               {/* Tier progress */}
               <TierProgress totalPoints={points.total} />
+
+              {/* Rhythm Depth level */}
+              {depth && (() => {
+                const { level, next, pct } = getProgressToNext(depth.signal);
+                return (
+                  <View style={s.row}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: level.color }} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: level.color }}>{level.label}</Text>
+                    </View>
+                    {next && (
+                      <Text style={s.rowValue}>{Math.round(pct * 100)}% → {next.label}</Text>
+                    )}
+                  </View>
+                );
+              })()}
 
               <View style={s.divider} />
 

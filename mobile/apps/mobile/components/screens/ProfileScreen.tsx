@@ -53,15 +53,17 @@ import { RhythmDepthCard }       from '../RhythmDepthCard';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 
+// Static fallback — matches dark theme. Used only in StyleSheet.create (which can't use hooks).
+// All dynamic/inline styles use theme.colors directly.
 const C = {
   bg:        '#0a0a3a',
   card:      '#141466',
   surface2:  '#1c1c7a',
   accent:          '#1c9fda',
   accentSecondary: '#1c9fda',
-  text:      '#E6EDF7',
-  textSub:   '#9FB0C5',
-  textMuted: '#6B7F99',
+  text:      '#FFFFFF',     // aligned with dark theme (was #E6EDF7)
+  textSub:   '#A8C4E0',    // aligned with dark theme (was #9FB0C5)
+  textMuted: '#6B8CAE',    // aligned with dark theme (was #6B7F99)
   error:     '#F87171',
   success:   '#3DDC97',
   border:    'rgba(255,255,255,0.07)',
@@ -423,8 +425,8 @@ export default function ProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset', style: 'destructive', onPress: async () => {
           await clearAllStorage();
-          // Set phase to guided_chat BEFORE logout so new session starts fresh
-          await setOnboardingPhase('guided_chat');
+          // Reset phase so new session starts from onboarding
+          await setOnboardingPhase('plan');
           await logout();
           router.replace('/onboarding');
         }},

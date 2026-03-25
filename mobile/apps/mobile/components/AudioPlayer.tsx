@@ -27,11 +27,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: W, height: H } = Dimensions.get('window');
 
-const BG     = '#0a0a3a';
-const ACCENT = '#1c9fda';
-const TEXT   = '#FFFFFF';
-const MUTED  = '#6B8CAE';
-const GOLD   = '#F5A623';
+// Immersive player — always dark, even in light theme
+const BG     = '#0a0a3a';   // darkTheme.background
+const ACCENT = '#1c9fda';   // darkTheme.accent
+const TEXT   = '#FFFFFF';    // darkTheme.text
+const MUTED  = '#6B8CAE';   // darkTheme.textMuted
+const GOLD   = '#F5A623';   // darkTheme.gold
 
 function fmtSeconds(s: number): string {
   const m = Math.floor(s / 60);
@@ -39,88 +40,151 @@ function fmtSeconds(s: number): string {
   return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
 }
 
-// ─── Breathing Circle (MRM) ────────────────────────────────────────────────────
+// ─── Breathing Circle (MRM) — 4-4-4-4 box breathing ─────────────────────────
+const BREATH_PHASES = ['Breathe in', 'Hold', 'Breathe out', 'Hold'];
+const BREATH_DUR    = 4000; // 4 seconds each phase
+
 function BreathingCircle() {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale1 = useRef(new Animated.Value(1)).current;
+  const scale2 = useRef(new Animated.Value(1)).current;
+  const scale3 = useRef(new Animated.Value(1)).current;
+  const ringOp = useRef(new Animated.Value(0.08)).current;
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const phaseRef = useRef(0);
+
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, { toValue: 1.35, duration: 4000, useNativeDriver: true }),
-        Animated.timing(scale, { toValue: 1.00, duration: 4000, useNativeDriver: true }),
-      ])
-    ).start();
-    return () => scale.stopAnimation();
-  }, []);
+    // Concentric rings — staggered expand/contract
+    const makeLoop = (anim: Animated.Value, delay: number, peak: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(anim, { toValue: peak, duration: BREATH_DUR * 2, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 1,    duration: BREATH_DUR * 2, useNativeDriver: true }),
+      ]));
+
+    const l1 = makeLoop(scale1, 0,    1.40);
+    const l2 = makeLoop(scale2, 300,  1.25);
+    const l3 = makeLoop(scale3, 600,  1.12);
+
+    // Outer ring glow pulse
+    const glowLoop = Animated.loop(Animated.sequence([
+      Animated.timing(ringOp, { toValue: 0.20, duration: BREATH_DUR * 2, useNativeDriver: true }),
+      Animated.timing(ringOp, { toValue: 0.06, duration: BREATH_DUR * 2, useNativeDriver: true }),
+    ]));
+
+    l1.start(); l2.start(); l3.start(); glowLoop.start();
+
+    // Phase label cycle
+    const interval = setInterval(() => {
+      phaseRef.current = (phaseRef.current + 1) % BREATH_PHASES.length;
+      setPhaseIdx(phaseRef.current);
+    }, BREATH_DUR);
+
+    return () => {
+      l1.stop(); l2.stop(); l3.stop(); glowLoop.stop();
+      clearInterval(interval);
+    };
+  }, [scale1, scale2, scale3, ringOp]);
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <View style={bg.circleWrap}>
-        <Animated.View style={[bg.circle, bg.circleOuter, { transform: [{ scale }] }]} />
-        <Animated.View style={[bg.circle, bg.circleMid,   { transform: [{ scale: Animated.multiply(scale, 0.75) }] }]} />
-        <View          style={[bg.circle, bg.circleInner]} />
+        {/* Outermost glow ring */}
+        <Animated.View style={[bg.circle, bg.circleOuter, { transform: [{ scale: scale1 }], opacity: ringOp }]} />
+        {/* Mid ring */}
+        <Animated.View style={[bg.circle, bg.circleMid, { transform: [{ scale: scale2 }] }]} />
+        {/* Inner ring */}
+        <Animated.View style={[bg.circle, bg.circleInner, { transform: [{ scale: scale3 }] }]} />
+        {/* Core — static */}
+        <View style={bg.circleCore} />
+        {/* Phase label */}
+        <Text style={bg.breathLabel}>{BREATH_PHASES[phaseIdx]}</Text>
       </View>
     </View>
   );
 }
 
-// ─── Wave (CRP) ────────────────────────────────────────────────────────────────
+// ─── Wave (CRP) — slow breathing arcs ────────────────────────────────────────
+const WAVE_COUNT = 5;
+
 function WaveBackground() {
-  const anims = [
-    useRef(new Animated.Value(0)).current,
-    useRef(new Animated.Value(0)).current,
-    useRef(new Animated.Value(0)).current,
-  ];
+  const anims = Array.from({ length: WAVE_COUNT }, () => useRef(new Animated.Value(0)).current);
+
   useEffect(() => {
     anims.forEach((a, i) => {
       Animated.loop(
         Animated.sequence([
-          Animated.delay(i * 600),
-          Animated.timing(a, { toValue: 1, duration: 3000, useNativeDriver: true }),
-          Animated.timing(a, { toValue: 0, duration: 3000, useNativeDriver: true }),
+          Animated.delay(i * 700),
+          Animated.timing(a, { toValue: 1, duration: 4000 + i * 300, useNativeDriver: true }),
+          Animated.timing(a, { toValue: 0, duration: 4000 + i * 300, useNativeDriver: true }),
         ])
       ).start();
     });
   }, []);
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {anims.map((a, i) => (
         <Animated.View key={i} style={[bg.wave, {
-          top:     H * 0.4 + i * 30,
-          opacity: a.interpolate({ inputRange: [0,1], outputRange: [0.04, 0.12] }),
-          transform: [{ scaleX: a.interpolate({ inputRange: [0,1], outputRange: [0.6, 1.2] }) }],
+          top:       H * 0.35 + i * 40,
+          opacity:   a.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.02, 0.10, 0.02] }),
+          transform: [
+            { scaleX:    a.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1.15] }) },
+            { translateY: a.interpolate({ inputRange: [0, 1], outputRange: [0, -12 - i * 4] }) },
+          ],
         }]} />
       ))}
     </View>
   );
 }
 
-// ─── Stars (wind-down) ─────────────────────────────────────────────────────────
-const STARS = Array.from({ length: 30 }, (_, i) => ({
-  x: Math.random(), y: Math.random() * 0.6,
-  size: Math.random() < 0.2 ? 2.5 : 1.5,
-  delay: Math.random() * 3000,
-  dur: 2000 + Math.random() * 2000,
+// ─── Stars (wind-down) — soft twinkle + gentle drift ─────────────────────────
+const STARS = Array.from({ length: 36 }, () => ({
+  x:     Math.random(),
+  y:     Math.random() * 0.65,
+  size:  Math.random() < 0.15 ? 3 : Math.random() < 0.4 ? 2 : 1.5,
+  delay: Math.floor(Math.random() * 4000),
+  dur:   2500 + Math.floor(Math.random() * 3000),
+  driftY: (Math.random() - 0.5) * 14,
 }));
 
 function StarField() {
-  const opacs = STARS.map(() => useRef(new Animated.Value(0.3)).current);
+  const opacs  = STARS.map(() => useRef(new Animated.Value(Math.random() * 0.3)).current);
+  const drifts = STARS.map(() => useRef(new Animated.Value(0)).current);
+
   useEffect(() => {
     STARS.forEach((s, i) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(s.delay),
-          Animated.timing(opacs[i], { toValue: 0.9, duration: s.dur, useNativeDriver: true }),
-          Animated.timing(opacs[i], { toValue: 0.2, duration: s.dur, useNativeDriver: true }),
-        ])
-      ).start();
+      // Twinkle
+      Animated.loop(Animated.sequence([
+        Animated.delay(s.delay),
+        Animated.timing(opacs[i],  { toValue: 0.85, duration: s.dur,     useNativeDriver: true }),
+        Animated.timing(opacs[i],  { toValue: 0.12, duration: s.dur * 1.2, useNativeDriver: true }),
+      ])).start();
+      // Slow vertical drift
+      Animated.loop(Animated.sequence([
+        Animated.timing(drifts[i], { toValue: 1,  duration: 8000 + s.delay, useNativeDriver: true }),
+        Animated.timing(drifts[i], { toValue: 0,  duration: 8000 + s.delay, useNativeDriver: true }),
+      ])).start();
     });
   }, []);
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {STARS.map((s, i) => (
         <Animated.View key={i} style={{
-          position: 'absolute', left: s.x * W, top: s.y * H,
-          width: s.size, height: s.size, borderRadius: s.size / 2,
-          backgroundColor: '#fff', opacity: opacs[i],
+          position:        'absolute',
+          left:            s.x * W,
+          top:             s.y * H,
+          width:           s.size,
+          height:          s.size,
+          borderRadius:    s.size / 2,
+          backgroundColor: s.size >= 3 ? ACCENT : '#fff',
+          opacity:         opacs[i],
+          transform:       [{
+            translateY: drifts[i].interpolate({
+              inputRange:  [0, 1],
+              outputRange: [0, s.driftY],
+            }),
+          }],
         }} />
       ))}
     </View>

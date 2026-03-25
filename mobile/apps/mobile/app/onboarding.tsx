@@ -1,18 +1,16 @@
 /**
- * Onboarding — 6-step linear flow.
+ * Onboarding — 7-step linear flow.
  *
  * Steps:
- *   0 — "Your sleep is the result of your entire day" (R-Lo speech bubble)
- *   1 — "The R90 Method" (Nick Littlehales authority circle)
- *   2 — "Meet R-Lo" (mascot + speech bubble)
- *   3 — First name input
- *   4 — Anchor time (ARP) picker
- *   5 — Cycle count selector (4 / 5 / 6)
+ *   0 — "8h myth" hook (strikethrough animation)
+ *   1 — Cycle visualization (Light → Deep → REM → Wake = 90 min)
+ *   2 — Nick authority + teams (Man United, Team Sky, Ronaldo, Olympics)
+ *   3 — Meet R-Lo + Name input (fused — R-Lo asks for the name)
+ *   4 — Chronotype picker (AMer / Intermediate / PMer)
+ *   5 — Anchor time (ARP) picker + live rhythm preview
+ *   6 — Cycle count selector (3/4/5/6) + "35 cycles per week" insight
  *
- * DISABLED (kept in code):
- *   — "Your sleep strategy is calculated automatically" (schema image)
- *
- * On finish (step 6 → Continue):
+ * On finish (step 6 → Create my plan):
  *   - Saves onboarding data (firstName, wakeTimeMinutes, cycles)
  *   - Saves profile (anchorTime, idealCyclesPerNight)
  *   - Bootstraps backend user
@@ -60,7 +58,22 @@ import { Button } from '../components/ui/Button';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_PAGES = 6;
+const TOTAL_PAGES = 7;
+
+const SCREEN_W = Dimensions.get('window').width;
+const PHASE_BLOCK_W = SCREEN_W < 375 ? 46 : 52;
+
+// Phase colours — reusable across onboarding + daily loop timeline
+export const PHASE_COLORS = {
+  light: { bg: 'rgba(93,202,165,0.18)',  text: '#5DCAA5', border: 'rgba(93,202,165,0.40)' },
+  deep:  { bg: 'rgba(133,183,235,0.18)', text: '#85B7EB', border: 'rgba(133,183,235,0.40)' },
+  rem:   { bg: 'rgba(175,169,236,0.18)', text: '#AFA9EC', border: 'rgba(175,169,236,0.40)' },
+  awake: { bg: 'rgba(242,166,35,0.12)',  text: '#F2A623', border: 'rgba(242,166,35,0.40)' },
+} as const;
+
+// Accent colour aliases — used standalone for calc box highlights
+const GOLD = '#F2A623';
+const TEAL = '#5DCAA5';
 
 // Onboarding always dark — aligned with darkTheme tokens
 const ACCENT    = '#1c9fda';   // darkTheme.accent
@@ -272,10 +285,13 @@ export default function OnboardingScreen() {
 
   const [page,      setPage]      = useState(0);
   const [saving,    setSaving]    = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [wakeHour,  setWakeHour]  = useState(6);
-  const [wakeMin,   setWakeMin]   = useState(30);
-  const [cycles,    setCycles]    = useState(5);
+  const [firstName,  setFirstName]  = useState('');
+  const [chronotype, setChronotype] = useState<'AMer' | 'Neither' | 'PMer'>('Neither');
+  const [wakeHour,   setWakeHour]   = useState(7);
+  const [wakeMin,    setWakeMin]    = useState(0);
+  const [cycles,     setCycles]     = useState(5);
+
+
 
   const isNavigating    = useRef(false);
   const pageTransition  = useRef(new Animated.Value(1)).current;
@@ -293,6 +309,34 @@ export default function OnboardingScreen() {
   const fadeAnim1 = useRef(new Animated.Value(0)).current;
   const fadeAnim2 = useRef(new Animated.Value(0)).current;
   const fadeAnim3 = useRef(new Animated.Value(0)).current;
+  const fadeAnim4 = useRef(new Animated.Value(0)).current;
+
+  // ── Page 1 — Cycle screen animations ─────────────────────────────────────
+  // 4 phase blocks: opacity + scale, staggered 300ms each
+  const phaseAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  const cycleLabelAnim   = useRef(new Animated.Value(0)).current; // "= 1 cycle complet"
+  const insightBoxAnim   = useRef(new Animated.Value(0)).current; // insight box
+  const p1AnimDone       = useRef(false);
+
+  // Page 1 — team items stagger animation (4 items, 250ms apart)
+  const teamAnims = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ];
+
+  // ── Page 0 — Myth screen animations ─────────────────────────────────────
+  const p0BgNumAnim    = useRef(new Animated.Value(0)).current; // bg "8h" fade+scale
+  const p0LabelAnim    = useRef(new Animated.Value(0)).current; // category label
+  const p0TitleAnim    = useRef(new Animated.Value(0)).current; // title block
+  const p0BodyAnim     = useRef(new Animated.Value(0)).current; // body text
+  const p0StrikeAnim   = useRef(new Animated.Value(0)).current; // strikethrough width (JS driver)
 
   // ── Breathing circles — 3 staggered loops (like HTML prototype) ──────────
   useEffect(() => {
@@ -365,27 +409,97 @@ export default function OnboardingScreen() {
     Animated.timing(fadeAnim0, { toValue: 1, duration: 700, delay: 150, useNativeDriver: true }).start();
   }, [fadeAnim0]);
 
-  // ── Fade-in for slides 1, 2, 3 (on page change) ─────────────────────────
+  // ── Page 0 — Myth screen sequential animation ────────────────────────────
   useEffect(() => {
-    if (page === 1) {
+    if (page !== 0) return;
+    p0BgNumAnim.setValue(0);
+    p0LabelAnim.setValue(0);
+    p0TitleAnim.setValue(0);
+    p0BodyAnim.setValue(0);
+    p0StrikeAnim.setValue(0);
+
+    Animated.sequence([
+      // 1. bg number fades in (800ms)
+      Animated.timing(p0BgNumAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      // 2. label (200ms stagger, native driver OK — translateY + opacity)
+      Animated.timing(p0LabelAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      // 3. title
+      Animated.timing(p0TitleAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      // 4. body
+      Animated.timing(p0BodyAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
+      // 5. strikethrough — 600ms after text visible → JS driver (width)
+      Animated.delay(300),
+      Animated.timing(p0StrikeAnim, { toValue: 1, duration: 400, useNativeDriver: false }),
+    ]).start();
+  }, [page]);
+
+  // ── Page 1 — Cycle visualization sequential animation ───────────────────
+  useEffect(() => {
+    if (page !== 1) return;
+    if (p1AnimDone.current) return;
+    p1AnimDone.current = true;
+
+    phaseAnims.forEach(a => a.setValue(0));
+    cycleLabelAnim.setValue(0);
+    insightBoxAnim.setValue(0);
+
+    // Stagger 4 blocks, 300ms apart, each 500ms with spring-like cubic timing
+    const blockAnims = phaseAnims.map((a, i) =>
+      Animated.sequence([
+        Animated.delay(i * 300),
+        Animated.spring(a, {
+          toValue: 1,
+          tension: 200,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    Animated.sequence([
+      Animated.parallel(blockAnims),
+      Animated.delay(400),
+      Animated.timing(cycleLabelAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.delay(200),
+      Animated.timing(insightBoxAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, [page]);
+
+  // Reset p1AnimDone when leaving page 1 so it replays on re-entry
+  useEffect(() => {
+    if (page !== 1) {
+      p1AnimDone.current = false;
+    }
+  }, [page]);
+
+  // ── Fade-in for slides 2, 3, 4 (on page change) ─────────────────────────
+  useEffect(() => {
+    if (page === 2) {
       fadeAnim1.setValue(0);
-      Animated.timing(fadeAnim1, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start();
+      teamAnims.forEach(a => a.setValue(0));
+      Animated.timing(fadeAnim1, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start(() => {
+        Animated.stagger(250, teamAnims.map(a =>
+          Animated.timing(a, { toValue: 1, duration: 400, useNativeDriver: true })
+        )).start();
+      });
     }
   }, [page, fadeAnim1]);
 
   useEffect(() => {
-    if (page === 2) {
+    if (page === 3) {
       fadeAnim2.setValue(0);
       Animated.timing(fadeAnim2, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start();
     }
   }, [page, fadeAnim2]);
 
   useEffect(() => {
-    if (page === 3) {
+    if (page === 4) {
       fadeAnim3.setValue(0);
       Animated.timing(fadeAnim3, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start();
     }
   }, [page, fadeAnim3]);
+
+
 
   // ── Pulse on last CTA ────────────────────────────────────────────────────
   useEffect(() => {
@@ -420,6 +534,10 @@ export default function OnboardingScreen() {
     if (page > 0) goToPage(page - 1);
   }
 
+  // ── ARP helpers ──────────────────────────────────────────────────────────
+
+  const isValidArp = wakeHour >= 4 && wakeHour <= 12;
+
   // ── Finish: save data → plan phase ───────────────────────────────────────
 
   async function finishOnboarding() {
@@ -441,7 +559,7 @@ export default function OnboardingScreen() {
       const existingProfile = await loadProfile();
       await saveProfile({
         anchorTime: arpMinutes,
-        chronotype: existingProfile?.chronotype ?? 'Neither',
+        chronotype: chronotype,
         idealCyclesPerNight: cycles,
         weeklyTarget: cycles * 7,
       });
@@ -480,15 +598,16 @@ export default function OnboardingScreen() {
 
   // ── Button state ─────────────────────────────────────────────────────────
 
-  // Disable next on name page (page 3) if empty
+  // Disable next on R-Lo+name page (page 3) if name empty
   const isNextDisabled = saving || (page === 3 && firstName.trim().length === 0);
 
   const nextLabel =
     page === TOTAL_PAGES - 1 ? (saving ? 'Setting up…' : 'Create my plan →') :
     page === 0               ? "Let's see →" :
-    page === 2               ? 'Get started →' :
-    page === 3               ? 'Continue →' :
-    page === 4               ? 'Next →' :
+    page === 1               ? 'Makes sense →' :  // Point #6 — better CTA
+    page === 3               ? 'Continue →' :      // R-Lo + name
+    page === 4               ? 'Continue →' :      // chronotype
+    page === 5               ? 'Next →' :          // ARP
     'Next →';
 
   // ── Computed values for ARP result display ───────────────────────────────
@@ -519,75 +638,219 @@ export default function OnboardingScreen() {
           <View style={s.progressWrap}>
             <ProgressBar value={(page + 1) / TOTAL_PAGES} color={ACCENT} height={3} />
           </View>
-          <View style={{ width: 36 }} />
+          {/* Skip link — educational pages only (0-2) */}
+          {page <= 2 ? (
+            <Pressable onPress={() => goToPage(3)} hitSlop={12} style={{ width: 36, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: TEXT_MUTED }}>Skip</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
         </View>
 
         {/* ── Slides pager ── */}
         <View style={s.pagerClip}>
           <Animated.View style={[s.pager, { opacity: pageTransition }]}>
 
-            {/* ══════ PAGE 0 — Breathing circles + "Your sleep is the result…" ══════ */}
+            {/* ══════ PAGE 0 — "Le mythe des 8h" ══════ */}
             {page === 0 && (
-              <View style={s.slideV}>
-                <Animated.View style={[s.slide0Wrap, { opacity: fadeAnim0 }]}>
-                  {/* Breathing concentric circles — staggered pulse */}
-                  <View style={s.breathWrap}>
-                    <Animated.View style={[
-                      s.breathCircle, s.breathOuterStyle,
-                      { transform: [{ scale: breathOuter }] },
-                    ]} />
-                    <Animated.View style={[
-                      s.breathCircle, s.breathMidStyle,
-                      { transform: [{ scale: breathMid }] },
-                    ]} />
-                    <Animated.View style={[
-                      s.breathCircle, s.breathInnerStyle,
-                      { transform: [{ scale: breathInner }] },
-                    ]} />
-                    <View style={[s.breathCircle, s.breathCore]} />
-                  </View>
+              <View style={s.slide0Root}>
+                {/* ÉLÉMENT 1 — Big decorative "8h" background */}
+                <Animated.Text
+                  pointerEvents="none"
+                  style={[s.slide0BgNum, {
+                    opacity: p0BgNumAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.15] }),
+                    transform: [{ scale: p0BgNumAnim.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
+                  }]}
+                >
+                  8h
+                </Animated.Text>
 
-                  {/* Title */}
-                  <Text style={s.slide0Title}>
-                    {"Your sleep is the result of your entire day"}
-                  </Text>
+                {/* Bottom-aligned content block */}
+                <View style={s.slide0BottomBlock}>
 
-                  {/* Subtitle */}
-                  <Text style={s.slide0Sub}>
-                    {"Not just what happens at night. R90 helps you build a rhythm that works."}
-                  </Text>
-                </Animated.View>
+                  {/* ÉLÉMENT 2 — Category label */}
+                  <Animated.Text style={[s.slide0Label, {
+                    opacity: p0LabelAnim,
+                    transform: [{ translateY: p0LabelAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }],
+                  }]}>
+                    SLEEP MYTH #1
+                  </Animated.Text>
+
+                  {/* ÉLÉMENT 3 — Title with animated strikethrough */}
+                  <Animated.View style={[s.slide0TitleWrap, {
+                    opacity: p0TitleAnim,
+                    transform: [{ translateY: p0TitleAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }],
+                  }]}>
+                    {/* "8 heures de sommeil." with animated strikethrough */}
+                    <View style={s.slide0StrikeRow}>
+                      <Text style={s.slide0TitleStruck}>8 hours of sleep.</Text>
+                      {/* Animated strike bar — rendered over the text */}
+                      <Animated.View style={[s.slide0StrikeLine, {
+                        width: p0StrikeAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                      }]} />
+                    </View>
+                    <Text style={s.slide0TitleClean}>Forget that rule.</Text>
+                  </Animated.View>
+
+                  {/* ÉLÉMENT 4 — Body text */}
+                  <Animated.Text style={[s.slide0Body, {
+                    opacity: p0BodyAnim,
+                    transform: [{ translateY: p0BodyAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 0] }) }],
+                  }]}>
+                    {"Your body doesn't recover in hours.\nIt recovers in 90-minute cycles."}
+                  </Animated.Text>
+
+                </View>
               </View>
             )}
 
-            {/* ══════ PAGE 1 — Nick / R90 Method ══════ */}
+            {/* ══════ PAGE 1 — Cycle Visualization ══════ */}
             {page === 1 && (
-              <View style={s.slideV}>
-                <Animated.View style={[s.slide2Content, { opacity: fadeAnim1 }]}>
-                  <Text style={s.slideTitle}>{"The R90 Method"}</Text>
-                  <View style={s.slide2CircleWrap}>
-                    <Animated.View style={[s.slide2Halo, {
-                      opacity: circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.04, 0.10] }),
-                      transform: [{ scale: circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [1.0, 1.18] }) }],
-                    }]} />
-                    <Animated.View style={[s.circleGlowSilver, {
-                      opacity: circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.0, 0.06] }),
-                      transform: [{ scale: circlePulse2 }],
-                    }]} />
-                    <Animated.View style={[s.circleRingSilver, {
-                      opacity: circlePulse2.interpolate({ inputRange: [1, 1.06], outputRange: [0.55, 0.80] }),
-                      transform: [{ scale: circlePulse2 }],
-                    }]} />
-                    <Animated.View style={[StyleSheet.absoluteFill, s.slide2Inner, { transform: [{ scale: circlePulse2 }] }]}>
-                      <Text style={s.slide2DevelopedBy}>Developed by</Text>
-                      <Text style={s.slide2AuthorName}>Nick Littlehales</Text>
-                      <Text style={s.slide2Credential}>
-                        {"The R90 method used by elite athletes\n(Cristiano Ronaldo, Manchester United, Team Sky)"}
-                      </Text>
-                    </Animated.View>
-                  </View>
+              <View style={s.cycleSlide}>
+
+                {/* Label contextuel */}
+                <Text style={s.cycleContextLabel}>A complete sleep cycle</Text>
+
+                {/* 4 phase blocks */}
+                <View style={s.cyclePhaseRow}>
+                  {(
+                    [
+                      { key: 'light', label: 'Light' },
+                      { key: 'deep',  label: 'Deep'  },
+                      { key: 'rem',   label: 'REM'   },
+                      { key: 'awake', label: 'Wake'  },
+                    ] as const
+                  ).map((phase, i) => {
+                    const c = PHASE_COLORS[phase.key];
+                    return (
+                      <Animated.View
+                        key={phase.key}
+                        style={[
+                          s.cyclePhaseBlock,
+                          {
+                            backgroundColor: c.bg,
+                            borderColor:     c.border,
+                            width: PHASE_BLOCK_W,
+                            opacity: phaseAnims[i],
+                            transform: [{
+                              scale: phaseAnims[i].interpolate({
+                                inputRange:  [0, 1],
+                                outputRange: [0.8, 1],
+                              }),
+                            }],
+                          },
+                        ]}
+                      >
+                        <Text style={[s.cyclePhaseLabel, { color: c.text }]}>{phase.label}</Text>
+                      </Animated.View>
+                    );
+                  })}
+                </View>
+
+                {/* Duration label */}
+                <Text style={s.cycleDurationLabel}>← 90 minutes →</Text>
+
+                {/* "= 1 full recovery cycle" — fades in after blocks */}
+                <Animated.Text
+                  style={[s.cycleTotalLabel, { opacity: cycleLabelAnim }]}
+                >
+                  = 1 full recovery cycle
+                </Animated.Text>
+
+                {/* Insight box */}
+                <Animated.View
+                  style={[
+                    s.cycleInsightBox,
+                    {
+                      opacity: insightBoxAnim,
+                      transform: [{
+                        translateY: insightBoxAnim.interpolate({
+                          inputRange:  [0, 1],
+                          outputRange: [10, 0],
+                        }),
+                      }],
+                    },
+                  ]}
+                >
+                  <Text style={s.cycleInsightTitle}>Think in cycles, not hours</Text>
+                  <Text style={s.cycleInsightBody}>
+                    {"5 cycles × 90 min = 7h30 optimal sleep.\nWaking mid-cycle = fatigue. Waking at the end = energy."}
+                  </Text>
                 </Animated.View>
+
               </View>
+            )}
+
+            {/* ══════ PAGE 2 — Nick Authority + Teams ══════ */}
+            {page === 2 && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={s.nickSlide}
+                showsVerticalScrollIndicator={false}
+              >
+                <Animated.View style={{ opacity: fadeAnim1 }}>
+                  {/* Nick badge */}
+                  <View style={nk.badge}>
+                    <View style={nk.badgeDot} />
+                    <Text style={nk.badgeText}>Created by Nick Littlehales</Text>
+                  </View>
+
+                  {/* Title */}
+                  <Text style={nk.title}>
+                    {"The method used by\nworld champions"}
+                  </Text>
+                </Animated.View>
+
+                {/* Team items — staggered animation */}
+                {([
+                  {
+                    icon:     'football-outline' as const,
+                    iconColor: '#5DCAA5',
+                    name:     'Manchester United',
+                    sub:      'Historic treble era',
+                  },
+                  {
+                    icon:     'bicycle-outline' as const,
+                    iconColor: '#F2A623',
+                    name:     'Team Sky / British Cycling',
+                    sub:      '7 Tours de France, Olympic records',
+                  },
+                  {
+                    icon:     'star-outline' as const,
+                    iconColor: '#F09575',
+                    name:     'Cristiano Ronaldo',
+                    sub:      'R90 recovery protocols',
+                  },
+                  {
+                    icon:     'medal-outline' as const,
+                    iconColor: '#85B7EB',
+                    name:     'Olympic athletes',
+                    sub:      'NBA, NFL, Premier League',
+                  },
+                ] as const).map((item, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[nk.teamItem, {
+                      opacity: teamAnims[i],
+                      transform: [{
+                        translateY: teamAnims[i].interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [10, 0],
+                        }),
+                      }],
+                    }]}
+                  >
+                    <View style={[nk.teamIcon, { backgroundColor: `${item.iconColor}20` }]}>
+                      <Ionicons name={item.icon} size={18} color={item.iconColor} />
+                    </View>
+                    <View style={nk.teamText}>
+                      <Text style={nk.teamName}>{item.name}</Text>
+                      <Text style={nk.teamSub}>{item.sub}</Text>
+                    </View>
+                  </Animated.View>
+                ))}
+              </ScrollView>
             )}
 
             {/* ══════ DISABLED — Schema / Strategy (kept for future use) ══════
@@ -610,8 +873,8 @@ export default function OnboardingScreen() {
             )}
             ══════ END DISABLED ══════ */}
 
-            {/* ══════ PAGE 2 — Meet R-Lo ══════ */}
-            {page === 2 && (
+            {/* ══════ PAGE 3 — Meet R-Lo + Name (fused) ══════ */}
+            {page === 3 && (
               <View style={s.slideV}>
                 <Animated.View style={[s.meetRLoContent, { opacity: fadeAnim2 }]}>
                   {/* Mascot with glow */}
@@ -624,123 +887,234 @@ export default function OnboardingScreen() {
                       <MascotImage emotion="Enthousisate" style={s.meetRLoMascotImg} />
                     </Animated.View>
                   </View>
-                  {/* Speech bubble pointing up to mascot */}
+                  {/* Speech bubble — R-Lo asks for the name */}
                   <View style={s.meetRLoBubbleWrap}>
                     <View style={s.meetRLoBubbleTip} />
                     <View style={s.meetRLoBubble}>
                       <Text style={s.meetRLoBubbleHi}>Hi, I'm R-Lo</Text>
                       <Text style={s.meetRLoBubbleText}>
-                        {"Your rhythm companion.\n\nI help you move through your day\nin sync with your natural cycles."}
+                        Your rhythm companion.{'\n'}What should I call you?
                       </Text>
+                      {/* Name input inside the bubble */}
+                      <View style={s.nameInputWrap}>
+                        <TextInput
+                          style={s.nameInput}
+                          placeholder="Your first name"
+                          placeholderTextColor={TEXT_DIM}
+                          value={firstName}
+                          onChangeText={setFirstName}
+                          autoCapitalize="words"
+                          autoComplete="given-name"
+                          autoCorrect={false}
+                          returnKeyType="next"
+                          onSubmitEditing={() => { if (firstName.trim().length > 0) handleNext(); }}
+                        />
+                        {firstName.trim().length >= 2 && (
+                          <View style={s.nameCheck}>
+                            <Ionicons name="checkmark" size={13} color="#fff" />
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
                 </Animated.View>
               </View>
             )}
 
-            {/* ══════ PAGE 3 — First Name ══════ */}
-            {page === 3 && (
-              <View style={s.slideV}>
-                <View style={s.nameContent}>
-                  <View style={s.nameMascotArea}>
-                    <View style={s.nameMascotGlow} />
-                    <Animated.View style={{ transform: [{ scale: mascotBreath }] }}>
-                      <MascotImage emotion="encourageant" style={s.nameMascotImg} />
-                    </Animated.View>
-                  </View>
-                  <Text style={s.nameTitle}>What should R-Lo call you?</Text>
-                  <View style={s.nameInputWrap}>
-                    <TextInput
-                      style={s.nameInput}
-                      placeholder="Your first name"
-                      placeholderTextColor={TEXT_DIM}
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      autoCapitalize="words"
-                      autoComplete="given-name"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                      onSubmitEditing={() => { if (firstName.trim().length > 0) handleNext(); }}
-                    />
-                    {firstName.trim().length >= 2 && (
-                      <View style={s.nameCheck}>
-                        <Ionicons name="checkmark" size={13} color="#fff" />
+            {/* ══════ PAGE 4 — Chronotype ══════ */}
+            {page === 4 && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={ct.scrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={ct.title}>{firstName.trim() ? `${firstName.trim()}, what's your chronotype?` : "What's your chronotype?"}</Text>
+                <Text style={ct.subtitle}>This decides when your energy peaks and when to recover</Text>
+
+                {([
+                  {
+                    id: 'AMer' as const,
+                    icon: 'sunny-outline' as const,
+                    iconColor: '#F2A623',
+                    label: 'AMer — Early riser',
+                    range: '5:30 – 7:00',
+                    desc: "You're naturally alert in the morning and your focus drops in the evening.",
+                    defaultHour: 6,
+                  },
+                  {
+                    id: 'Neither' as const,
+                    icon: 'partly-sunny-outline' as const,
+                    iconColor: '#85B7EB',
+                    label: 'Intermediate',
+                    range: '7:00 – 8:00',
+                    desc: 'You adapt to both rhythms with a mid-morning energy peak.',
+                    defaultHour: 7,
+                  },
+                  {
+                    id: 'PMer' as const,
+                    icon: 'moon-outline' as const,
+                    iconColor: '#A78BFA',
+                    label: 'PMer — Night owl',
+                    range: '8:00 – 10:00',
+                    desc: "You're more creative and focused in the evening. Mornings are harder.",
+                    defaultHour: 8,
+                  },
+                ]).map(opt => {
+                  const selected = chronotype === opt.id;
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      style={[ct.card, selected && ct.cardSelected]}
+                      onPress={() => {
+                        HapticsLight();
+                        setChronotype(opt.id);
+                        setWakeHour(opt.defaultHour);
+                        setWakeMin(0);
+                      }}
+                    >
+                      <View style={ct.cardHeader}>
+                        <View style={ct.cardLeft}>
+                          <Ionicons
+                            name={opt.icon}
+                            size={18}
+                            color={selected ? opt.iconColor : TEXT_MUTED}
+                          />
+                          <Text style={[ct.cardLabel, selected && { color: TEXT_CLR }]}>
+                            {opt.label}
+                          </Text>
+                        </View>
+                        <Text style={[ct.cardRange, selected && { color: '#F2A623' }]}>
+                          {opt.range}
+                        </Text>
                       </View>
-                    )}
-                  </View>
-                </View>
-              </View>
+                      <Text style={[ct.cardDesc, selected && { color: TEXT_SUB }]}>
+                        {opt.desc}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             )}
 
-            {/* ══════ PAGE 4 — ARP (Anchor Time) — scroll picker ══════ */}
-            {page === 4 && (
-              <View style={s.slideV}>
-                <View style={s.setupContent}>
-                  <Text style={s.setupTitle}>When do you wake up?</Text>
-                  <Text style={s.setupSub}>This anchors your entire rhythm</Text>
-                  <View style={s.timePicker}>
+            {/* ══════ PAGE 5 — ARP (Anchor Time) ══════ */}
+            {page === 5 && (() => {
+              return (
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={arp.scroll}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {/* TITRE — Point #8: make the ARP feel important */}
+                  <Text style={arp.title}>When do you wake up?</Text>
+                  <Text style={arp.subtitle}>This one time anchors your entire rhythm</Text>
+
+                  {/* TIME PICKER — scroll wheel heures + minutes */}
+                  <View style={arp.pickerWrap}>
                     <ScrollPicker
                       items={Array.from({ length: 24 }, (_, i) => i)}
                       selected={wakeHour}
-                      onChange={setWakeHour}
-                      width={100}
+                      onChange={(v) => { HapticsLight(); setWakeHour(v); }}
+                      width={96}
                       loop
                     />
-                    <Text style={s.timeSep}>:</Text>
+                    <Text style={arp.timeSep}>:</Text>
                     <ScrollPicker
-                      items={[0, 15, 30, 45]}
+                      items={[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]}
                       selected={wakeMin}
-                      onChange={setWakeMin}
-                      width={100}
+                      onChange={(v) => { HapticsLight(); setWakeMin(v); }}
+                      width={96}
                       loop
                     />
                   </View>
-                </View>
-              </View>
-            )}
 
-            {/* ══════ PAGE 5 — Cycle Count ══════ */}
-            {page === 5 && (
-              <View style={s.slideV}>
-                <View style={s.setupContent}>
-                  <Text style={s.setupTitle}>How many cycles?</Text>
-                  <Text style={s.setupSub}>Each cycle is 90 minutes of sleep</Text>
-                  <View style={s.cycleSelector}>
-                    {[
-                      { n: 4, dur: '6h' },
-                      { n: 5, dur: '7h30' },
-                      { n: 6, dur: '9h' },
-                    ].map(({ n, dur }) => (
+                  {/* Live rhythm preview — Point #8 */}
+                  <View style={arp.previewRow}>
+                    <View style={arp.previewItem}>
+                      <Ionicons name="sunny" size={14} color="#F2A623" />
+                      <Text style={arp.previewValue}>{fmtTime(arpTotal)}</Text>
+                      <Text style={arp.previewLabel}>Wake</Text>
+                    </View>
+                    <View style={arp.previewDot} />
+                    <View style={arp.previewItem}>
+                      <Ionicons name="moon-outline" size={14} color="#A78BFA" />
+                      <Text style={arp.previewValue}>{fmtTime(sleepOnset)}</Text>
+                      <Text style={arp.previewLabel}>Sleep</Text>
+                    </View>
+                    <View style={arp.previewDot} />
+                    <View style={arp.previewItem}>
+                      <Ionicons name="bed-outline" size={14} color={ACCENT} />
+                      <Text style={arp.previewValue}>{fmtTime(((sleepOnset - 60) + 1440) % 1440)}</Text>
+                      <Text style={arp.previewLabel}>Wind-down</Text>
+                    </View>
+                  </View>
+
+                  {/* Out-of-range warning */}
+                  {!isValidArp && (
+                    <View style={arp.warnBox}>
+                      <Ionicons name="information-circle-outline" size={14} color={GOLD} />
+                      <Text style={arp.warnText}>
+                        R-Lo works best with wake times between 04:00 and 12:00.
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+              );
+            })()}
+
+            {/* ══════ PAGE 6 — Cycle Count ══════ */}
+            {page === 6 && (
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={cy.scrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={cy.title}>How many cycles per night?</Text>
+                <Text style={cy.subtitle}>Nick recommends 5 for most people</Text>
+
+                {/* 4 cycle options in a row */}
+                <View style={cy.optionRow}>
+                  {([
+                    { n: 3, dur: '4h30' },
+                    { n: 4, dur: '6h00' },
+                    { n: 5, dur: '7h30', recommended: true },
+                    { n: 6, dur: '9h00' },
+                  ] as const).map(opt => {
+                    const sel = cycles === opt.n;
+                    return (
                       <Pressable
-                        key={n}
-                        style={[s.cycleOpt, cycles === n && s.cycleOptSelected]}
-                        onPress={() => { HapticsLight(); setCycles(n); }}
+                        key={opt.n}
+                        style={[cy.option, sel && cy.optionSelected]}
+                        onPress={() => { HapticsLight(); setCycles(opt.n); }}
                       >
-                        <Text style={[s.cycleNum, cycles === n && s.cycleNumSelected]}>{n}</Text>
-                        <Text style={s.cycleDur}>{dur}</Text>
+                        <Text style={[cy.optionNum, sel && cy.optionNumSelected]}>{opt.n}</Text>
+                        <Text style={[cy.optionDur, sel && cy.optionDurSelected]}>{opt.dur}</Text>
+                        {'recommended' in opt && opt.recommended && (
+                          <View style={cy.recBadge}>
+                            <Text style={cy.recBadgeText}>Recommended</Text>
+                          </View>
+                        )}
                       </Pressable>
-                    ))}
-                  </View>
-
-                  {/* Preview card */}
-                  <View style={s.previewCard}>
-                    <View style={s.previewRow}>
-                      <Text style={s.previewLabel}>Wake-up</Text>
-                      <Text style={[s.previewValue, { color: ACCENT }]}>{fmtTime(arpTotal)}</Text>
-                    </View>
-                    <View style={s.previewDivider} />
-                    <View style={s.previewRow}>
-                      <Text style={s.previewLabel}>Sleep window</Text>
-                      <Text style={s.previewValue}>{fmtTime(sleepOnset)}</Text>
-                    </View>
-                    <View style={s.previewDivider} />
-                    <View style={s.previewRow}>
-                      <Text style={s.previewLabel}>Cycles</Text>
-                      <Text style={s.previewValue}>{cycles} × 90 min</Text>
-                    </View>
-                  </View>
+                    );
+                  })}
                 </View>
-              </View>
+
+                {/* 3-cycle warning */}
+                {cycles === 3 && (
+                  <View style={cy.warnRow}>
+                    <Ionicons name="information-circle-outline" size={14} color="#F2A623" />
+                    <Text style={cy.warnText}>3 cycles require daytime CRPs to compensate.</Text>
+                  </View>
+                )}
+
+                {/* 35 cycles per week insight — critical R90 concept */}
+                <View style={cy.insightBox}>
+                  <Text style={cy.insightTitle}>35 cycles per week</Text>
+                  <Text style={cy.insightText}>
+                    Think in cycles per week, not per night. A 4-cycle night doesn't ruin anything if the others are 5. You never fail. You adapt.
+                  </Text>
+                </View>
+              </ScrollView>
             )}
 
           </Animated.View>
@@ -811,46 +1185,159 @@ const s = StyleSheet.create({
     textAlign: 'center', lineHeight: 42, letterSpacing: -0.5,
   },
 
-  // ══════ PAGE 0 — Breathing circles ══════
-  slide0Wrap: {
-    alignItems: 'center', justifyContent: 'center', gap: 0, paddingBottom: 16,
+  // ══════ PAGE 1 — Cycle Visualization ══════
+  cycleSlide: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 0,
   },
-  breathWrap: {
-    width: 230, height: 230,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 40,
-  },
-  breathCircle: {
-    position: 'absolute', borderRadius: 9999,
-  },
-  breathOuterStyle: {
-    width: 230, height: 230,
-    backgroundColor: 'rgba(28,159,218,0.06)',
-  },
-  breathMidStyle: {
-    width: 165, height: 165,
-    backgroundColor: 'rgba(28,159,218,0.10)',
-  },
-  breathInnerStyle: {
-    width: 105, height: 105,
-    backgroundColor: 'rgba(28,159,218,0.18)',
-  },
-  breathCore: {
-    width: 55, height: 55,
-    backgroundColor: ACCENT,
-    opacity: 0.3,
-  },
-  slide0Title: {
-    fontSize: 26, fontWeight: '700', color: TEXT_CLR,
-    textAlign: 'center', lineHeight: 34, letterSpacing: -0.3,
+  cycleContextLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_MUTED,
+    textAlign: 'center',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
     marginBottom: 12,
   },
-  slide0Sub: {
-    fontSize: 15, color: '#9FB0C5', textAlign: 'center',
-    lineHeight: 24, maxWidth: 300,
+  cyclePhaseRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  cyclePhaseBlock: {
+    height: 52,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  cyclePhaseLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  cycleDurationLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_MUTED,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  cycleTotalLabel: {
+    fontSize: 22,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: TEXT_CLR,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  cycleInsightBox: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 24,
+    width: '100%',
+  },
+  cycleInsightTitle: {
+    fontSize: 17,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: TEXT_CLR,
+    marginBottom: 10,
+  },
+  cycleInsightBody: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_SUB,
+    lineHeight: 22,
   },
 
-  // ══════ PAGE 1 — Nick / R90 Method ══════
+  // ══════ PAGE 0 — "Le mythe des 8h" ══════
+  slide0Root: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  slide0BgNum: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    fontSize: 180,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: ACCENT,
+    lineHeight: 180,
+  },
+  slide0BottomBlock: {
+    position: 'absolute',
+    bottom: 80,
+    left: 28,
+    right: 28,
+    gap: 16,
+  },
+  slide0Label: {
+    fontSize: 11,
+    fontFamily: 'Inter-Regular',
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    color: ACCENT,
+    marginBottom: 4,
+  },
+  slide0TitleWrap: {
+    gap: 0,
+    marginBottom: 0,
+  },
+  slide0StrikeRow: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  slide0TitleStruck: {
+    fontSize: 32,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: '#5A5852',
+    lineHeight: 38,
+  },
+  slide0StrikeLine: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    height: 3,
+    backgroundColor: ACCENT,
+    marginTop: -1.5,
+  },
+  slide0TitleClean: {
+    fontSize: 32,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: TEXT_CLR,
+    lineHeight: 38,
+    marginTop: 2,
+  },
+  slide0Body: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#8A8780',
+    lineHeight: 24,
+    maxWidth: 280,
+    marginTop: 0,
+  },
+
+  // ══════ PAGE 1 — Nick Authority + Teams ══════
+  nickSlide: {
+    paddingHorizontal: 28,
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: 14,
+  },
+
+  // (Legacy circle styles — kept for potential reuse)
   slide2Content: {
     alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center',
     gap: 36, transform: [{ translateY: -52 }],
@@ -1044,5 +1531,402 @@ const s = StyleSheet.create({
   },
   previewValue: {
     fontSize: 17, fontWeight: '700', color: TEXT_CLR,
+  },
+});
+
+// ─── Nick Authority + Teams styles ──────────────────────────────────────────
+
+const nk = StyleSheet.create({
+  badge: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    alignSelf:         'flex-start',
+    gap:               8,
+    backgroundColor:   'rgba(28,159,218,0.10)',
+    borderWidth:       1,
+    borderColor:       'rgba(28,159,218,0.18)',
+    borderRadius:      20,
+    paddingVertical:   6,
+    paddingHorizontal: 14,
+    marginBottom:      24,
+  },
+  badgeDot: {
+    width:           8,
+    height:          8,
+    borderRadius:    4,
+    backgroundColor: '#1c9fda',
+  },
+  badgeText: {
+    fontSize:   12,
+    fontWeight: '500',
+    color:      '#1c9fda',
+  },
+  title: {
+    fontSize:      26,
+    fontWeight:    '400',
+    color:         '#FFFFFF',
+    lineHeight:    34,
+    marginBottom:  32,
+    letterSpacing: -0.3,
+  },
+  teamItem: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               14,
+    backgroundColor:   '#141466',
+    borderRadius:      12,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.06)',
+    paddingVertical:   12,
+    paddingHorizontal: 16,
+  },
+  teamIcon: {
+    width:          36,
+    height:         36,
+    borderRadius:   10,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  teamText: {
+    flex: 1,
+    gap:  2,
+  },
+  teamName: {
+    fontSize:   14,
+    fontWeight: '700',
+    color:      '#FFFFFF',
+  },
+  teamSub: {
+    fontSize: 12,
+    color:    '#6B8CAE',
+  },
+});
+
+// ─── Chronotype picker styles ───────────────────────────────────────────────
+
+// ─── ARP (Page 6) styles ─────────────────────────────────────────────────────
+
+const arp = StyleSheet.create({
+  scroll: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 26,
+    fontFamily: 'DMSerifDisplay_400Regular',
+    fontWeight: '400',
+    color: TEXT_CLR,
+    textAlign: 'center',
+    marginTop: 20,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_SUB,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 36,
+  },
+
+  // Wheel picker
+  pickerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+    marginBottom: 12,
+  },
+  timeSep: {
+    fontSize: 40,
+    fontWeight: '300',
+    color: TEXT_MUTED,
+    paddingHorizontal: 6,
+    marginBottom: 2,
+  },
+
+  // Out-of-range warning
+  warnBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(242,166,35,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(242,166,35,0.25)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 8,
+    marginBottom: 4,
+    width: '100%',
+  },
+  warnText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: GOLD,
+    lineHeight: 19,
+  },
+
+  // Live rhythm preview (Point #8)
+  previewRow: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    alignItems:     'center',
+    gap:            16,
+    marginTop:      20,
+    marginBottom:   8,
+  },
+  previewItem: {
+    alignItems: 'center',
+    gap:        4,
+  },
+  previewValue: {
+    fontSize:   18,
+    fontWeight: '700',
+    color:      '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  previewLabel: {
+    fontSize:   11,
+    fontWeight: '500',
+    color:      '#6B8CAE',
+  },
+  previewDot: {
+    width:           4,
+    height:          4,
+    borderRadius:    2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+
+  // Live calc box
+  calcBox: {
+    marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  calcRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  calcDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  calcLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  calcLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_SUB,
+  },
+  calcLabelBadge: {
+    fontSize: 11,
+    fontFamily: 'Inter-Regular',
+    color: TEXT_MUTED,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  // Wake time — neutral
+  calcValueBase: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TEXT_CLR,
+    fontFamily: 'Inter-Regular',
+  },
+  // 5 cycles — gold highlight
+  calcValue5: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: GOLD,
+    fontFamily: 'Inter-Regular',
+  },
+  // Wind-down — teal
+  calcValueWind: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TEAL,
+    fontFamily: 'Inter-Regular',
+  },
+});
+
+// ─── Chronotype (Page 5) styles ───────────────────────────────────────────────
+
+const ct = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 28,
+    paddingTop:        16,
+    paddingBottom:     24,
+    gap:               12,
+  },
+  title: {
+    fontSize:      26,
+    fontWeight:    '400',
+    color:         '#FFFFFF',
+    lineHeight:    34,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize:   14,
+    color:      '#A8C4E0',
+    marginBottom: 20,
+  },
+  card: {
+    padding:           20,
+    backgroundColor:   '#141466',
+    borderRadius:      16,
+    borderWidth:       2,
+    borderColor:       'rgba(255,255,255,0.06)',
+    gap:               6,
+  },
+  cardSelected: {
+    borderColor:     '#F2A623',
+    backgroundColor: 'rgba(242,166,35,0.10)',
+  },
+  cardHeader: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+  },
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           8,
+  },
+  cardLabel: {
+    fontSize:   16,
+    fontWeight: '600',
+    color:      '#6B8CAE',
+  },
+  cardRange: {
+    fontSize:   13,
+    fontWeight: '500',
+    color:      '#6B8CAE',
+  },
+  cardDesc: {
+    fontSize:   13,
+    color:      '#6B8CAE',
+    lineHeight: 18,
+    marginTop:  2,
+  },
+});
+
+// ─── Cycle count picker styles ──────────────────────────────────────────────
+
+const TEAL_CY = '#1D9E75';
+
+const cy = StyleSheet.create({
+  scrollContent: {
+    paddingHorizontal: 28,
+    paddingTop:        16,
+    paddingBottom:     24,
+    gap:               16,
+  },
+  title: {
+    fontSize:      26,
+    fontWeight:    '400',
+    color:         '#FFFFFF',
+    lineHeight:    34,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize:     14,
+    color:        '#A8C4E0',
+    marginBottom: 16,
+  },
+  optionRow: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    gap:            10,
+  },
+  option: {
+    width:           72,
+    height:          80,
+    backgroundColor: '#141466',
+    borderRadius:    16,
+    borderWidth:     2,
+    borderColor:     'rgba(255,255,255,0.06)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:             4,
+    position:        'relative',
+    marginBottom:    16,
+  },
+  optionSelected: {
+    borderColor:     TEAL_CY,
+    backgroundColor: 'rgba(29,158,117,0.10)',
+  },
+  optionNum: {
+    fontSize:   24,
+    fontWeight: '700',
+    color:      '#6B8CAE',
+  },
+  optionNumSelected: {
+    color: TEAL_CY,
+  },
+  optionDur: {
+    fontSize:   11,
+    color:      '#6B8CAE',
+  },
+  optionDurSelected: {
+    color: TEAL_CY,
+  },
+  recBadge: {
+    position:        'absolute',
+    bottom:          -12,
+    backgroundColor: 'rgba(29,158,117,0.15)',
+    borderRadius:    6,
+    paddingVertical:   2,
+    paddingHorizontal: 8,
+  },
+  recBadgeText: {
+    fontSize:   10,
+    fontWeight: '700',
+    color:      TEAL_CY,
+  },
+  warnRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           8,
+    marginTop:     4,
+  },
+  warnText: {
+    fontSize: 13,
+    color:    '#F2A623',
+    flex:     1,
+  },
+  insightBox: {
+    backgroundColor:   '#141466',
+    borderRadius:      16,
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.06)',
+    padding:           20,
+    gap:               8,
+    marginTop:         8,
+  },
+  insightTitle: {
+    fontSize:   18,
+    fontWeight: '400',
+    color:      '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  insightText: {
+    fontSize:   13,
+    color:      '#A8C4E0',
+    lineHeight: 20,
   },
 });

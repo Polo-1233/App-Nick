@@ -267,10 +267,11 @@ function RootLayoutInner() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    'Inter-Regular':  require('../assets/fonts/Inter-Regular.ttf'),
-    'Inter-Medium':   require('../assets/fonts/Inter-Medium.ttf'),
-    'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
-    'Inter-Bold':     require('../assets/fonts/Inter-Bold.ttf'),
+    'Inter-Regular':              require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium':               require('../assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold':             require('../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold':                 require('../assets/fonts/Inter-Bold.ttf'),
+    'DMSerifDisplay_400Regular':  require('../assets/fonts/DMSerifDisplay-Regular.ttf'),
   });
 
   // Configure RevenueCat inside a component so any native module error is

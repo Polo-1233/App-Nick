@@ -25,7 +25,8 @@ import { Platform } from 'react-native';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
-const REVENUECAT_API_KEY_IOS     = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY     || 'appl_grvoRVEsHFspIMxZUJtgdFYXBZw';
+// IMPORTANT: Keys must come from environment variables only. Never hardcode.
+const REVENUECAT_API_KEY_IOS     = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY     ?? '';
 const REVENUECAT_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY ?? '';
 
 /** Entitlement identifier in RevenueCat dashboard. */

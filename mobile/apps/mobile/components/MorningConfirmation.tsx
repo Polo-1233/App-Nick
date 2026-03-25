@@ -11,8 +11,11 @@
  *   - Updates flow/streak
  */
 
-import { useState, useEffect, memo } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
+import {
+  View, Text, StyleSheet, Pressable, Modal, ScrollView,
+  type NativeSyntheticEvent, type NativeScrollEvent,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticsSuccess, HapticsLight } from '../utils/haptics';
@@ -30,6 +33,76 @@ const TEXT   = '#FFFFFF';    // darkTheme.text
 const MUTED  = '#6B8CAE';   // darkTheme.textMuted
 
 export const CONFIRM_DATE_KEY = '@r90:lastConfirmDate:v1';
+
+// ─── Mini scroll picker (compact, snap-based, 1-min precision) ──────────────
+
+const PICK_ITEM_H = 44;
+const PICK_VISIBLE = 3;
+
+function MiniScrollPicker({ items, selected, onChange }: {
+  items: number[];
+  selected: number;
+  onChange: (v: number) => void;
+}) {
+  const scrollRef = useRef<ScrollView>(null);
+  const ready = useRef(false);
+  const selectedIdx = items.indexOf(selected);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: selectedIdx * PICK_ITEM_H, animated: false });
+      setTimeout(() => { ready.current = true; }, 100);
+    }, 30);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handleEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!ready.current) return;
+    const idx = Math.round(e.nativeEvent.contentOffset.y / PICK_ITEM_H);
+    const clamped = Math.max(0, Math.min(items.length - 1, idx));
+    scrollRef.current?.scrollTo({ y: clamped * PICK_ITEM_H, animated: true });
+    if (items[clamped] !== selected) {
+      HapticsLight();
+      onChange(items[clamped]);
+    }
+  }, [items, selected, onChange]);
+
+  const h = PICK_VISIBLE * PICK_ITEM_H;
+  const pad = Math.floor(PICK_VISIBLE / 2) * PICK_ITEM_H;
+
+  return (
+    <View style={{ width: 70, height: h, overflow: 'hidden', borderRadius: 12 }}>
+      {/* Highlight bar */}
+      <View style={{
+        position: 'absolute', top: pad, left: 0, right: 0, height: PICK_ITEM_H,
+        backgroundColor: '#1c1c7a', borderRadius: 10, zIndex: 0,
+      }} />
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={PICK_ITEM_H}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleEnd}
+        onScrollEndDrag={handleEnd}
+        contentContainerStyle={{ paddingTop: pad, paddingBottom: pad }}
+        bounces={false}
+      >
+        {items.map((v, i) => (
+          <View key={i} style={{ height: PICK_ITEM_H, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: v === selected ? 32 : 24,
+              fontWeight: v === selected ? '800' : '600',
+              color: v === selected ? TEXT : MUTED,
+              letterSpacing: -1,
+            }}>
+              {String(v).padStart(2, '0')}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
 
 type Mood = 'tired' | 'neutral' | 'good';
 
@@ -121,7 +194,7 @@ export const MorningConfirmation = memo(function MorningConfirmation({
     );
   }
 
-  // ── Adjust mode ──────────────────────────────────────────────────────────
+  // ── Adjust mode — scroll picker (consistent with onboarding ARP setup) ──
   if (adjusting) {
     const adjustedTime = `${String(adjustHour).padStart(2, '0')}:${String(adjustMin).padStart(2, '0')}`;
     return (
@@ -134,27 +207,19 @@ export const MorningConfirmation = memo(function MorningConfirmation({
 
             <Text style={s.greeting}>Adjust your wake time</Text>
 
-            {/* Simple hour:minute adjuster */}
+            {/* Scroll picker — matches onboarding ARP picker */}
             <View style={s.adjusterRow}>
-              <View style={s.adjCol}>
-                <Pressable onPress={() => { HapticsLight(); setAdjustHour(h => (h + 1) % 24); }} hitSlop={8}>
-                  <Ionicons name="chevron-up" size={24} color={MUTED} />
-                </Pressable>
-                <Text style={s.adjValue}>{String(adjustHour).padStart(2, '0')}</Text>
-                <Pressable onPress={() => { HapticsLight(); setAdjustHour(h => (h - 1 + 24) % 24); }} hitSlop={8}>
-                  <Ionicons name="chevron-down" size={24} color={MUTED} />
-                </Pressable>
-              </View>
+              <MiniScrollPicker
+                items={Array.from({ length: 24 }, (_, i) => i)}
+                selected={adjustHour}
+                onChange={setAdjustHour}
+              />
               <Text style={s.adjSep}>:</Text>
-              <View style={s.adjCol}>
-                <Pressable onPress={() => { HapticsLight(); setAdjustMin(m => (m + 5) % 60); }} hitSlop={8}>
-                  <Ionicons name="chevron-up" size={24} color={MUTED} />
-                </Pressable>
-                <Text style={s.adjValue}>{String(adjustMin).padStart(2, '0')}</Text>
-                <Pressable onPress={() => { HapticsLight(); setAdjustMin(m => (m - 5 + 60) % 60); }} hitSlop={8}>
-                  <Ionicons name="chevron-down" size={24} color={MUTED} />
-                </Pressable>
-              </View>
+              <MiniScrollPicker
+                items={Array.from({ length: 60 }, (_, i) => i)}
+                selected={adjustMin}
+                onChange={setAdjustMin}
+              />
             </View>
 
             <Pressable style={s.confirmBtn} onPress={() => {

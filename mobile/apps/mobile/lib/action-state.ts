@@ -171,7 +171,7 @@ export function getCurrentActionState(
     return {
       state:         'crp_active',
       title:         'Recovery time',
-      subtitle:      '20 min mental recovery — not a nap.',
+      subtitle:      'Your natural energy dip is now. The ideal moment to recover.',
       cta:           'Start recovery',
       ctaColor:      'gold',
       nextEventIn:   CRP_WINDOW - (nowMin - crpTime),
@@ -185,7 +185,7 @@ export function getCurrentActionState(
     return {
       state:         'pre_crp',
       title:         `Recovery in ${inMin} min`,
-      subtitle:      '20-min recovery period coming — plan for it.',
+      subtitle:      'Your energy naturally dips here. A 20-min recovery will reset you.',
       cta:           'Plan it',
       ctaColor:      'gold',
       nextEventIn:   inMin,

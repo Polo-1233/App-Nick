@@ -40,8 +40,13 @@ export interface ThemeColors {
   // ── Semantic ──────────────────────────────────────────────────────────────
   success:    string;
   warning:    string;
+  gold:       string;   // CRP, recovery, warm highlights
+  purple:     string;   // sleep markers, premium accents
   error:      string;   // ONLY for technical errors (network, login) — not for rhythm/sleep
   rhythmLow:  string;   // amber — for below-target rhythm indicators (never red)
+
+  // ── Button text ─────────────────────────────────────────────────────────
+  buttonPrimaryText: string;   // text color on primary CTA buttons
 
   // ── System ────────────────────────────────────────────────────────────────
   statusBarStyle: 'light' | 'dark';
@@ -81,8 +86,11 @@ export const darkTheme: Theme = {
     accentSecondary: '#4DC3F0',   // accent plus clair
     success:         '#3DDC97',
     warning:         '#F5A623',
+    gold:            '#F5A623',   // CRP, recovery highlights
+    purple:          '#8B5CF6',   // sleep markers, premium
     error:           '#F87171',   // technical errors only
     rhythmLow:       '#E8A020',   // warm amber — below-target rhythm (not anxiety-inducing)
+    buttonPrimaryText: '#FFFFFF', // white text on accent buttons
     statusBarStyle:  'light',
   },
 };
@@ -109,8 +117,11 @@ export const lightTheme: Theme = {
     accentSecondary: '#141466',   // bleu marine R90
     success:         '#16A34A',
     warning:         '#D97706',
+    gold:            '#D97706',   // CRP, recovery highlights
+    purple:          '#7C3AED',   // sleep markers, premium
     error:           '#DC2626',   // technical errors only
     rhythmLow:       '#C47F17',   // warm amber for below-target rhythm
+    buttonPrimaryText: '#FFFFFF', // white text on accent buttons
     statusBarStyle:  'dark',
   },
 };

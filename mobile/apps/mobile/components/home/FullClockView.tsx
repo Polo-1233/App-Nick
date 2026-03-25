@@ -155,6 +155,282 @@ function ArcSegment({ index, startDeg, spanDeg, outerR, thickness, color, opacit
   );
 }
 
+// ─── Rhythm Breakdown Panel ──────────────────────────────────────────────────
+
+interface BreakdownRow {
+  time:   string;   // "06:30 – 09:30"
+  label:  string;   // "Building"
+  detail: string;   // short explanation
+  level:  'high' | 'medium' | 'low' | 'peak';
+}
+
+interface BreakdownData {
+  title:    string;
+  subtitle: string;
+  color:    string;
+  icon:     string;
+  rows:     BreakdownRow[];
+}
+
+function fmt(m: number): string {
+  const n = ((m % 1440) + 1440) % 1440;
+  return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
+}
+
+function getBreakdownData(
+  layer: 'energy' | 'sleep' | 'recovery',
+  wakeMin: number,
+  idealCycles: number,
+): BreakdownData {
+  const crp      = wakeMin + 7 * 60;
+  const bedtime  = wakeMin + idealCycles * 90;
+  const winddown = bedtime - 60;
+
+  if (layer === 'energy') {
+    return {
+      title:    'Energy rhythm',
+      subtitle: 'How your energy flows through the day',
+      color:    CYAN,
+      icon:     'flash-outline',
+      rows: [
+        {
+          time:   `${fmt(wakeMin)} – ${fmt(wakeMin + 3 * 90)}`,
+          label:  'Building',
+          detail: 'Energy climbs through your first 3 cycles. Best for focused work.',
+          level:  'medium',
+        },
+        {
+          time:   `${fmt(wakeMin + 3 * 90)} – ${fmt(wakeMin + 5 * 90)}`,
+          label:  'Peak',
+          detail: 'Your strongest window. Highest alertness and clarity.',
+          level:  'peak',
+        },
+        {
+          time:   `${fmt(wakeMin + 5 * 90)} – ${fmt(crp)}`,
+          label:  'Settling',
+          detail: 'Natural energy dip. This is when your CRP recovery helps most.',
+          level:  'low',
+        },
+        {
+          time:   `${fmt(crp + 20)} – ${fmt(winddown)}`,
+          label:  'Afternoon',
+          detail: 'Moderate energy. MRM resets keep you sharp through the afternoon.',
+          level:  'medium',
+        },
+        {
+          time:   `${fmt(winddown)} – ${fmt(bedtime)}`,
+          label:  'Winding down',
+          detail: 'Energy drops naturally. Your body prepares for sleep.',
+          level:  'low',
+        },
+      ],
+    };
+  }
+
+  if (layer === 'sleep') {
+    return {
+      title:    'Sleep pressure',
+      subtitle: 'How your body builds readiness to sleep',
+      color:    NAVY,
+      icon:     'moon-outline',
+      rows: [
+        {
+          time:   `${fmt(wakeMin)} – ${fmt(wakeMin + 4 * 90)}`,
+          label:  'Low',
+          detail: 'Sleep pressure is minimal. Your body is fully awake.',
+          level:  'low',
+        },
+        {
+          time:   `${fmt(wakeMin + 4 * 90)} – ${fmt(crp)}`,
+          label:  'Building',
+          detail: 'Adenosine accumulates. You may feel a natural dip — this is normal.',
+          level:  'medium',
+        },
+        {
+          time:   `${fmt(crp)} – ${fmt(winddown)}`,
+          label:  'Rising',
+          detail: 'Sleep pressure increases steadily. Avoid caffeine from here.',
+          level:  'high',
+        },
+        {
+          time:   `${fmt(winddown)} – ${fmt(bedtime)}`,
+          label:  'High',
+          detail: 'Your wind-down window. Dim lights, reduce screens, let your body prepare.',
+          level:  'peak',
+        },
+        {
+          time:   `${fmt(bedtime)}`,
+          label:  'Sleep window',
+          detail: `${idealCycles} cycles of sleep begin here. Wake at ${fmt(wakeMin)}.`,
+          level:  'peak',
+        },
+      ],
+    };
+  }
+
+  // recovery
+  return {
+    title:    'Recovery windows',
+    subtitle: 'When your body benefits most from rest',
+    color:    '#D97706',
+    icon:     'fitness-outline',
+    rows: [
+      {
+        time:   `Every 90 min`,
+        label:  'MRM',
+        detail: '2-minute micro-resets between cycles. Quick mental refresh.',
+        level:  'medium',
+      },
+      {
+        time:   `${fmt(crp)} – ${fmt(crp + 20)}`,
+        label:  'CRP',
+        detail: '20-minute controlled recovery. The most powerful daytime reset.',
+        level:  'peak',
+      },
+      {
+        time:   `${fmt(winddown)} – ${fmt(bedtime)}`,
+        label:  'Wind-down',
+        detail: 'Your evening transition. Prepares body and mind for deep sleep.',
+        level:  'high',
+      },
+      {
+        time:   `${fmt(bedtime)} – ${fmt(wakeMin)}`,
+        label:  'Sleep',
+        detail: `${idealCycles} full cycles of recovery. The foundation of the R90 method.`,
+        level:  'peak',
+      },
+    ],
+  };
+}
+
+const LEVEL_OPACITY = { low: 0.15, medium: 0.30, high: 0.50, peak: 0.70 };
+
+function RhythmBreakdown({ layer, wakeMin, idealCycles }: {
+  layer: 'energy' | 'sleep' | 'recovery';
+  wakeMin: number;
+  idealCycles: number;
+}) {
+  const bd = getBreakdownData(layer, wakeMin, idealCycles);
+
+  return (
+    <View style={bd_s.wrap}>
+      {/* Header */}
+      <View style={bd_s.header}>
+        <View style={[bd_s.headerIcon, { backgroundColor: `${bd.color}15` }]}>
+          <Ionicons name={bd.icon as any} size={14} color={bd.color} />
+        </View>
+        <View style={bd_s.headerText}>
+          <Text style={bd_s.title}>{bd.title}</Text>
+          <Text style={bd_s.subtitle}>{bd.subtitle}</Text>
+        </View>
+      </View>
+
+      {/* Rows */}
+      <View style={bd_s.rows}>
+        {bd.rows.map((row, i) => (
+          <View key={i} style={bd_s.row}>
+            {/* Level indicator bar */}
+            <View style={bd_s.barCol}>
+              <View style={[bd_s.bar, {
+                backgroundColor: bd.color,
+                opacity: LEVEL_OPACITY[row.level],
+              }]} />
+            </View>
+
+            {/* Content */}
+            <View style={bd_s.rowContent}>
+              <View style={bd_s.rowTop}>
+                <Text style={bd_s.rowTime}>{row.time}</Text>
+                <Text style={[bd_s.rowLabel, { color: bd.color }]}>{row.label}</Text>
+              </View>
+              <Text style={bd_s.rowDetail}>{row.detail}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const bd_s = StyleSheet.create({
+  wrap: {
+    marginTop:         20,
+    marginHorizontal:  20,
+    gap:               14,
+    alignSelf:         'stretch',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+  },
+  headerIcon: {
+    width:        32,
+    height:       32,
+    borderRadius: 10,
+    alignItems:   'center',
+    justifyContent: 'center',
+  },
+  headerText: {
+    flex: 1,
+    gap:  2,
+  },
+  title: {
+    fontSize:   15,
+    fontWeight: '700',
+    color:      TEXT_D,
+  },
+  subtitle: {
+    fontSize: 12,
+    color:    TEXT_M,
+  },
+  rows: {
+    gap: 2,
+  },
+  row: {
+    flexDirection: 'row',
+    gap:           12,
+    paddingVertical: 10,
+  },
+  barCol: {
+    width:          4,
+    alignItems:     'center',
+    paddingVertical: 2,
+  },
+  bar: {
+    width:        4,
+    flex:         1,
+    borderRadius: 2,
+  },
+  rowContent: {
+    flex:      1,
+    flexShrink: 1,
+    gap:       3,
+  },
+  rowTop: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+  },
+  rowTime: {
+    fontSize:      12,
+    fontWeight:    '600',
+    color:         TEXT_D,
+    letterSpacing: -0.2,
+  },
+  rowLabel: {
+    fontSize:      11,
+    fontWeight:    '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  rowDetail: {
+    fontSize:   12,
+    color:      TEXT_M,
+    lineHeight: 17,
+  },
+});
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface FullClockViewProps {
   visible:         boolean;
@@ -252,7 +528,7 @@ export function FullClockView({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <View style={s.clockWrap}>
           <View style={{ width: D, height: D }}>
 
@@ -372,16 +648,7 @@ export function FullClockView({
               </>
             )}
 
-            {/* Next action marker */}
-            {nextMarker && nextPt && (
-              <View style={[s.nextMarkerWrap, {
-                left: nextPt.x - 20,
-                top:  nextPt.y - 20,
-              }]}>
-                <View style={s.nextDot} />
-                <Text style={s.nextLabel}>{nextMarker.label}</Text>
-              </View>
-            )}
+            {/* Next action marker — hidden */}
 
             {/* Center text */}
             <View style={s.center} pointerEvents="none">
@@ -416,19 +683,9 @@ export function FullClockView({
           })}
         </View>
 
-        {/* ── Layer description ── */}
-        <View style={s.desc}>
-          {layer === 'energy' && (
-            <Text style={s.descText}>Inner ring shows your energy level across 90-min cycles. Brighter = higher energy.</Text>
-          )}
-          {layer === 'sleep' && (
-            <Text style={s.descText}>
-              Navy = sleep window ({idealCycles} cycles). Cyan ticks = 3 optimal bedtimes. Faded zones = 30-min wind-down before each.
-            </Text>
-          )}
-          {layer === 'recovery' && (
-            <Text style={s.descText}>Your CRP recovery window — the best moment to rest during the day.</Text>
-          )}
+        {/* ── Contextual day breakdown panel ── */}
+        <View style={s.breakdownWrap}>
+          <RhythmBreakdown layer={layer} wakeMin={wakeMin} idealCycles={idealCycles} />
         </View>
 
         </ScrollView>
@@ -439,11 +696,13 @@ export function FullClockView({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root:      { flex: 1, backgroundColor: BG },
-  header:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  title:     { fontSize: 18, fontWeight: '700', color: TEXT_D },
-  scroll:    { alignItems: 'center', paddingBottom: 48 },
-  clockWrap: { alignItems: 'center', marginTop: 12 },
+  root:         { flex: 1, backgroundColor: BG },
+  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
+  title:        { fontSize: 18, fontWeight: '700', color: TEXT_D },
+  scrollView:   { flex: 1, width: '100%' },
+  scroll:       { alignItems: 'center', paddingBottom: 48 },
+  clockWrap:    { alignItems: 'center', marginTop: 12 },
+  breakdownWrap: { width: '100%', alignSelf: 'stretch' },
 
   // Layer selector
   layerBar:    { flexDirection: 'row', gap: 10, marginTop: 28, justifyContent: 'center' },
@@ -451,8 +710,7 @@ const s = StyleSheet.create({
   chipOn:      { backgroundColor: CYAN, borderColor: CYAN },
   chipLabel:   { fontSize: 13, fontWeight: '600', color: TEXT_M },
   chipLabelOn: { color: '#FFFFFF' },
-  desc:        { marginTop: 16, paddingHorizontal: 32 },
-  descText:    { fontSize: 13, color: TEXT_M, textAlign: 'center', lineHeight: 20 },
+  // desc removed — replaced by RhythmBreakdown component
 
   // Cursor
   cursorGlow: {

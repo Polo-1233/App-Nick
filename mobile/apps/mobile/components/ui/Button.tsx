@@ -50,7 +50,7 @@ export function Button({
   const c = theme.colors;
 
   const variantStyles: Record<Variant, { bg: string; text: string; borderColor?: string; borderWidth?: number }> = {
-    primary:   { bg: c.accent,    text: '#000000' },
+    primary:   { bg: c.accent,    text: c.buttonPrimaryText },
     secondary: { bg: c.surface2,  text: c.text,    borderColor: c.border, borderWidth: 1 },
     ghost:     { bg: 'transparent', text: c.accent },
     danger:    { bg: c.error,     text: '#FFFFFF' },

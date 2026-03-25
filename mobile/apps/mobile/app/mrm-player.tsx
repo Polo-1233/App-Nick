@@ -11,10 +11,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { MascotImage } from '../components/ui/MascotImage';
+import { RLoTooltip } from '../components/RLoGuide';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
 import type { ContentItem } from '../lib/content-registry';
 
 const BG     = '#0a0a3a';
@@ -28,12 +30,15 @@ export default function MrmPlayerScreen() {
   const [content,   setContent]   = useState<ContentItem | null>(null);
   const [completed, setCompleted] = useState(false);
   const [loading,   setLoading]   = useState(true);
+  const [showTip,   setShowTip]   = useState(false);
 
   useEffect(() => {
     getNextContent('mrm', isPremium).then(c => {
       setContent(c);
       setLoading(false);
     });
+    // Layer 2: show contextual tip on first MRM visit
+    shouldShowGuide(GUIDE_KEYS.FEAT_MRM).then(setShowTip).catch(() => {});
   }, [isPremium]);
 
   async function handleComplete() {
@@ -69,6 +74,19 @@ export default function MrmPlayerScreen() {
 
   return (
     <View style={s.root}>
+      {/* Layer 2 tooltip — shown once on first MRM */}
+      {showTip && (
+        <View style={{ position: 'absolute', top: 80, left: 0, right: 0, zIndex: 50 }}>
+          <RLoTooltip
+            visible={showTip}
+            message="This is a reset moment. 2 minutes to help you stay sharp."
+            onDismiss={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_MRM);
+              setShowTip(false);
+            }}
+          />
+        </View>
+      )}
       <AudioPlayer
         source={content.source}
         title={content.title}

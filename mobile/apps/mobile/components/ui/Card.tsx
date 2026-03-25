@@ -28,7 +28,7 @@ export function Card({ children, style, onPress, variant = 'default' }: CardProp
         s.base,
         {
           backgroundColor: c.surface,
-          borderRadius:    radius.xl,
+          borderRadius:    radius.card,
           padding:         spacing.lg,
         },
         variantStyle,

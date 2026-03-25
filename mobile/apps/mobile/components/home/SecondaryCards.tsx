@@ -1,23 +1,17 @@
 /**
- * SecondaryCards
+ * SecondaryCards — Compact info cards below the main action area.
  *
- * Compact info cards below the main action cards.
  * Render NOTHING if no data.
- *
- * Matches reference style: slightly lighter blue cards, smaller, compact.
  * Types: calendar, insight, weekly.
+ *
+ * Uses theme colors for dark/light mode consistency.
  */
 
 import { memo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const ACCENT     = '#1c9fda';
-const GOLD       = '#D97706';
-const CARD_BG    = '#DCF0FB';   // bleu R90 pâle mais visible en light mode
-const CARD_BORDER= 'rgba(28,159,218,0.25)';
-const TEXT_MAIN  = '#002060';
-const TEXT_MUTED = '#3A5A7A';
+import { useTheme } from '../../lib/theme-context';
+import { spacing, radius, opacity as op } from '../../lib/design-tokens';
 
 export interface CalendarCard  { type: 'calendar';  title: string; subtitle: string; onDismiss: () => void }
 export interface InsightCard   { type: 'insight';   id: string; message: string; onDismiss: () => void }
@@ -26,28 +20,30 @@ export type SecondaryCardData  = CalendarCard | InsightCard | WeeklyCard;
 
 // ─── Insight card with expand/collapse ───────────────────────────────────────
 function InsightCardItem({ card }: { card: InsightCard }) {
+  const { theme } = useTheme();
+  const c = theme.colors;
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Pressable onPress={() => setExpanded(e => !e)} style={sc.card}>
-      <View style={sc.iconWrap}>
-        <Ionicons name="bulb-outline" size={16} color={GOLD} />
+    <Pressable onPress={() => setExpanded(e => !e)} style={[sc.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+      <View style={[sc.iconWrap, { backgroundColor: `${c.warning}${op.medium}` }]}>
+        <Ionicons name="bulb-outline" size={16} color={c.warning} />
       </View>
       <View style={sc.body}>
-        <Text style={sc.label}>DID YOU KNOW?</Text>
-        <Text style={sc.title} numberOfLines={expanded ? undefined : 2}>
+        <Text style={[sc.label, { color: c.warning }]}>DID YOU KNOW?</Text>
+        <Text style={[sc.title, { color: c.text }]} numberOfLines={expanded ? undefined : 2}>
           {card.message}
         </Text>
         {!expanded && (
-          <Text style={sc.readMore}>Read more</Text>
+          <Text style={[sc.readMore, { color: c.accent }]}>Read more</Text>
         )}
       </View>
       {expanded ? (
         <Pressable onPress={card.onDismiss} hitSlop={10}>
-          <Ionicons name="checkmark-circle" size={20} color={ACCENT} />
+          <Ionicons name="checkmark-circle" size={20} color={c.accent} />
         </Pressable>
       ) : (
-        <Ionicons name="chevron-down" size={16} color={ACCENT} />
+        <Ionicons name="chevron-down" size={16} color={c.accent} />
       )}
     </Pressable>
   );
@@ -56,21 +52,27 @@ function InsightCardItem({ card }: { card: InsightCard }) {
 interface SecondaryCardsProps { cards: SecondaryCardData[] }
 
 export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryCardsProps) {
+  const { theme } = useTheme();
+  const c = theme.colors;
+
   if (!cards.length) return null;
+
+  // Limit to 2 visible cards to reduce cognitive load
+  const visibleCards = cards.slice(0, 2);
 
   return (
     <View style={sc.wrap}>
-      {cards.map((card, i) => {
+      {visibleCards.map((card, i) => {
         if (card.type === 'calendar') return (
-          <Pressable key={i} onPress={card.onDismiss} style={sc.card}>
-            <View style={sc.iconWrap}>
-              <Ionicons name="calendar-outline" size={16} color={ACCENT} />
+          <Pressable key={i} onPress={card.onDismiss} style={[sc.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+            <View style={[sc.iconWrap, { backgroundColor: `${c.accent}${op.medium}` }]}>
+              <Ionicons name="calendar-outline" size={16} color={c.accent} />
             </View>
             <View style={sc.body}>
-              <Text style={sc.title} numberOfLines={1}>{card.title}</Text>
-              <Text style={sc.sub}   numberOfLines={1}>{card.subtitle}</Text>
+              <Text style={[sc.title, { color: c.text }]} numberOfLines={1}>{card.title}</Text>
+              <Text style={[sc.sub, { color: c.textMuted }]} numberOfLines={1}>{card.subtitle}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
+            <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
           </Pressable>
         );
 
@@ -79,17 +81,17 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
         );
 
         if (card.type === 'weekly') return (
-          <View key={i} style={sc.card}>
-            <View style={sc.iconWrap}>
-              <Ionicons name="stats-chart-outline" size={16} color={ACCENT} />
+          <View key={i} style={[sc.card, { backgroundColor: c.surface, borderColor: c.border }]}>
+            <View style={[sc.iconWrap, { backgroundColor: `${c.accent}${op.medium}` }]}>
+              <Ionicons name="stats-chart-outline" size={16} color={c.accent} />
             </View>
             <View style={sc.body}>
-              <Text style={sc.title}>Weekly report</Text>
-              <Text style={sc.sub}>
+              <Text style={[sc.title, { color: c.text }]}>Weekly report</Text>
+              <Text style={[sc.sub, { color: c.textMuted }]}>
                 {card.streakDays > 0 ? `${card.streakDays} days rhythm flow` : 'Check your Insights'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color={TEXT_MUTED} />
+            <Ionicons name="chevron-forward" size={14} color={c.textMuted} />
           </View>
         );
 
@@ -101,38 +103,30 @@ export const SecondaryCards = memo(function SecondaryCards({ cards }: SecondaryC
 
 const sc = StyleSheet.create({
   wrap: {
-    gap:       8,
-    marginTop: 16,
+    gap:       spacing.sm,
+    marginTop: spacing.lg,
   },
   card: {
     flexDirection:     'row',
     alignItems:        'center',
-    gap:               12,
-    marginHorizontal:  20,
+    gap:               spacing.md,
+    marginHorizontal:  spacing.screen,
     paddingVertical:   14,
-    paddingHorizontal: 16,
-    borderRadius:      16,
-    backgroundColor:   CARD_BG,
+    paddingHorizontal: spacing.lg,
+    borderRadius:      radius.lg,
     borderWidth:       1,
-    borderColor:       CARD_BORDER,
-    shadowColor:       '#1c9fda',
-    shadowOffset:      { width: 0, height: 3 },
-    shadowOpacity:     0.12,
-    shadowRadius:      10,
-    elevation:         3,
   },
   iconWrap: {
     width:           36,
     height:          36,
     borderRadius:    10,
-    backgroundColor: `${ACCENT}28`,
     alignItems:      'center',
     justifyContent:  'center',
   },
-  body:    { flex: 1 },
-  label:   { fontSize: 10, fontWeight: '800', color: GOLD,       letterSpacing: 1.0, marginBottom: 3 },
-  title:   { fontSize: 13, fontWeight: '700', color: TEXT_MAIN,  lineHeight: 18 },
-  sub:     { fontSize: 12, color: TEXT_MUTED, marginTop: 2 },
-  dismiss:  { fontSize: 14, color: ACCENT, fontWeight: '700' },
-  readMore: { fontSize: 11, color: ACCENT, fontWeight: '600', marginTop: 4 },
+  body:     { flex: 1 },
+  label:    { fontSize: 10, fontWeight: '800', letterSpacing: 1.0, marginBottom: 3 },
+  title:    { fontSize: 13, fontWeight: '700', lineHeight: 18 },
+  sub:      { fontSize: 12, marginTop: 2 },
+  dismiss:  { fontSize: 14, fontWeight: '700' },
+  readMore: { fontSize: 11, fontWeight: '600', marginTop: 4 },
 });

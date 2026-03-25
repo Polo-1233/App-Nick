@@ -12,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { MascotImage } from '../components/ui/MascotImage';
+import { RLoTooltip } from '../components/RLoGuide';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
 import type { ContentItem } from '../lib/content-registry';
 
 const BG     = '#0a0a3a';
@@ -29,9 +31,11 @@ export default function CrpPlayerScreen() {
   const [content,   setContent]   = useState<ContentItem | null>(null);
   const [completed, setCompleted] = useState(false);
   const [loading,   setLoading]   = useState(true);
+  const [showTip,   setShowTip]   = useState(false);
 
   useEffect(() => {
     getNextContent('crp', isPremium).then(c => { setContent(c); setLoading(false); });
+    shouldShowGuide(GUIDE_KEYS.FEAT_CRP).then(setShowTip).catch(() => {});
   }, [isPremium]);
 
   async function handleComplete() {
@@ -63,6 +67,18 @@ export default function CrpPlayerScreen() {
 
   return (
     <View style={s.root}>
+      {showTip && (
+        <View style={{ position: 'absolute', top: 80, left: 0, right: 0, zIndex: 50 }}>
+          <RLoTooltip
+            visible={showTip}
+            message="This is your recovery time. 20 minutes to recharge."
+            onDismiss={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_CRP);
+              setShowTip(false);
+            }}
+          />
+        </View>
+      )}
       <AudioPlayer
         source={content.source}
         title={content.title}

@@ -34,9 +34,8 @@ export default function TabsLayout() {
   useEffect(() => {
     if (authLoading) return; // wait for auth to settle
     getOnboardingPhase().then(p => {
-      // Allow 'calendar' and 'plan' phases through when relevant
-    // Force 'done' for any stale phase after auth
-    if (isAuthenticated && p !== 'done' && p !== 'calendar') {
+      // Force 'done' for any stale onboarding phase after auth
+    if (isAuthenticated && p !== 'done') {
         setOnboardingPhase('done');
         setPhaseState('done');
       } else {
@@ -58,18 +57,13 @@ export default function TabsLayout() {
   }, []);
 
   // ── Plan overlay: after reveal → login ────────────────────────────────────
-  // Must await the AsyncStorage write before navigating — otherwise the phase
-  // effect re-reads the old value when isAuthenticated changes post-login.
+  // Post-login goes directly to 'done' — no permission cascade.
+  // Permissions are now contextual (wind-down → notifications, Planning → calendar).
   const handlePlanToLogin = useCallback(async () => {
-    await setOnboardingPhase('calendar');
-    setPhaseState('calendar');
+    await setOnboardingPhase('done');
+    setPhaseState('done');
     router.replace('/login');
   }, [router]);
-
-  // ── Calendar step done → full app ─────────────────────────────────────────
-  const handleCalendarDone = useCallback(() => {
-    advance('done');
-  }, [advance]);
 
   // Don't render until both auth + phase are known
   if (authLoading || !phaseReady) return null;
@@ -103,13 +97,9 @@ export default function TabsLayout() {
               />
             )}
 
-            {/* Calendar step — permission flow (calendar → wearables → notifications) */}
-            {phase === 'calendar' && (
-              <OnboardingPlanOverlay
-                onComplete={handleCalendarDone}
-                calendarOnly
-              />
-            )}
+            {/* Calendar/wearable/notification permissions removed from onboarding.
+                Now contextual: notifications after first wind-down,
+                calendar on first Planning tab visit, wearables in Settings. */}
 
             <RLoChat
               visible={chatVisible}

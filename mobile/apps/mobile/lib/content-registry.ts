@@ -11,14 +11,22 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+export type MrmVariant = 'breathing' | 'movement' | 'sensory';
+
 export interface ContentItem {
   id:          string;
   title:       string;
   description: string;
-  duration:    number;    // secondes
+  duration:    number;       // secondes
   category:    'mrm' | 'crp' | 'winddown';
-  source:      number;    // require(...)
+  source:      number | null;  // require(...) or null for text-only
   premium:     boolean;
+  /** MRM variant — null for CRP/winddown */
+  mrmVariant?: MrmVariant;
+  /** Text-only instructions (for movement/sensory MRM) */
+  textGuide?:  string[];
+  /** Wind-down episode number (serialized, like Netflix) */
+  episode?:    number;
 }
 
 // ─── MRM Content ──────────────────────────────────────────────────────────────
@@ -76,6 +84,66 @@ export const MRM_CONTENT: ContentItem[] = [
     premium:     true,
   },
 ];
+
+// ─── MRM Movement & Sensory variants (text-only, no audio) ──────────────────
+
+export const MRM_MOVEMENT: ContentItem[] = [
+  {
+    id:          'mrm-move-stretch',
+    title:       'Stand & stretch',
+    description: 'Get up, stretch your arms overhead, roll your neck.',
+    duration:    60,
+    category:    'mrm',
+    source:      null,
+    premium:     false,
+    mrmVariant:  'movement',
+    textGuide:   ['Stand up slowly', 'Stretch your arms overhead', 'Roll your neck gently', 'Fill a glass of water', 'Take a deep breath'],
+  },
+  {
+    id:          'mrm-move-walk',
+    title:       'Quick walk',
+    description: 'Walk for 1 minute. No phone. Just movement.',
+    duration:    60,
+    category:    'mrm',
+    source:      null,
+    premium:     false,
+    mrmVariant:  'movement',
+    textGuide:   ['Put your phone down', 'Walk for 60 seconds', 'Feel your feet on the ground', 'Return refreshed'],
+  },
+];
+
+export const MRM_SENSORY: ContentItem[] = [
+  {
+    id:          'mrm-sense-window',
+    title:       'Window pause',
+    description: 'Look outside. No screen. Just 2 minutes.',
+    duration:    120,
+    category:    'mrm',
+    source:      null,
+    premium:     false,
+    mrmVariant:  'sensory',
+    textGuide:   ['Look out the window', 'Focus on something far away', 'Notice the light and colours', 'Let your eyes rest'],
+  },
+  {
+    id:          'mrm-sense-listen',
+    title:       'Sound awareness',
+    description: 'Close your eyes. Listen to what\'s around you.',
+    duration:    120,
+    category:    'mrm',
+    source:      null,
+    premium:     false,
+    mrmVariant:  'sensory',
+    textGuide:   ['Close your eyes', 'Listen to the nearest sound', 'Now listen to the farthest sound', 'Open your eyes slowly'],
+  },
+];
+
+/** Get a random MRM of a specific variant */
+export function getRandomMrmByVariant(variant: MrmVariant): ContentItem {
+  const pool = variant === 'breathing' ? MRM_CONTENT
+    : variant === 'movement' ? MRM_MOVEMENT
+    : MRM_SENSORY;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
 
 // ─── CRP Content ──────────────────────────────────────────────────────────────
 
@@ -137,70 +205,77 @@ export const CRP_CONTENT: ContentItem[] = [
 export const WINDDOWN_CONTENT: ContentItem[] = [
   {
     id:          'wd-story-forest',
-    title:       'Night forest',
-    description: 'A walk through a calm forest. 12 minutes.',
+    title:       'The Night Forest',
+    description: 'A walk through ancient trees under starlight.',
     duration:    720,
     category:    'winddown',
+    episode:     1,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/sleep-story-forest-12min.mp3'),
     premium:     false,
   },
   {
     id:          'wd-story-ocean',
-    title:       'Seaside',
-    description: 'Waves and sand. 15 minutes.',
+    title:       'The Quiet Shore',
+    description: 'Waves, sand, and a setting sun.',
     duration:    900,
     category:    'winddown',
+    episode:     2,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/sleep-story-ocean-15min.mp3'),
     premium:     true,
   },
   {
     id:          'wd-story-train',
-    title:       'Train journey',
-    description: 'The soothing rhythm of a train. 12 minutes.',
+    title:       'The Midnight Train',
+    description: 'The gentle rhythm of tracks through countryside.',
     duration:    720,
     category:    'winddown',
+    episode:     3,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/sleep-story-train-12min.mp3'),
     premium:     true,
   },
   {
     id:          'wd-breathing-presleep',
-    title:       'Pre-sleep breathing',
-    description: 'Physiological sleep preparation. 10 minutes.',
+    title:       'Into Sleep',
+    description: 'Guided breathing to prepare your body.',
     duration:    600,
     category:    'winddown',
+    episode:     4,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/breathing-presleep-10min.mp3'),
     premium:     false,
   },
   {
     id:          'wd-breathing-progressive',
-    title:       'Progressive relaxation',
-    description: 'From body to sleep. 8 minutes.',
+    title:       'Body Release',
+    description: 'Progressive muscle relaxation, head to toe.',
     duration:    480,
     category:    'winddown',
+    episode:     5,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/breathing-progressive-8min.mp3'),
     premium:     true,
   },
   {
     id:          'wd-soundscape-rain',
-    title:       'Gentle rain',
-    description: 'Relaxing soundscape. 30 minutes.',
+    title:       'Rain on the Roof',
+    description: 'Soft rain. No voice. Just sound.',
     duration:    1800,
     category:    'winddown',
+    episode:     6,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/soundscape-rain-30min.mp3'),
     premium:     false,
   },
   {
     id:          'wd-soundscape-night',
-    title:       'Calm night',
-    description: 'Sounds of the night. 30 minutes.',
+    title:       'Still Night',
+    description: 'Crickets, distant owls, soft wind.',
     duration:    1800,
     category:    'winddown',
+    episode:     7,
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/winddown/soundscape-night-30min.mp3'),
     premium:     true,

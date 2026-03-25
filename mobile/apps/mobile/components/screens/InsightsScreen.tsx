@@ -25,6 +25,8 @@ import { useCallback, useRef } from 'react';
 
 import { loadProfile, loadWeekHistory } from '../../lib/storage';
 import { getWeeklySummaries, getWearableHistory, type WeeklySummaryResponse } from '../../lib/api';
+import { RLoTooltip } from '../RLoGuide';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../../lib/onboarding-guide';
 import {
   computeInsights,
   getRhythmInsightMessage,
@@ -194,6 +196,179 @@ const ed = StyleSheet.create({
   bold:        { fontWeight: '700', color: C.text },
 });
 
+// ─── Weekly 35-cycle grid ────────────────────────────────────────────────────
+// Visual representation of "think in weeks, not nights"
+// 7 columns (Mon–Sun) × N rows (target cycles). Each cell = 1 cycle.
+
+const DAYS_LABEL = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+function WeeklyCycleGrid({ history, target }: { history: NightRecord[]; target: number }) {
+  // Build 7-day data (Mon → Sun of current week)
+  const today  = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const weekData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() + mondayOffset + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const night   = history.find(n => n.date === dateStr);
+    return {
+      day:     DAYS_LABEL[i],
+      date:    dateStr,
+      cycles:  night?.cyclesCompleted ?? 0,
+      isToday: dateStr === today.toISOString().slice(0, 10),
+      isPast:  d < today && dateStr !== today.toISOString().slice(0, 10),
+    };
+  });
+
+  const totalCycles  = weekData.reduce((s, d) => s + d.cycles, 0);
+  const weeklyTarget = target * 7;
+  const pct          = Math.min(100, Math.round((totalCycles / weeklyTarget) * 100));
+
+  return (
+    <View style={wg.card}>
+      {/* Header */}
+      <View style={wg.header}>
+        <Text style={wg.title}>Weekly cycles</Text>
+        <View style={wg.scoreBadge}>
+          <Text style={wg.scoreText}>{totalCycles}/{weeklyTarget}</Text>
+        </View>
+      </View>
+
+      {/* Grid: target rows × 7 columns */}
+      <View style={wg.grid}>
+        {/* Day labels */}
+        <View style={wg.dayRow}>
+          {weekData.map((d, i) => (
+            <View key={i} style={wg.dayCell}>
+              <Text style={[wg.dayLabel, d.isToday && { color: C.accent, fontWeight: '700' }]}>{d.day}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Cycle rows (bottom to top: row 0 = first cycle, row N-1 = last) */}
+        {Array.from({ length: target }, (_, row) => (
+          <View key={row} style={wg.cycleRow}>
+            {weekData.map((d, col) => {
+              const filled = d.cycles > row;
+              const empty  = !filled && (d.isPast || d.isToday);
+              return (
+                <View key={col} style={wg.dayCell}>
+                  <View style={[
+                    wg.cell,
+                    filled && { backgroundColor: C.accent, opacity: 0.7 + (row / target) * 0.3 },
+                    empty  && { backgroundColor: `${C.accent}10` },
+                    !filled && !empty && { backgroundColor: `${C.textFaint}20` },
+                    d.isToday && filled && { backgroundColor: C.accent, opacity: 1 },
+                  ]} />
+                </View>
+              );
+            })}
+          </View>
+        )).reverse()}
+      </View>
+
+      {/* Rhythm Score — compact inline */}
+      <View style={wg.scoreRow}>
+        <View style={wg.scoreBar}>
+          <View style={[wg.scoreFill, { width: `${Math.max(3, pct)}%` }]} />
+        </View>
+        <Text style={wg.scorePct}>{pct}%</Text>
+      </View>
+
+      {/* Philosophy reminder */}
+      <Text style={wg.philosophy}>Think in weeks, not nights. Every cycle counts.</Text>
+    </View>
+  );
+}
+
+const wg = StyleSheet.create({
+  card: {
+    backgroundColor: C.card,
+    borderRadius:    20,
+    padding:         20,
+    marginBottom:    14,
+    gap:             14,
+  },
+  header: {
+    flexDirection:  'row',
+    justifyContent: 'space-between',
+    alignItems:     'center',
+  },
+  title: {
+    fontSize:      14,
+    fontWeight:    '700',
+    color:         C.text,
+  },
+  scoreBadge: {
+    backgroundColor: `${C.accent}18`,
+    borderRadius:    10,
+    paddingHorizontal: 10,
+    paddingVertical:   4,
+  },
+  scoreText: {
+    fontSize:   12,
+    fontWeight: '700',
+    color:      C.accent,
+  },
+  grid: {
+    gap: 3,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    marginBottom:  4,
+  },
+  cycleRow: {
+    flexDirection: 'row',
+  },
+  dayCell: {
+    flex:       1,
+    alignItems: 'center',
+  },
+  dayLabel: {
+    fontSize:   10,
+    fontWeight: '600',
+    color:      C.textMuted,
+  },
+  cell: {
+    width:        '85%',
+    aspectRatio:  2.5,
+    borderRadius: 4,
+    backgroundColor: `${C.textFaint}20`,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           10,
+  },
+  scoreBar: {
+    flex:            1,
+    height:          4,
+    backgroundColor: `${C.textFaint}20`,
+    borderRadius:    2,
+    overflow:        'hidden',
+  },
+  scoreFill: {
+    height:          4,
+    backgroundColor: C.accent,
+    borderRadius:    2,
+  },
+  scorePct: {
+    fontSize:   13,
+    fontWeight: '700',
+    color:      C.accent,
+    width:      36,
+    textAlign:  'right',
+  },
+  philosophy: {
+    fontSize:   12,
+    color:      C.textMuted,
+    textAlign:  'center',
+    fontStyle:  'italic',
+  },
+});
+
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState() {
@@ -218,8 +393,12 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
   const [profile,         setProfile]         = useState<UserProfile | null>(null);
   const [weekSummary,     setWeekSummary]      = useState<WeeklySummaryResponse | null>(null);
   const [rawHistory,      setRawHistory]       = useState<NightRecord[]>([]);
+  const [showTip,         setShowTip]          = useState(false);
 
-  useFocusEffect(useCallback(() => { Analytics.screenViewed('insights'); }, []));
+  useFocusEffect(useCallback(() => {
+    Analytics.screenViewed('insights');
+    shouldShowGuide(GUIDE_KEYS.FEAT_INSIGHTS).then(setShowTip).catch(() => {});
+  }, []));
 
   useEffect(() => {
     async function load() {
@@ -229,28 +408,7 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
         getWearableHistory().catch(() => null),
       ]);
 
-      // ── SMOKE DATA — remove before production ────────────────────────────
-      const SMOKE_PROFILE: UserProfile = {
-        anchorTime:          390,   // 06:30
-        idealCyclesPerNight: 5,
-        chronotype:          'Neither',
-        weeklyTarget:        35,
-      };
-      const today = new Date();
-      const SMOKE_HISTORY: NightRecord[] = Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() - (13 - i));
-        const cycles = [5, 4, 5, 5, 3, 5, 4, 5, 5, 4, 5, 5, 3, 5][i] ?? 4;
-        return {
-          date:            d.toISOString().slice(0, 10),
-          cyclesCompleted: cycles,
-          anchorTime:      390,
-        };
-      });
-      // ─────────────────────────────────────────────────────────────────────
-
-      const activeProfile = p ?? SMOKE_PROFILE;
-      if (p) setProfile(p); else setProfile(SMOKE_PROFILE);
+      if (p) setProfile(p);
 
       let history = (h && h.length > 0) ? h : null;
       if (!history && wearableRes?.ok && wearableRes.data?.data) {
@@ -258,13 +416,15 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
         history = entries.map((w: any) => ({
           date:            w.collected_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
           cyclesCompleted: w.sleep_duration_min ? Math.round(w.sleep_duration_min / 90) : 4,
-          anchorTime:      activeProfile.anchorTime,
+          anchorTime:      p?.anchorTime ?? 390,
         }));
       }
-      if (!history) history = SMOKE_HISTORY;
 
-      setRawHistory(history);
-      setInsights(computeInsights(history, activeProfile));
+      if (history && p) {
+        setRawHistory(history);
+        setInsights(computeInsights(history, p));
+      }
+      // If no data at all, empty state will show (no more fake data)
       setLoading(false);
     }
     void load();
@@ -323,6 +483,18 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
       <BackHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
+        {/* Layer 2 tooltip — shown once on first Insights visit */}
+        {showTip && (
+          <RLoTooltip
+            visible={showTip}
+            message="This shows how your rhythm is building over time."
+            onDismiss={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_INSIGHTS);
+              setShowTip(false);
+            }}
+          />
+        )}
+
         {/* ── 1. Rhythm Flow ── */}
         <View style={s.flowCard}>
           <Text style={s.flowLabel}>Rhythm Flow</Text>
@@ -354,7 +526,10 @@ export default function InsightsScreen({ onClose }: { onClose?: () => void }) {
           )}
         </View>
 
-        {/* ── 3. En savoir plus ── */}
+        {/* ── 3. Weekly 35-cycle grid ── */}
+        <WeeklyCycleGrid history={rawHistory} target={target} />
+
+        {/* ── 4. En savoir plus ── */}
         <View style={s.detailsCard}>
           <ExpandableDetails insights={insights} profile={profile} />
         </View>
@@ -381,7 +556,7 @@ const s = StyleSheet.create({
   // Rhythm Flow card
   flowCard:   { backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 14 },
   flowLabel:  { fontSize: 12, fontWeight: '700', color: C.accent, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  flowNumber: { fontSize: 80, fontWeight: '900', color: C.text, lineHeight: 88 },
+  flowNumber: { fontSize: 64, fontWeight: '900', color: C.text, lineHeight: 72 },
   flowSub:    { fontSize: 16, color: C.textSub, marginBottom: 20 },
   rloRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.surface2, borderRadius: 14, padding: 12, width: '100%' },
   rloAvatar:  { width: 32, height: 32, borderRadius: 16, overflow: 'hidden' },
