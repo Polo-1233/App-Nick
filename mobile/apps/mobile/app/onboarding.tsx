@@ -819,7 +819,7 @@ export default function OnboardingScreen() {
                   </Text>
                 </Animated.View>
 
-                {/* Team items — staggered animation */}
+                {/* Team details — staggered list */}
                 {([
                   {
                     icon:     'football-outline' as const,
@@ -894,7 +894,7 @@ export default function OnboardingScreen() {
             {page === 3 && (
               <View style={s.slideV}>
                 <Animated.View style={[s.meetRLoContent, { opacity: fadeAnim2 }]}>
-                  {/* Mascot with glow */}
+                  {/* Mascot with speech bubble overlay */}
                   <View style={s.meetRLoMascotArea}>
                     <View style={s.meetRLoGlow} />
                     <Animated.View style={{
@@ -903,7 +903,23 @@ export default function OnboardingScreen() {
                     }}>
                       <MascotImage emotion="Enthousisate" style={s.meetRLoMascotImg} />
                     </Animated.View>
+
+                    {/* R-Lo personalised reply — floats top-right, like a speech bubble */}
+                    <Animated.View style={[
+                      s.rloGreetBubble,
+                      {
+                        opacity: rloGreetAnim,
+                        transform: [{ translateY: rloGreetSlide }],
+                      },
+                    ]}>
+                      {/* Queue pointant vers R-Lo (bas gauche) */}
+                      <View style={s.rloGreetTail} />
+                      <Text style={s.rloGreetText}>
+                        {`Hey ${firstName.trim()}! 🌙\nLet's build your rhythm together.`}
+                      </Text>
+                    </Animated.View>
                   </View>
+
                   {/* Speech bubble — R-Lo asks for the name */}
                   <View style={s.meetRLoBubbleWrap}>
                     <View style={s.meetRLoBubbleTip} />
@@ -934,20 +950,6 @@ export default function OnboardingScreen() {
                       </View>
                     </View>
                   </View>
-
-                  {/* R-Lo personalised greeting — appears when name >= 2 chars */}
-                  <Animated.View style={[
-                    s.rloGreetBubble,
-                    {
-                      opacity: rloGreetAnim,
-                      transform: [{ translateY: rloGreetSlide }],
-                    },
-                  ]}>
-                    <Text style={s.rloGreetEmoji}>✨</Text>
-                    <Text style={s.rloGreetText}>
-                      {`Hey ${firstName.trim()}! Let's build your rhythm together. 🌙`}
-                    </Text>
-                  </Animated.View>
                 </Animated.View>
               </View>
             )}
@@ -1080,11 +1082,6 @@ export default function OnboardingScreen() {
                     </View>
                   </View>
 
-                  {/* Ideal bedtime — derived from sleepOnset */}
-                  <View style={arp.bedtimeRow}>
-                    <Text style={arp.bedtimeText}>🌙 Ideal bedtime: {fmtTime(sleepOnset)}</Text>
-                  </View>
-
                   {/* Out-of-range warning */}
                   {!isValidArp && (
                     <View style={arp.warnBox}>
@@ -1143,11 +1140,17 @@ export default function OnboardingScreen() {
                   </View>
                 )}
 
-                {/* 35 cycles per week insight — critical R90 concept */}
+                {/* Cycles per week insight — critical R90 concept */}
                 <View style={cy.insightBox}>
-                  <Text style={cy.insightTitle}>35 cycles per week</Text>
+                  <Text style={cy.insightTitle}>{cycles * 7} cycles per week</Text>
                   <Text style={cy.insightText}>
-                    Think in cycles per week, not per night. A 4-cycle night doesn't ruin anything if the others are 5. You never fail. You adapt.
+                    {cycles === 5
+                      ? "That's 35 cycles per week — the gold standard Nick uses with elite athletes. Think in weeks, not nights."
+                      : cycles === 6
+                      ? "That's 42 cycles — optimal recovery. The same protocol used by Olympic athletes."
+                      : cycles === 4
+                      ? "That's 28 cycles — a solid rhythm. Many top performers start here and build up."
+                      : `That's ${cycles * 7} cycles per week. Every cycle counts — you never fail, you adapt.`}
                   </Text>
                 </View>
               </ScrollView>
@@ -1441,6 +1444,7 @@ const s = StyleSheet.create({
   },
   meetRLoMascotArea: {
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    position: 'relative',
   },
   meetRLoGlow: {
     position: 'absolute', width: 280, height: 280,
@@ -1509,26 +1513,43 @@ const s = StyleSheet.create({
 
   // R-Lo greeting bubble (Step 3 personalised reply)
   rloGreetBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: SURFACE,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginTop: 16,
-    alignSelf: 'stretch',
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: ACCENT,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    maxWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 10,
+  },
+  rloGreetTail: {
+    position: 'absolute',
+    bottom: -10,
+    left: 16,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 0,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: ACCENT,
   },
   rloGreetEmoji: {
     fontSize: 18,
   },
   rloGreetText: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter-Regular',
     fontStyle: 'italic',
-    color: TEXT_SUB,
-    lineHeight: 20,
+    color: '#fff',
+    lineHeight: 19,
   },
 
   // ══════ PAGE 5 — ARP Setup ══════
@@ -1659,6 +1680,35 @@ const nk = StyleSheet.create({
   teamSub: {
     fontSize: 12,
     color:    '#6B8CAE',
+  },
+  // Logo circles row
+  logosRow: {
+    flexDirection:  'row',
+    justifyContent: 'center',
+    gap:            20,
+    marginBottom:   24,
+  },
+  logoCircleWrap: {
+    alignItems: 'center',
+    gap:        6,
+  },
+  logoCircle: {
+    width:           48,
+    height:          48,
+    borderRadius:    24,
+    borderWidth:     1.5,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  logoEmoji: {
+    fontSize: 20,
+  },
+  logoLabel: {
+    fontSize:   10,
+    fontWeight: '700',
+    textAlign:  'center',
+    lineHeight: 12,
   },
 });
 
