@@ -1514,7 +1514,7 @@ const s = StyleSheet.create({
   // R-Lo greeting bubble (Step 3 personalised reply)
   rloGreetBubble: {
     position: 'absolute',
-    top: -10,
+    top: -80,
     right: -10,
     backgroundColor: ACCENT,
     borderRadius: 14,
