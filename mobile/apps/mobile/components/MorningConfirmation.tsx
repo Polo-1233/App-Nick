@@ -35,7 +35,7 @@ type Mood = 'tired' | 'neutral' | 'good';
 
 const MOODS: Array<{ value: Mood; icon: keyof typeof Ionicons.glyphMap; color: string; label: string }> = [
   { value: 'tired',   icon: 'moon-outline',        color: '#8B5CF6', label: 'Tired'   },
-  { value: 'neutral', icon: 'remove-circle-outline',color: '#9BB5CC', label: 'Neutral' },
+  { value: 'neutral', icon: 'contrast-outline',      color: '#9BB5CC', label: 'Neutral' },
   { value: 'good',    icon: 'sunny-outline',        color: '#F5A623', label: 'Good'    },
 ];
 
