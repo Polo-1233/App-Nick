@@ -1,16 +1,21 @@
 /**
- * RhythmTimeline — Redesigned v2
+ * RhythmTimeline — v3 Premium Redesign
  *
- * Answers in 1 second:
- *   1. Where am I?        → cursor + current block highlighted
- *   2. What's coming?     → next 2 cycles visible
- *   3. What should I do?  → "Next: MRM in 12 min" label
+ * Shows the FULL day as a continuous rhythm track.
+ * The active cycle is visually dominant. Past recedes. Future is quiet.
+ *
+ * Visual hierarchy:
+ *   NOW  = tall segment, bright fill, glow cursor, time label
+ *   NEXT = normal height, subtle border, softer
+ *   PAST = shorter, faded, no border
  *
  * Structure:
- *   [Cycle label]           [tap hint]
- *   [████░░░░][░░░░░░][░░░░░]   ← blocks + cursor
- *   [markers row: MRM · CRP · 🌙]
- *   [Next action label]
+ *   [wake time]                    [sleep time]
+ *   [░░░░|████▌░░░░|░░░░|░░░░|░░░░]   ← all cycles, cursor at now
+ *        ↑ active with progress fill
+ *   [Cycle 3 of 5 · 42 min left]
+ *
+ * Tap → opens FullClockView
  */
 
 import { useEffect, useRef, useState, memo } from 'react';
@@ -18,73 +23,38 @@ import {
   View, Text, StyleSheet, Animated, Pressable, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../lib/theme-context';
 import { nowMin, fmtMin } from '../../lib/time-utils';
 import { computeRhythmData, CYCLE } from '../../lib/rhythm-clock';
+import { spacing } from '../../lib/design-tokens';
 import { FullClockView } from './FullClockView';
 
-// ─── Tokens ───────────────────────────────────────────────────────────────────
-const ACCENT        = '#1c9fda';
-const ACCENT_LIGHT  = 'rgba(28,159,218,0.18)';
-const ACCENT_BORDER = 'rgba(28,159,218,0.40)';
-const GOLD          = '#D97706';
-const PURPLE        = '#8B5CF6';
-const TEXT_PRIMARY  = '#002060';
-const TEXT_MUTED    = '#5A7A9A';
-const TEXT_FAINT    = '#9BB5CC';
-const CURSOR_COLOR  = '#FFFFFF';
+// ─── Layout tuning ────────────────────────────────────────────────────────────
 
-const SEG_H  = 18;   // taller blocks — more presence
-const GAP    = 6;
-const VISIBLE = 3;
+/** Height of a normal (inactive) segment */
+const SEG_H_NORMAL = 14;
+
+/** Height of the active segment — taller = more dominant */
+const SEG_H_ACTIVE = 22;
+
+/** Height of past segments — shorter = receding */
+const SEG_H_PAST = 10;
+
+/** Gap between segments */
+const GAP = 3;
+
+/** Corner radius for segments */
+const SEG_R = 5;
+
+/** Cursor line width */
+const CURSOR_W = 2.5;
+
+/** Cursor glow spread */
+const CURSOR_GLOW_W = 12;
 
 interface RhythmTimelineProps {
   wakeMin:     number;
   idealCycles: number;
-}
-
-// ─── Next action label ────────────────────────────────────────────────────────
-function getNextActionLabel(
-  data:       ReturnType<typeof computeRhythmData>,
-  wakeMin:    number,
-  idealCycles:number,
-): string | null {
-  const { currentIdx, nowMin: now, totalCycles, segments } = data;
-
-  if (currentIdx < 0) {
-    const minsToWake = ((wakeMin - now) + 1440) % 1440;
-    return `Wake up in ${minsToWake} min`;
-  }
-
-  if (currentIdx >= totalCycles) return 'Day complete — rest well tonight';
-
-  const seg = segments[currentIdx];
-  if (!seg) return null;
-
-  const elapsed = ((now - seg.startMin) + 1440) % 1440;
-  const remaining = CYCLE - elapsed;
-
-  // MRM is at 80 min into cycle
-  const minsToMRM = 80 - elapsed;
-  if (minsToMRM > 0 && minsToMRM <= 20 && seg.hasMRM) {
-    return `MRM in ${Math.round(minsToMRM)} min`;
-  }
-
-  // CRP
-  if (seg.isCRP) {
-    const minsIntoCRP = elapsed;
-    if (minsIntoCRP < 30) return `CRP window open — ${Math.round(30 - minsIntoCRP)} min remaining`;
-  }
-
-  // End of current cycle
-  if (remaining <= 20) {
-    if (currentIdx === totalCycles - 1) {
-      return `Sleep window in ${Math.round(remaining)} min`;
-    }
-    return `Next cycle in ${Math.round(remaining)} min`;
-  }
-
-  // Generic
-  return `${Math.round(remaining)} min in cycle ${currentIdx + 1}`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -92,146 +62,264 @@ function getNextActionLabel(
 export const RhythmTimeline = memo(function RhythmTimeline({
   wakeMin, idealCycles,
 }: RhythmTimelineProps) {
+  const { theme } = useTheme();
+  const c = theme.colors;
   const W  = Dimensions.get('window').width;
-  const TW = W - 40;
+  const TW = W - spacing.screen * 2;
 
   const [clockOpen, setClockOpen] = useState(false);
   const [data, setData] = useState(() => computeRhythmData(nowMin(), wakeMin, idealCycles));
 
   useEffect(() => {
-    const id = setInterval(() => setData(computeRhythmData(nowMin(), wakeMin, idealCycles)), 30_000);
+    const tick = () => setData(computeRhythmData(nowMin(), wakeMin, idealCycles));
+    tick();
+    const id = setInterval(tick, 30_000);
     return () => clearInterval(id);
   }, [wakeMin, idealCycles]);
 
-  // Cursor pulse animation
-  const pulseScale  = useRef(new Animated.Value(1)).current;
-  const pulseOpacity = useRef(new Animated.Value(0.8)).current;
+  // ── Cursor pulse ──────────────────────────────────────────────────────────
+  const glowOpacity = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.parallel([
-          Animated.timing(pulseScale,   { toValue: 1.5, duration: 900, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0,   duration: 900, useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(pulseScale,   { toValue: 1, duration: 0, useNativeDriver: true }),
-          Animated.timing(pulseOpacity, { toValue: 0.8, duration: 0, useNativeDriver: true }),
-        ]),
+        Animated.timing(glowOpacity, { toValue: 1,   duration: 1200, useNativeDriver: true }),
+        Animated.timing(glowOpacity, { toValue: 0.4, duration: 1200, useNativeDriver: true }),
       ])
     );
     loop.start();
     return () => loop.stop();
-  }, [pulseScale, pulseOpacity]);
+  }, [glowOpacity]);
 
-  // ── Visible window ────────────────────────────────────────────────────────
-  const { segments, currentIdx, totalCycles } = data;
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const { segments, currentIdx, totalCycles, wakeMin: wake, bedtimeMin } = data;
+  const isActive     = currentIdx >= 0 && currentIdx < totalCycles;
+  const currentSeg   = isActive ? segments[currentIdx] : null;
+  const elapsed      = currentSeg ? ((data.nowMin - currentSeg.startMin + 1440) % 1440) : 0;
+  const progress     = Math.max(0, Math.min(1, elapsed / CYCLE));
+  const remaining    = isActive ? Math.max(0, CYCLE - elapsed) : 0;
 
-  const clampedIdx = currentIdx >= totalCycles ? totalCycles - 1 : Math.max(0, currentIdx);
-  const startIdx   = Math.max(0, Math.min(clampedIdx, totalCycles - VISIBLE));
-  const endIdx     = Math.min(totalCycles - 1, startIdx + VISIBLE - 1);
-  const visible    = segments.slice(startIdx, endIdx + 1);
-  const visCount   = Math.max(1, visible.length);
+  // ── Segment widths ────────────────────────────────────────────────────────
+  // All segments share the track width equally
+  const totalGaps = (totalCycles - 1) * GAP;
+  const segW      = Math.max(8, (TW - totalGaps) / totalCycles);
 
-  const segW = (TW - (visCount - 1) * GAP) / visCount;
-
-  const isActiveCycle = currentIdx >= 0 && currentIdx < totalCycles;
-  const currentSeg    = isActiveCycle ? segments[currentIdx] : null;
-  const progressInCycle = currentSeg
-    ? Math.max(0, Math.min(1, ((data.nowMin - currentSeg.startMin + 1440) % 1440) / 90))
-    : 0;
-
-  const cursorVisible = isActiveCycle && currentIdx >= startIdx && currentIdx <= endIdx;
-  const cursorX = cursorVisible
-    ? (currentIdx - startIdx) * (segW + GAP) + progressInCycle * segW
+  // ── Cursor X position ─────────────────────────────────────────────────────
+  const cursorX = isActive
+    ? currentIdx * (segW + GAP) + progress * segW
     : -100;
 
   // ── Labels ────────────────────────────────────────────────────────────────
-  const cycleLabel = isActiveCycle
-    ? `Cycle ${currentIdx + 1} / ${totalCycles}`
+  const statusLabel = isActive
+    ? `Cycle ${currentIdx + 1} of ${totalCycles} · ${Math.round(remaining)} min left`
     : currentIdx < 0
-      ? `${totalCycles} cycles today`
-      : `Day complete`;
+      ? 'Day starts soon'
+      : 'Day complete';
 
-  const nextLabel = getNextActionLabel(data, wakeMin, idealCycles);
+  // ── MRM / CRP markers ────────────────────────────────────────────────────
+  // Show a single marker for the most relevant upcoming event
+  let marker: { type: 'mrm' | 'crp' | 'sleep'; segIdx: number; label: string } | null = null;
+
+  if (isActive) {
+    const minsToMRM = 80 - elapsed;
+    if (minsToMRM > 0 && minsToMRM <= 25 && currentSeg?.hasMRM) {
+      marker = { type: 'mrm', segIdx: currentIdx, label: `MRM ${Math.round(minsToMRM)}m` };
+    } else {
+      // Find next CRP
+      const crpSeg = segments.find((s, i) => s.isCRP && i >= currentIdx && !s.isPast);
+      if (crpSeg) {
+        const minsTo = ((crpSeg.startMin - data.nowMin) + 1440) % 1440;
+        if (minsTo < 180) {
+          marker = { type: 'crp', segIdx: crpSeg.index, label: minsTo <= 0 ? 'CRP now' : `CRP ${Math.round(minsTo)}m` };
+        }
+      }
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <>
       <Pressable onPress={() => setClockOpen(true)} style={tl.outer}>
 
-        {/* ── Top row: cycle label + tap hint ── */}
-        <View style={tl.topRow}>
-          <Text style={tl.cycleLabel}>{cycleLabel}</Text>
-          <Text style={tl.tapHint}>Full view ›</Text>
+        {/* ── Time anchors ── */}
+        <View style={tl.timeRow}>
+          <View style={tl.timeAnchor}>
+            <Ionicons name="sunny" size={11} color={c.gold} style={{ marginRight: 3 }} />
+            <Text style={[tl.timeLabel, { color: c.textMuted }]}>{fmtMin(wake)}</Text>
+          </View>
+          <Text style={[tl.tapHint, { color: c.accent }]}>Full day ›</Text>
+          <View style={tl.timeAnchor}>
+            <Text style={[tl.timeLabel, { color: c.textMuted }]}>{fmtMin(bedtimeMin)}</Text>
+            <Ionicons name="moon" size={10} color={c.purple} style={{ marginLeft: 3 }} />
+          </View>
         </View>
 
-        {/* ── Blocks ── */}
-        <View style={[tl.segRow, { width: TW }]}>
-          {visible.map((seg, i) => {
-            const isCurrent = seg.isCurrent && isActiveCycle;
-            const isPast    = seg.isPast || (!isActiveCycle && currentIdx >= totalCycles);
+        {/* ── Track — all cycles ── */}
+        <View style={[tl.track, { width: TW, height: SEG_H_ACTIVE + 8, marginTop: marker ? 14 : 0 }]}>
+
+          {/* Segments */}
+          {segments.map((seg, i) => {
+            const isCurr = i === currentIdx && isActive;
+            const isPast = seg.isPast || (!isActive && currentIdx >= totalCycles);
+            const isFuture = !isCurr && !isPast;
+
+            // Dynamic height: past < normal < active
+            const h = isCurr ? SEG_H_ACTIVE : isPast ? SEG_H_PAST : SEG_H_NORMAL;
+            // Vertical centering within the track
+            const top = (SEG_H_ACTIVE + 8 - h) / 2;
+            // Horizontal position
+            const left = i * (segW + GAP);
+
+            // Color treatment
+            const bgColor = isCurr
+              ? `${c.accent}25`
+              : isPast
+                ? `${c.accent}15`
+                : `${c.accent}0A`;
+
+            const borderColor = isCurr
+              ? c.accent
+              : isFuture
+                ? `${c.accent}20`
+                : 'transparent';
+
+            const borderW = isCurr ? 1.5 : isFuture ? 1 : 0;
+
+            // CRP and sleep get subtle color hints
+            const isSpecial = seg.isCRP && !isPast;
+            const isSleep   = seg.isSleep && !isPast;
+            const specialBg = isSpecial ? `${c.gold}15` : isSleep ? `${c.purple}12` : null;
 
             return (
-              <View key={seg.index} style={[tl.segWrap, { marginRight: i < visCount - 1 ? GAP : 0 }]}>
-                {/* Block */}
-                <View style={[
-                  tl.seg,
-                  { width: segW },
-                  isCurrent && tl.segCurrent,
-                  !isCurrent && !isPast && tl.segFuture,
-                  isPast && tl.segPast,
-                ]}>
-                  {/* Fill bar — progress inside current block */}
-                  {isCurrent && (
-                    <View style={[tl.segFill, { width: `${progressInCycle * 100}%` }]} />
-                  )}
-                </View>
+              <View
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left,
+                  top,
+                  width: segW,
+                  height: h,
+                  borderRadius: SEG_R,
+                  backgroundColor: specialBg ?? bgColor,
+                  borderWidth: borderW,
+                  borderColor,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Progress fill — only on active segment */}
+                {isCurr && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 0, bottom: 0, left: 0,
+                    width: `${progress * 100}%` as any,
+                    backgroundColor: c.accent,
+                    opacity: 0.35,
+                    borderRadius: SEG_R - 1,
+                  }} />
+                )}
 
-                {/* Markers below block */}
-                <View style={[tl.markers, { width: segW }]}>
-                  {seg.hasMRM && !isPast && (
-                    <View style={tl.mrmMarker}>
-                      <View style={tl.mrmDot} />
-                      <Text style={tl.markerLabel}>MRM</Text>
-                    </View>
-                  )}
-                  {seg.isCRP && !isPast && (
-                    <View style={tl.crpMarker}>
-                      <Ionicons name="flash" size={9} color={GOLD} />
-                      <Text style={[tl.markerLabel, { color: GOLD }]}>CRP</Text>
-                    </View>
-                  )}
-                  {seg.isSleep && !isPast && (
-                    <View style={tl.sleepMarker}>
-                      <Ionicons name="moon" size={9} color={PURPLE} />
-                    </View>
-                  )}
-                </View>
+                {/* CRP flash icon — centered in segment */}
+                {isSpecial && (
+                  <View style={tl.segIcon}>
+                    <Ionicons name="flash" size={8} color={c.gold} style={{ opacity: 0.6 }} />
+                  </View>
+                )}
+
+                {/* Sleep moon icon — centered in segment */}
+                {isSleep && (
+                  <View style={tl.segIcon}>
+                    <Ionicons name="moon" size={8} color={c.purple} style={{ opacity: 0.5 }} />
+                  </View>
+                )}
               </View>
             );
           })}
 
-          {/* Animated cursor */}
-          {cursorVisible && (
-            <View pointerEvents="none" style={[tl.cursorWrap, { left: cursorX - 7 }]}>
-              {/* Pulse ring */}
-              <Animated.View style={[
-                tl.cursorRing,
-                { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
-              ]} />
-              {/* Solid dot */}
-              <View style={tl.cursorDot} />
+          {/* ── Cursor — refined vertical line with glow ── */}
+          {isActive && cursorX >= 0 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: cursorX - CURSOR_GLOW_W / 2,
+                top: 0,
+                bottom: 0,
+                width: CURSOR_GLOW_W,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {/* Glow — soft pulse */}
+              <Animated.View style={{
+                position: 'absolute',
+                width: CURSOR_GLOW_W,
+                height: SEG_H_ACTIVE + 8,
+                borderRadius: CURSOR_GLOW_W / 2,
+                backgroundColor: c.accent,
+                opacity: glowOpacity.interpolate({
+                  inputRange: [0.4, 1],
+                  outputRange: [0.06, 0.15],
+                }),
+              }} />
+
+              {/* Line — sharp, high contrast */}
+              <View style={{
+                width: CURSOR_W,
+                height: SEG_H_ACTIVE + 4,
+                borderRadius: CURSOR_W / 2,
+                backgroundColor: '#FFFFFF',
+                shadowColor: c.accent,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 4,
+                elevation: 6,
+              }} />
+
+              {/* Top dot — small accent cap */}
+              <View style={{
+                position: 'absolute',
+                top: -1,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#FFFFFF',
+                shadowColor: c.accent,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 1,
+                shadowRadius: 4,
+                elevation: 8,
+              }} />
+            </View>
+          )}
+
+          {/* ── Marker badge — floats above the relevant segment ── */}
+          {marker && (
+            <View style={[
+              tl.markerBadge,
+              {
+                left: marker.segIdx * (segW + GAP) + segW / 2 - 24,
+                backgroundColor: marker.type === 'crp' ? `${c.gold}20` : `${c.accent}18`,
+                borderColor: marker.type === 'crp' ? `${c.gold}40` : `${c.accent}30`,
+              },
+            ]}>
+              <Ionicons
+                name={marker.type === 'crp' ? 'flash' : 'ellipse'}
+                size={8}
+                color={marker.type === 'crp' ? c.gold : c.accent}
+              />
+              <Text style={[
+                tl.markerBadgeText,
+                { color: marker.type === 'crp' ? c.gold : c.accent },
+              ]}>
+                {marker.label}
+              </Text>
             </View>
           )}
         </View>
 
-        {/* ── Next action label ── */}
-        {nextLabel && (
-          <View style={tl.nextRow}>
-            <View style={tl.nextDot} />
-            <Text style={tl.nextLabel}>{nextLabel}</Text>
-          </View>
-        )}
+        {/* ── Status line ── */}
+        <Text style={[tl.statusLabel, { color: c.textMuted }]}>{statusLabel}</Text>
 
       </Pressable>
 
@@ -248,150 +336,66 @@ export const RhythmTimeline = memo(function RhythmTimeline({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const tl = StyleSheet.create({
   outer: {
-    paddingHorizontal: 20,
-    marginTop:         20,
-    gap:               8,
+    paddingHorizontal: spacing.screen,
+    marginTop:         12,
+    gap:               4,
   },
 
-  // Top row
-  topRow: {
+  // Time anchors row
+  timeRow: {
     flexDirection:  'row',
     justifyContent: 'space-between',
     alignItems:     'center',
-    marginBottom:   2,
+    marginBottom:   4,
   },
-  cycleLabel: {
-    fontSize:   15,
-    fontWeight: '700',
-    color:      TEXT_PRIMARY,
-    letterSpacing: -0.2,
+  timeAnchor: {
+    flexDirection: 'row',
+    alignItems:    'center',
+  },
+  timeLabel: {
+    fontSize:   11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   tapHint: {
-    fontSize:   12,
-    color:      ACCENT,
+    fontSize:   11,
     fontWeight: '600',
   },
 
-  // Segment row
-  segRow: {
-    flexDirection: 'row',
-    alignItems:    'flex-start',
-    position:      'relative',
-    paddingBottom: 20,  // space for markers
-  },
-  segWrap: {
+  // Track container
+  track: {
     position: 'relative',
   },
 
-  // Blocks
-  seg: {
-    height:       SEG_H,
-    borderRadius: 9,
-    overflow:     'hidden',
-  },
-  segCurrent: {
-    backgroundColor: ACCENT_LIGHT,
-    borderWidth:     1.5,
-    borderColor:     ACCENT,
-  },
-  segFuture: {
-    backgroundColor: 'rgba(28,100,160,0.10)',
-    borderWidth:     1,
-    borderColor:     ACCENT_BORDER,
-  },
-  segPast: {
-    backgroundColor: 'rgba(28,159,218,0.35)',
-    borderWidth:     0,
-  },
-  segFill: {
-    position:        'absolute',
-    top:             0, bottom: 0, left: 0,
-    backgroundColor: ACCENT,
-    borderRadius:    8,
-    opacity:         0.85,
-  },
-
-  // Markers (below blocks)
-  markers: {
-    flexDirection:  'row',
-    justifyContent: 'flex-end',
+  // Icon centered in special segments
+  segIcon: {
+    ...StyleSheet.absoluteFillObject,
     alignItems:     'center',
-    gap:            4,
-    marginTop:      5,
-    paddingRight:   2,
-  },
-  mrmMarker: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           3,
-  },
-  mrmDot: {
-    width:           5,
-    height:          5,
-    borderRadius:    3,
-    backgroundColor: ACCENT,
-    opacity:         0.7,
-  },
-  markerLabel: {
-    fontSize:   8,
-    fontWeight: '700',
-    color:      TEXT_FAINT,
-    letterSpacing: 0.3,
-  },
-  crpMarker: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           2,
-  },
-  sleepMarker: {
-    marginLeft: 2,
+    justifyContent: 'center',
   },
 
-  // Cursor
-  cursorWrap: {
+  // Marker badge (floats above track)
+  markerBadge: {
     position:        'absolute',
-    top:             (SEG_H - 14) / 2,
-    width:           14,
-    height:          14,
+    top:             -14,
+    flexDirection:   'row',
     alignItems:      'center',
-    justifyContent:  'center',
+    gap:             3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius:    8,
+    borderWidth:     1,
   },
-  cursorRing: {
-    position:        'absolute',
-    width:           14,
-    height:          14,
-    borderRadius:    7,
-    borderWidth:     1.5,
-    borderColor:     CURSOR_COLOR,
-  },
-  cursorDot: {
-    width:           8,
-    height:          8,
-    borderRadius:    4,
-    backgroundColor: CURSOR_COLOR,
-    shadowColor:     ACCENT,
-    shadowOffset:    { width: 0, height: 0 },
-    shadowOpacity:   1,
-    shadowRadius:    6,
-    elevation:       8,
+  markerBadgeText: {
+    fontSize:   9,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
-  // Next action
-  nextRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    gap:           6,
-    marginTop:     2,
-  },
-  nextDot: {
-    width:           6,
-    height:          6,
-    borderRadius:    3,
-    backgroundColor: ACCENT,
-  },
-  nextLabel: {
-    fontSize:   13,
-    fontWeight: '600',
-    color:      TEXT_MUTED,
+  // Status label
+  statusLabel: {
+    fontSize:      13,
+    fontWeight:    '500',
+    letterSpacing: -0.1,
   },
 });
