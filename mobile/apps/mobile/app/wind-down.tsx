@@ -1,11 +1,12 @@
 /**
  * wind-down.tsx — Flow guidé de préparation au sommeil
  *
- * 4 phases séquentielles :
- *   1. intro     — 3s, R-Lo introduit le wind-down
- *   2. checklist — 5 items à cocher
- *   3. content   — sélection + lecture audio
- *   4. goodnight — écran presque noir, fenêtre de sommeil
+ * 5 phases séquentielles :
+ *   1. intro       — 3s, R-Lo introduit le wind-down
+ *   2. checklist   — 5 items à cocher
+ *   3. content     — sélection + lecture audio
+ *   4. notif_ask   — contextual notification permission (shown once)
+ *   5. goodnight   — écran presque noir, fenêtre de sommeil
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -25,15 +26,24 @@ import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
+import { requestNotifications } from '../lib/permissions';
+import {
+  shouldShowNotifPrompt,
+  dismissNotifPrompt,
+  markNotifGranted,
+} from '../lib/contextual-permissions';
+import { RLoTooltip } from '../components/RLoGuide';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
 import type { ContentItem } from '../lib/content-registry';
 
-const BG     = '#0a0a3a';
-const CARD   = '#141466';
-const ACCENT = '#1c9fda';
-const TEXT   = '#FFFFFF';
-const MUTED  = '#6B8CAE';
+// Wind-down is always dark — immersive, sleep-oriented
+const BG     = '#0a0a3a';   // darkTheme.background
+const CARD   = '#141466';   // darkTheme.surface
+const ACCENT = '#1c9fda';   // darkTheme.accent
+const TEXT   = '#FFFFFF';    // darkTheme.text
+const MUTED  = '#6B8CAE';   // darkTheme.textMuted
 
-type WindDownPhase = 'intro' | 'checklist' | 'content' | 'goodnight';
+type WindDownPhase = 'intro' | 'checklist' | 'content' | 'notif_ask' | 'goodnight';
 
 const CHECKLIST = [
   { id: 'lights',   label: 'Lights dimmed?' },
@@ -44,17 +54,32 @@ const CHECKLIST = [
 ];
 
 // ─── Phase 1 — Intro ──────────────────────────────────────────────────────────
-function IntroPhase({ onNext }: { onNext: () => void }) {
+function IntroPhase({ onNext, showTip, onDismissTip }: {
+  onNext: () => void;
+  showTip?: boolean;
+  onDismissTip?: () => void;
+}) {
   useEffect(() => {
-    const t = setTimeout(onNext, 3000);
+    // Delay auto-advance if tip is showing (give user time to read)
+    const delay = showTip ? 6000 : 3000;
+    const t = setTimeout(onNext, delay);
     return () => clearTimeout(t);
-  }, [onNext]);
+  }, [onNext, showTip]);
 
   return (
     <Pressable style={ph.wrap} onPress={onNext}>
       <MascotImage emotion="rassurante" size="md" />
       <Text style={ph.title}>Your wind-down starts now.</Text>
       <Text style={ph.sub}>Prepare for a good night.</Text>
+      {showTip && onDismissTip && (
+        <View style={{ position: 'absolute', bottom: 100, left: 0, right: 0 }}>
+          <RLoTooltip
+            visible
+            message="This prepares your body for sleep. A calm transition from your day."
+            onDismiss={onDismissTip}
+          />
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -110,8 +135,8 @@ function ChecklistPhase({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 
 // ─── Phase 3 — Content ────────────────────────────────────────────────────────
 function ContentPhase({
-  onComplete, isPremium,
-}: { onComplete: () => void; isPremium: boolean }) {
+  onComplete, isPremium, onClose,
+}: { onComplete: () => void; isPremium: boolean; onClose: () => void }) {
   const [content,  setContent]  = useState<ContentItem | null>(null);
   const [playing,  setPlaying]  = useState(false);
   const [loading,  setLoading]  = useState(true);
@@ -144,7 +169,11 @@ function ContentPhase({
   }
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: BG }} edges={['top', 'bottom']}>
     <View style={ph.wrap}>
+      <Pressable onPress={onClose} style={s.closeBtn}>
+        <Ionicons name="close" size={22} color={MUTED} />
+      </Pressable>
       <Text style={ph.title}>Tonight</Text>
       <View style={ct.card}>
         <Text style={ct.cardTitle}>{content.title}</Text>
@@ -164,10 +193,89 @@ function ContentPhase({
         <Text style={ph.skipTxt}>Something else</Text>
       </Pressable>
     </View>
+    </SafeAreaView>
   );
 }
 
-// ─── Phase 4 — Goodnight ──────────────────────────────────────────────────────
+// ─── Phase 4 — Notification permission (contextual) ─────────────────────────
+function NotifAskPhase({ onNext }: { onNext: () => void }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+  }, []);
+
+  async function handleAccept() {
+    HapticsSuccess();
+    const result = await requestNotifications();
+    if (result === 'granted') await markNotifGranted();
+    onNext();
+  }
+
+  async function handleDismiss() {
+    await dismissNotifPrompt();
+    onNext();
+  }
+
+  return (
+    <View style={na.wrap}>
+      <Animated.View style={[na.content, { opacity }]}>
+        <View style={na.iconWrap}>
+          <Ionicons name="notifications-outline" size={32} color={ACCENT} />
+        </View>
+        <Text style={na.title}>Want R-Lo to remind you{'\n'}tomorrow evening?</Text>
+        <Text style={na.sub}>
+          A gentle nudge before wind-down{'\n'}and a morning check-in to start your rhythm.
+        </Text>
+        <Pressable style={na.primaryBtn} onPress={handleAccept}>
+          <Text style={na.primaryBtnText}>Yes, remind me</Text>
+        </Pressable>
+        <Pressable style={na.secondaryBtn} onPress={handleDismiss}>
+          <Text style={na.secondaryBtnText}>Not now</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
+const na = StyleSheet.create({
+  wrap: {
+    flex: 1, backgroundColor: BG,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  content: { alignItems: 'center', gap: 16, maxWidth: 320 },
+  iconWrap: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: 'rgba(28,159,218,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 22, fontWeight: '700', color: TEXT,
+    textAlign: 'center', lineHeight: 30,
+  },
+  sub: {
+    fontSize: 15, color: MUTED, textAlign: 'center',
+    lineHeight: 22, marginBottom: 8,
+  },
+  primaryBtn: {
+    backgroundColor: ACCENT, borderRadius: 16,
+    paddingVertical: 16, paddingHorizontal: 40,
+    width: '100%', alignItems: 'center',
+  },
+  primaryBtnText: {
+    fontSize: 16, fontWeight: '700', color: '#fff',
+  },
+  secondaryBtn: {
+    paddingVertical: 12,
+  },
+  secondaryBtnText: {
+    fontSize: 14, fontWeight: '600', color: MUTED,
+  },
+});
+
+// ─── Phase 5 — Goodnight ──────────────────────────────────────────────────────
 function GoodnightPhase({ onClose }: { onClose: () => void }) {
   const opacity = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -189,8 +297,25 @@ export default function WindDownScreen() {
   const router        = useRouter();
   const { isPremium } = usePremiumGate();
   const [phase, setPhase] = useState<WindDownPhase>('intro');
+  const [showNotifAsk, setShowNotifAsk] = useState(false);
+  const [showWdTip,    setShowWdTip]   = useState(false);
+
+  // Check contextual prompts
+  useEffect(() => {
+    shouldShowNotifPrompt().then(setShowNotifAsk).catch(() => {});
+    shouldShowGuide(GUIDE_KEYS.FEAT_WINDDOWN).then(setShowWdTip).catch(() => {});
+  }, []);
 
   const next = useCallback((p: WindDownPhase) => setPhase(p), []);
+
+  // After content: go to notif_ask if needed, otherwise straight to goodnight
+  const handleContentComplete = useCallback(() => {
+    if (showNotifAsk) {
+      next('notif_ask');
+    } else {
+      next('goodnight');
+    }
+  }, [showNotifAsk, next]);
 
   return (
     <View style={s.root}>
@@ -199,7 +324,14 @@ export default function WindDownScreen() {
           <Pressable onPress={() => router.back()} style={s.closeBtn}>
             <Ionicons name="close" size={22} color={MUTED} />
           </Pressable>
-          <IntroPhase onNext={() => next('checklist')} />
+          <IntroPhase
+            onNext={() => next('checklist')}
+            showTip={showWdTip}
+            onDismissTip={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_WINDDOWN);
+              setShowWdTip(false);
+            }}
+          />
         </SafeAreaView>
       )}
 
@@ -218,8 +350,13 @@ export default function WindDownScreen() {
       {phase === 'content' && (
         <ContentPhase
           isPremium={isPremium}
-          onComplete={() => next('goodnight')}
+          onComplete={handleContentComplete}
+          onClose={() => router.back()}
         />
+      )}
+
+      {phase === 'notif_ask' && (
+        <NotifAskPhase onNext={() => next('goodnight')} />
       )}
 
       {phase === 'goodnight' && (
