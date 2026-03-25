@@ -26,6 +26,8 @@ import { usePremiumGate }      from '../lib/use-premium-gate';
 import { loadOnboardingData }  from '../lib/storage';
 import { restorePurchases }    from '../lib/purchases';
 import { deleteAccount }       from '../lib/api';
+import { evaluateBadges }      from '../lib/badges';
+import { BadgeCase }           from '../components/BadgeCase';
 import AsyncStorage            from '@react-native-async-storage/async-storage';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -107,6 +109,8 @@ export default function AccountScreen() {
 
   useEffect(() => {
     loadOnboardingData().then(d => { if (d?.firstName) setName(d.firstName); });
+    // Evaluate badges on every account screen open (passive check)
+    evaluateBadges().catch(() => {});
   }, []);
 
   async function handleLogout() {
@@ -192,6 +196,11 @@ export default function AccountScreen() {
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+
+        {/* 0. Achievements */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+          <BadgeCase />
+        </View>
 
         {/* 1. Profile */}
         <Section title="Profile">
