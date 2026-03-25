@@ -1,18 +1,21 @@
 /**
  * wind-down.tsx — Flow guidé de préparation au sommeil
  *
- * 5 phases séquentielles :
+ * 4 phases séquentielles :
  *   1. intro       — 3s, R-Lo introduit le wind-down
- *   2. checklist   — 5 items à cocher
+ *   2. checklist   — items à cocher (adaptatifs après 14j / 21j)
  *   3. content     — sélection + lecture audio
- *   4. notif_ask   — contextual notification permission (shown once)
+ *   4. mood_check  — humeur du soir
  *   5. goodnight   — écran presque noir, fenêtre de sommeil
+ *
+ * Note: La demande de notification a été déplacée hors du wind-down.
+ * Elle s'affiche sur le HomeScreen après le PREMIER wind-down complété.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Pressable, Animated,
-  ScrollView, Platform,
+  ScrollView, Platform, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,6 +29,7 @@ import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
+import { saveChecklistRecord } from '../lib/kspi';
 import { requestNotifications } from '../lib/permissions';
 import {
   shouldShowNotifPrompt,
@@ -43,7 +47,58 @@ const ACCENT = '#1c9fda';   // darkTheme.accent
 const TEXT   = '#FFFFFF';    // darkTheme.text
 const MUTED  = '#6B8CAE';   // darkTheme.textMuted
 
-type WindDownPhase = 'intro' | 'checklist' | 'content' | 'notif_ask' | 'mood_check' | 'goodnight';
+type WindDownPhase = 'intro' | 'checklist' | 'content' | 'mood_check' | 'goodnight';
+
+// ─── Checklist history (adaptive checklist) ───────────────────────────────────
+const CHECKLIST_HISTORY_KEY = '@r90:checklistHistory:v1';
+const WINDDOWN_COUNT_KEY    = '@r90:winddownCount';
+const CUSTOM_ITEMS_KEY      = '@r90:checklistCustomItems:v1';
+
+interface ChecklistItemHistory {
+  timesShown:   number;
+  timesChecked: number;
+  firstSeenDate: string; // YYYY-MM-DD
+}
+interface ChecklistHistory {
+  [itemId: string]: ChecklistItemHistory;
+}
+
+async function loadChecklistHistory(): Promise<ChecklistHistory> {
+  try {
+    const raw = await AsyncStorage.getItem(CHECKLIST_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+async function saveChecklistHistory(h: ChecklistHistory): Promise<void> {
+  await AsyncStorage.setItem(CHECKLIST_HISTORY_KEY, JSON.stringify(h)).catch(() => {});
+}
+
+/** Returns true if this item has been checked > 90% of the time over at least 14 sessions */
+function isHabitFormed(h: ChecklistItemHistory | undefined): boolean {
+  if (!h) return false;
+  if (h.timesShown < 14) return false;
+  return h.timesChecked / h.timesShown > 0.9;
+}
+
+async function loadCustomItems(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(CUSTOM_ITEMS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+async function saveCustomItems(items: string[]): Promise<void> {
+  await AsyncStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(items)).catch(() => {});
+}
+
+async function getDaysSinceInstall(): Promise<number> {
+  try {
+    const raw = await AsyncStorage.getItem('@r90:signupDate:v1');
+    if (!raw) return 0;
+    return Math.floor((Date.now() - new Date(raw).getTime()) / 86_400_000);
+  } catch { return 0; }
+}
 
 const CHECKLIST = [
   { id: 'lights',   label: 'Lights dimmed?' },
@@ -84,49 +139,164 @@ function IntroPhase({ onNext, showTip, onDismissTip }: {
   );
 }
 
-// ─── Phase 2 — Checklist ─────────────────────────────────────────────────────
+// ─── Phase 2 — Checklist (adaptive) ─────────────────────────────────────────
 function ChecklistPhase({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const scales = useRef(CHECKLIST.map(() => new Animated.Value(1))).current;
+  const [checked,      setChecked]      = useState<Record<string, boolean>>({});
+  const [history,      setHistory]      = useState<ChecklistHistory>({});
+  const [customItems,  setCustomItems]  = useState<string[]>([]);
+  const [customInput,  setCustomInput]  = useState('');
+  const [showAddInput, setShowAddInput] = useState(false);
+  const [canAddOwn,    setCanAddOwn]    = useState(false);
+
+  // All renderable items: base + custom (habits pre-checked, moved to bottom)
+  const baseItems = CHECKLIST.map(item => ({
+    id:       item.id,
+    label:    item.label,
+    isCustom: false,
+    isHabit:  isHabitFormed(history[item.id]),
+  }));
+  const customRenderable = customItems.map(label => ({
+    id:       `custom_${label}`,
+    label,
+    isCustom: true,
+    isHabit:  false,
+  }));
+  const normalItems = [...baseItems, ...customRenderable].filter(i => !i.isHabit);
+  const habitItems  = [...baseItems].filter(i => i.isHabit);
+  const allRenderItems = [...normalItems, ...habitItems];
+
+  const allScales = useRef<Animated.Value[]>([]);
+  if (allScales.current.length !== allRenderItems.length) {
+    allScales.current = allRenderItems.map(() => new Animated.Value(1));
+  }
+
+  useEffect(() => {
+    loadChecklistHistory().then(h => {
+      setHistory(h);
+      // Pre-check habit items
+      const preChecked: Record<string, boolean> = {};
+      CHECKLIST.forEach(item => { if (isHabitFormed(h[item.id])) preChecked[item.id] = true; });
+      setChecked(preChecked);
+    });
+    loadCustomItems().then(setCustomItems);
+    getDaysSinceInstall().then(days => setCanAddOwn(days >= 21));
+  }, []);
 
   function toggle(id: string, idx: number) {
     HapticsLight();
-    Animated.sequence([
-      Animated.spring(scales[idx], { toValue: 1.15, useNativeDriver: true, speed: 50 }),
-      Animated.spring(scales[idx], { toValue: 1.00, useNativeDriver: true, speed: 50 }),
-    ]).start();
+    const scale = allScales.current[idx];
+    if (scale) {
+      Animated.sequence([
+        Animated.spring(scale, { toValue: 1.15, useNativeDriver: true, speed: 50 }),
+        Animated.spring(scale, { toValue: 1.00, useNativeDriver: true, speed: 50 }),
+      ]).start();
+    }
     setChecked(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
-  const allChecked = CHECKLIST.every(i => checked[i.id]);
+  const nonHabitItems = allRenderItems.filter(i => !i.isHabit);
+  const allNonHabitChecked = nonHabitItems.length > 0
+    && nonHabitItems.every(i => checked[i.id]);
+  const checkedCount = Object.values(checked).filter(Boolean).length;
+
+  async function persistAndNext() {
+    // Update checklist history
+    const today = new Date().toISOString().slice(0, 10);
+    const updatedHistory = { ...history };
+    CHECKLIST.forEach(item => {
+      const prev = updatedHistory[item.id] ?? { timesShown: 0, timesChecked: 0, firstSeenDate: today };
+      updatedHistory[item.id] = {
+        ...prev,
+        timesShown:   prev.timesShown + 1,
+        timesChecked: prev.timesChecked + (checked[item.id] ? 1 : 0),
+      };
+    });
+    await saveChecklistHistory(updatedHistory);
+    saveChecklistRecord(checkedCount, allRenderItems.length).catch(() => {});
+    onNext();
+  }
 
   useEffect(() => {
-    if (allChecked) {
+    if (allNonHabitChecked && nonHabitItems.length > 0) {
       HapticsSuccess();
-      const t = setTimeout(onNext, 600);
+      const t = setTimeout(() => { void persistAndNext(); }, 600);
       return () => clearTimeout(t);
     }
-  }, [allChecked, onNext]);
+  }, [allNonHabitChecked]);
+
+  async function handleAddCustom() {
+    const label = customInput.trim();
+    if (!label || label.length > 40) return;
+    const updated = [...customItems, label];
+    setCustomItems(updated);
+    await saveCustomItems(updated);
+    setCustomInput('');
+    setShowAddInput(false);
+    HapticsLight();
+  }
 
   return (
     <View style={ph.wrap}>
       <Text style={ph.title}>Set up your space</Text>
       <View style={cl.list}>
-        {CHECKLIST.map((item, i) => (
+        {allRenderItems.map((item, i) => (
           <Pressable key={item.id} onPress={() => toggle(item.id, i)}>
-            <Animated.View style={[cl.row, checked[item.id] && cl.rowDone, { transform: [{ scale: scales[i] }] }]}>
-              <View style={[cl.check, checked[item.id] && { backgroundColor: ACCENT }]}>
+            <Animated.View
+              style={[
+                cl.row,
+                checked[item.id] && cl.rowDone,
+                item.isHabit && cl.rowHabit,
+                { transform: [{ scale: allScales.current[i] ?? new Animated.Value(1) }] },
+              ]}
+            >
+              <View style={[cl.check, checked[item.id] && { backgroundColor: item.isHabit ? '#22c55e' : ACCENT }]}>
                 {checked[item.id] && <Ionicons name="checkmark" size={16} color="#fff" />}
               </View>
-              <Text style={[cl.label, checked[item.id] && cl.labelDone]}>{item.label}</Text>
+              <Text style={[cl.label, checked[item.id] && cl.labelDone, item.isHabit && cl.labelHabit]}>
+                {item.label}
+              </Text>
+              {item.isHabit && (
+                <View style={cl.habitBadge}>
+                  <Text style={cl.habitBadgeText}>Habit ✓</Text>
+                </View>
+              )}
             </Animated.View>
           </Pressable>
         ))}
+
+        {/* Add your own — after 21 days */}
+        {canAddOwn && !showAddInput && (
+          <Pressable style={cl.addOwnBtn} onPress={() => setShowAddInput(true)}>
+            <Ionicons name="add-circle-outline" size={18} color={MUTED} />
+            <Text style={cl.addOwnText}>Add a personal item...</Text>
+          </Pressable>
+        )}
+        {canAddOwn && showAddInput && (
+          <View style={cl.addOwnInputRow}>
+            <TextInput
+              style={cl.addOwnInput}
+              value={customInput}
+              onChangeText={t => setCustomInput(t.slice(0, 40))}
+              placeholder="My item..."
+              placeholderTextColor={MUTED}
+              maxLength={40}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => { void handleAddCustom(); }}
+            />
+            <Pressable style={cl.addOwnConfirm} onPress={() => { void handleAddCustom(); }}>
+              <Ionicons name="checkmark" size={18} color="#fff" />
+            </Pressable>
+          </View>
+        )}
       </View>
-      <Pressable onPress={onNext} style={ph.mainBtn}>
+      <Pressable onPress={() => { void persistAndNext(); }} style={ph.mainBtn}>
         <Text style={ph.mainBtnTxt}>Continue →</Text>
       </Pressable>
-      <Pressable onPress={onSkip} style={ph.skipBtn}>
+      <Pressable
+        onPress={() => { saveChecklistRecord(checkedCount, allRenderItems.length).catch(() => {}); onSkip(); }}
+        style={ph.skipBtn}
+      >
         <Text style={ph.skipTxt}>Skip</Text>
       </Pressable>
     </View>
@@ -370,25 +540,29 @@ export default function WindDownScreen() {
   const router        = useRouter();
   const { isPremium } = usePremiumGate();
   const [phase, setPhase] = useState<WindDownPhase>('intro');
-  const [showNotifAsk, setShowNotifAsk] = useState(false);
   const [showWdTip,    setShowWdTip]   = useState(false);
 
   // Check contextual prompts
   useEffect(() => {
-    shouldShowNotifPrompt().then(setShowNotifAsk).catch(() => {});
     shouldShowGuide(GUIDE_KEYS.FEAT_WINDDOWN).then(setShowWdTip).catch(() => {});
   }, []);
 
   const next = useCallback((p: WindDownPhase) => setPhase(p), []);
 
-  // After content: notif_ask (if needed) → mood_check → goodnight
+  // After content: mood_check → goodnight (notif ask moved to HomeScreen)
   const handleContentComplete = useCallback(() => {
-    if (showNotifAsk) {
-      next('notif_ask');
-    } else {
-      next('mood_check');
-    }
-  }, [showNotifAsk, next]);
+    next('mood_check');
+  }, [next]);
+
+  // On goodnight close: increment winddown count + navigate home
+  const handleGoodnight = useCallback(async () => {
+    try {
+      const raw   = await AsyncStorage.getItem(WINDDOWN_COUNT_KEY);
+      const count = raw ? parseInt(raw, 10) : 0;
+      await AsyncStorage.setItem(WINDDOWN_COUNT_KEY, String(count + 1));
+    } catch { /* non-fatal */ }
+    router.replace('/(tabs)');
+  }, [router]);
 
   return (
     <View style={s.root}>
@@ -428,16 +602,12 @@ export default function WindDownScreen() {
         />
       )}
 
-      {phase === 'notif_ask' && (
-        <NotifAskPhase onNext={() => next('mood_check')} />
-      )}
-
       {phase === 'mood_check' && (
         <MoodCheckPhase onNext={() => next('goodnight')} />
       )}
 
       {phase === 'goodnight' && (
-        <GoodnightPhase onClose={() => router.replace('/(tabs)')} />
+        <GoodnightPhase onClose={() => { void handleGoodnight(); }} />
       )}
     </View>
   );
@@ -460,12 +630,21 @@ const ph = StyleSheet.create({
 });
 
 const cl = StyleSheet.create({
-  list:     { width: '100%', gap: 10, marginVertical: 16 },
-  row:      { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: CARD, borderRadius: 14, padding: 16 },
-  rowDone:  { backgroundColor: `${ACCENT}15`, borderWidth: 1, borderColor: `${ACCENT}30` },
-  check:    { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: MUTED, alignItems: 'center', justifyContent: 'center' },
-  label:    { fontSize: 15, color: TEXT, fontWeight: '500', flex: 1 },
-  labelDone:{ color: ACCENT },
+  list:          { width: '100%', gap: 10, marginVertical: 16 },
+  row:           { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: CARD, borderRadius: 14, padding: 16 },
+  rowDone:       { backgroundColor: `${ACCENT}15`, borderWidth: 1, borderColor: `${ACCENT}30` },
+  rowHabit:      { opacity: 0.65, backgroundColor: 'rgba(34,197,94,0.08)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)' },
+  check:         { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: MUTED, alignItems: 'center', justifyContent: 'center' },
+  label:         { fontSize: 15, color: TEXT, fontWeight: '500', flex: 1 },
+  labelDone:     { color: ACCENT },
+  labelHabit:    { color: MUTED, fontStyle: 'italic' },
+  habitBadge:    { backgroundColor: 'rgba(34,197,94,0.2)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  habitBadgeText:{ fontSize: 10, fontWeight: '700', color: '#22c55e' },
+  addOwnBtn:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 4 },
+  addOwnText:    { fontSize: 14, color: MUTED, fontStyle: 'italic' },
+  addOwnInputRow:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
+  addOwnInput:   { flex: 1, backgroundColor: CARD, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: TEXT, borderWidth: 1, borderColor: MUTED },
+  addOwnConfirm: { width: 42, height: 42, borderRadius: 12, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center' },
 });
 
 const ct = StyleSheet.create({

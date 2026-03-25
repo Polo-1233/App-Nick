@@ -56,6 +56,7 @@ import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { StreakDetail }          from '../StreakDetail';
 import { RhythmPointsToast }     from '../RhythmPointsToast';
+import { RhythmDepthSheet }     from '../RhythmDepthSheet';
 // OnboardingChatFlow removed — data collection moved to onboarding pager
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
@@ -68,6 +69,8 @@ import { usePremiumGate } from '../../lib/use-premium-gate';
 import { isMilestone, getMilestoneMessage } from '../../lib/rlo-mood';
 // getMissedCycleInfo now handled inside action-state.ts
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
+import { shouldShowNotifPrompt, dismissNotifPrompt, markNotifGranted } from '../../lib/contextual-permissions';
+import * as Notifications from 'expo-notifications';
 import { saveMorningLight, saveMrmCompletion } from '../../lib/kspi';
 import { HapticsSuccess } from '../../utils/haptics';
 import {
@@ -110,10 +113,12 @@ export default function HomeScreen() {
   const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
   const [showStreakDetail,   setShowStreakDetail]     = useState(false);
+  const [showDepthSheet,     setShowDepthSheet]       = useState(false);
   const [toastPoints,        setToastPoints]          = useState(0);
   const [toastLabel,         setToastLabel]           = useState('Rhythm Points');
   const [showToast,          setShowToast]            = useState(false);
   const [showLightBanner,    setShowLightBanner]      = useState(false);
+  const [showPostWindown,    setShowPostWindown]       = useState(false);
   const lightBannerAnim = useRef(new Animated.Value(0)).current;
   const wakeButtonAnim  = useRef(new Animated.Value(1)).current;
 
@@ -204,6 +209,18 @@ export default function HomeScreen() {
     if (!hasMountedFocus.current) { hasMountedFocus.current = true; return; }
     refreshPlan();
   }, [refreshPlan]));
+
+  // ── Post-wind-down notif prompt (after first completion) ──────────────────
+  useFocusEffect(useCallback(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('@r90:winddownCount');
+        if (raw !== '1') return;                         // only on first completion
+        const shouldShow = await shouldShowNotifPrompt();
+        if (shouldShow) setShowPostWindown(true);
+      } catch { /* non-fatal */ }
+    })();
+  }, []));
 
   // ── Greeting (done phase only) ─────────────────────────────────────────────
   useEffect(() => {
@@ -363,36 +380,34 @@ export default function HomeScreen() {
             { paddingBottom: insets.bottom + 32 },
           ]}
         >
-          {/* Progression row — streak + depth level */}
+          {/* Progression row — streak dominant, points + level secondary */}
           {(streak > 0 || depthInfo) && (
-            <Animated.View style={[sh.progressRow, { transform: [{ scale: streakBounce }] }]}>
-              <Pressable onPress={() => setShowStreakDetail(true)} style={sh.progressBadge}>
-                {/* Streak */}
-                {streak > 0 && (
-                  <>
-                    <Ionicons name="flame" size={13} color="#D97706" />
-                    <Text style={sh.streakCount}>{streak}</Text>
-                  </>
-                )}
-                {/* Rhythm Score */}
+            <View style={sh.progressWrap}>
+              {/* Streak — dominant */}
+              {streak > 0 && (
+                <Animated.View style={{ transform: [{ scale: streakBounce }] }}>
+                  <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakRow}>
+                    <Ionicons name="flame" size={22} color="#D97706" />
+                    <Text style={sh.streakBig}>{streak} days</Text>
+                  </Pressable>
+                </Animated.View>
+              )}
+              {/* Secondary row: score + level */}
+              <View style={sh.secondaryRow}>
                 {rhythmScore !== null && (
-                  <>
-                    {streak > 0 && <View style={sh.badgeSep} />}
-                    <Text style={[sh.rhythmScore, {
-                      color: rhythmScore >= 80 ? '#F5A623' : rhythmScore >= 60 ? '#1c9fda' : '#6B8CAE',
-                    }]}>{rhythmScore}%</Text>
-                  </>
+                  <View style={sh.secondaryItem}>
+                    <Ionicons name="star-outline" size={12} color="#6B8CAE" />
+                    <Text style={sh.secondaryText}>{rhythmScore}%</Text>
+                  </View>
                 )}
-                {/* Depth level */}
                 {depthInfo && (
-                  <>
-                    <View style={sh.badgeSep} />
+                  <Pressable onPress={() => setShowDepthSheet(true)} style={sh.secondaryItem}>
                     <View style={[sh.levelDot, { backgroundColor: depthInfo.levelColor }]} />
-                    <Text style={[sh.levelLabel, { color: depthInfo.levelColor }]}>{depthInfo.levelLabel}</Text>
-                  </>
+                    <Text style={[sh.secondaryText, { color: depthInfo.levelColor }]}>{depthInfo.levelLabel}</Text>
+                  </Pressable>
                 )}
-              </Pressable>
-            </Animated.View>
+              </View>
+            </View>
           )}
 
           {/* 2. Rhythm Timeline */}
@@ -484,6 +499,11 @@ export default function HomeScreen() {
         onClose={() => setShowStreakDetail(false)}
       />
 
+      <RhythmDepthSheet
+        visible={showDepthSheet}
+        onClose={() => setShowDepthSheet(false)}
+      />
+
       <RhythmPointsToast
         points={toastPoints}
         label={toastLabel}
@@ -514,6 +534,41 @@ export default function HomeScreen() {
 
       {/* Weekly recap (Sunday evening) */}
       <WeeklyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
+
+      {/* Post-wind-down notification prompt (fires after first wind-down) */}
+      {showPostWindown && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setShowPostWindown(false)}>
+          <View style={pw.overlay}>
+            <View style={pw.sheet}>
+              <MascotImage emotion="celebration" size="sm" />
+              <Text style={pw.title}>You just completed your first wind-down! 🎉</Text>
+              <Text style={pw.body}>Want a reminder tomorrow evening so you keep the habit going?</Text>
+              <Pressable
+                style={pw.btnPrimary}
+                onPress={async () => {
+                  setShowPostWindown(false);
+                  try {
+                    const { status } = await Notifications.requestPermissionsAsync();
+                    if (status === 'granted') await markNotifGranted();
+                    else await dismissNotifPrompt();
+                  } catch { await dismissNotifPrompt().catch(() => {}); }
+                }}
+              >
+                <Text style={pw.btnPrimaryText}>Yes, remind me</Text>
+              </Pressable>
+              <Pressable
+                style={pw.btnSecondary}
+                onPress={async () => {
+                  setShowPostWindown(false);
+                  await dismissNotifPrompt().catch(() => {});
+                }}
+              >
+                <Text style={pw.btnSecondaryText}>Not now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Level-up celebration */}
       {showLevelUp && (
@@ -593,29 +648,39 @@ const sh = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  progressRow: {
-    flexDirection:   'row',
-    justifyContent:  'center',
-    marginTop:       14,
+  progressWrap: {
+    alignItems:       'center',
+    marginTop:        14,
     marginHorizontal: 20,
+    gap:              4,
   },
-  progressBadge: {
+  streakRow: {
     flexDirection:     'row',
     alignItems:        'center',
     gap:               8,
-    backgroundColor:   'rgba(245,166,35,0.10)',
-    borderRadius:      24,
-    paddingHorizontal: 16,
-    paddingVertical:   8,
-    borderWidth:       1,
-    borderColor:       'rgba(245,166,35,0.20)',
   },
-
-  streakCount:  { fontSize: 15, fontWeight: '800', color: '#D97706' },
-  badgeSep:     { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 2 },
-  rhythmScore:  { fontSize: 12, fontWeight: '800', letterSpacing: -0.3 },
-  levelDot:     { width: 6, height: 6, borderRadius: 3 },
-  levelLabel:   { fontSize: 11, fontWeight: '700' },
+  streakBig: {
+    fontSize:      28,
+    fontWeight:    '800',
+    color:         '#D97706',
+    letterSpacing: -0.5,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           16,
+  },
+  secondaryItem: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           4,
+  },
+  secondaryText: {
+    fontSize:   13,
+    fontWeight: '600',
+    color:      '#6B8CAE',
+  },
+  levelDot: { width: 6, height: 6, borderRadius: 3 },
 });
 
 // ─── Level-up celebration styles ────────────────────────────────────────────
@@ -739,5 +804,58 @@ const ml = StyleSheet.create({
   skipTxt: {
     fontSize: 14,
     color: '#6B8CAE',
+  },
+});
+
+// ─── Post wind-down notif sheet ───────────────────────────────────────────────
+const pw = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  sheet: {
+    backgroundColor: '#141466',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 28,
+    paddingBottom: 44,
+    alignItems: 'center',
+    gap: 12,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#E6EDF7',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  body: {
+    fontSize: 15,
+    color: '#A8C4E0',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  btnPrimary: {
+    backgroundColor: '#3DDC97',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    width: '100%',
+    alignItems: 'center',
+  },
+  btnPrimaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  btnSecondary: {
+    paddingVertical: 12,
+  },
+  btnSecondaryText: {
+    fontSize: 15,
+    color: '#6B8CAE',
+    fontWeight: '500',
   },
 });
