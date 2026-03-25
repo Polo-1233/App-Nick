@@ -50,7 +50,8 @@
     "plugins": [
       "expo-router",
       "expo-dev-client",
-      "@sentry/react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
       [
         "expo-navigation-bar",
         {
@@ -86,8 +87,7 @@
         }
       ],
       "expo-web-browser",
-      "expo-font",
-      "@sentry/react-native"
+      "expo-font"
     ],
     "extra": {
       "router": {},

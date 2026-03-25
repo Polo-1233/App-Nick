@@ -40,8 +40,8 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   static getDerivedStateFromError(): EBState { return { hasError: true }; }
   componentDidCatch(error: Error) {
     console.error('[RootErrorBoundary]', error);
-    // Report to Sentry
-    try { require('../lib/sentry').Sentry.captureException(error); } catch {}
+    // Report to Crashlytics
+    try { require('../lib/sentry').recordError(error, 'RootErrorBoundary'); } catch {}
   }
   render() {
     if (this.state.hasError) {

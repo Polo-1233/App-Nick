@@ -1,52 +1,44 @@
 /**
- * sentry.ts — Sentry error monitoring initialisation
+ * crashlytics.ts — Firebase Crashlytics error monitoring
  *
- * Call initSentry() once at app startup (app/_layout.tsx).
- * DSN stored in .env as EXPO_PUBLIC_SENTRY_DSN.
+ * Gratuit, intégré à Firebase.
+ * Call initCrashlytics() once at app startup (app/_layout.tsx).
  *
- * Filters:
- *   - Ignores network errors (expected when offline)
- *   - Ignores non-fatal expo-av errors (audio placeholder)
- *   - Sends source maps in production via EAS build
+ * Usage:
+ *   import { recordError, log } from '../lib/sentry';
+ *   recordError(new Error('something went wrong'));
+ *   log('User reached checkout');
  */
 
-import * as Sentry from '@sentry/react-native';
+import crashlytics from '@react-native-firebase/crashlytics';
 
-const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
-
-export function initSentry() {
-  if (!DSN) {
-    console.warn('[Sentry] No DSN configured — skipping init');
-    return;
-  }
-
-  Sentry.init({
-    dsn: DSN,
-
-    // Only send errors in production
-    enabled: process.env.NODE_ENV === 'production',
-
-    // Performance tracing — 10% sample rate
-    tracesSampleRate: 0.1,
-
-    // Breadcrumbs
-    maxBreadcrumbs: 50,
-
-    // Filter noise
-    beforeSend(event) {
-      // Drop network errors — expected when user is offline
-      const msg = event.exception?.values?.[0]?.value ?? '';
-      if (
-        msg.includes('Network request failed') ||
-        msg.includes('Failed to fetch') ||
-        msg.includes('load failed')
-      ) {
-        return null;
-      }
-      return event;
-    },
-  });
+export function initCrashlytics() {
+  // Enable crash reporting
+  crashlytics().setCrashlyticsCollectionEnabled(true);
+  console.log('[Crashlytics] Initialised');
 }
 
-// Re-export Sentry for use elsewhere (captureException, addBreadcrumb, etc.)
-export { Sentry };
+/** Record a JS error (non-fatal) */
+export function recordError(error: Error, context?: string) {
+  if (context) crashlytics().log(context);
+  crashlytics().recordError(error);
+}
+
+/** Log a breadcrumb message */
+export function log(message: string) {
+  crashlytics().log(message);
+}
+
+/** Set user identifier (call after login) */
+export function setUser(userId: string, email?: string) {
+  void crashlytics().setUserId(userId);
+  if (email) void crashlytics().setAttribute('email', email);
+}
+
+/** Set custom key-value attribute */
+export function setAttribute(key: string, value: string) {
+  void crashlytics().setAttribute(key, value);
+}
+
+// Legacy compat — keep initSentry name so existing call in _layout still works
+export const initSentry = initCrashlytics;
