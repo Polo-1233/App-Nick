@@ -968,7 +968,6 @@ const s = StyleSheet.create({
   },
   nameInput: {
     width: '100%', padding: 14,
-    paddingRight: 44,
     borderRadius: 14,
     borderWidth: 1.5, borderColor: 'rgba(28,159,218,0.25)',
     backgroundColor: SURFACE,
