@@ -30,7 +30,15 @@ import { useChat }            from '../../lib/use-chat';
 import { useTheme }           from '../../lib/theme-context';
 import { useChatContext }     from '../../lib/chat-context';
 import { usePager }           from '../../lib/pager-context';
-import { useTour }            from '../../lib/tour-context';
+// useTour removed — replaced by onboarding-guide system
+import { RLoSpotlight }       from '../RLoGuide';
+import {
+  GUIDE_KEYS,
+  shouldStartHomeOrientation,
+  markGuideSeen,
+  skipHomeOrientation,
+  migrateFromLegacyTour,
+} from '../../lib/onboarding-guide';
 
 // ─── Home sub-components (clean module) ────────────────────────────────────────
 import {
@@ -42,6 +50,7 @@ import {
 } from '../home';
 
 // ─── Shared components ─────────────────────────────────────────────────────────
+import { Ionicons }          from '@expo/vector-icons';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { StreakDetail }          from '../StreakDetail';
@@ -70,7 +79,7 @@ export default function HomeScreen() {
   const router                         = useRouter();
   const { goToPage }                   = usePager();
   const insets                         = useSafeAreaInsets();
-  const { startTour, skipTour, tourStep } = useTour();
+  // Old tour system removed — using onboarding-guide instead
   const { messages, isStreaming, isThinking, sendMessage, fetchGreeting, injectMessage } = useChat();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -87,6 +96,9 @@ export default function HomeScreen() {
   const [showStreakDetail,   setShowStreakDetail]     = useState(false);
   const [toastPoints,        setToastPoints]          = useState(0);
   const [showToast,          setShowToast]            = useState(false);
+
+  // Layer 1 — Home orientation guide (3 steps, shown once)
+  const [guideStep, setGuideStep] = useState<0 | 1 | 2 | null>(null);
 
   const hasMountedFocus  = useRef(false);
   const hasRedirected    = useRef(false);
@@ -149,10 +161,15 @@ export default function HomeScreen() {
         await new Promise(r => setTimeout(r, 2000));
       }
       await fetchGreeting();
-      setTimeout(() => { void startTour(); }, 2500);
+      // Start Layer 1 home orientation (replaces old tour)
+      await migrateFromLegacyTour();
+      const shouldStart = await shouldStartHomeOrientation();
+      if (shouldStart) {
+        setTimeout(() => setGuideStep(0), 1500);
+      }
     }, 600);
     return () => clearTimeout(t);
-  }, [phase, fetchGreeting, injectMessage, startTour]);
+  }, [phase, fetchGreeting, injectMessage]);
 
   // ── Calendar banner ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -172,17 +189,22 @@ export default function HomeScreen() {
     // }).catch(() => {});
   }, [isOnboarding]);
 
-  // ── Morning confirmation ───────────────────────────────────────────────────
+  // ── Morning confirmation (uses wake detection) ────────────────────────────
   useEffect(() => {
     if (isOnboarding || !profile) return;
     (async () => {
+      // Already confirmed today?
       const lastConfirm = await AsyncStorage.getItem(CONFIRM_DATE_KEY);
       const today       = new Date().toISOString().slice(0, 10);
       if (lastConfirm === today) return;
-      const now       = new Date();
-      const nowMins   = now.getHours() * 60 + now.getMinutes();
-      const arp       = profile.anchorTime;
-      if (nowMins >= arp && nowMins <= arp + 120) setShowMorningConfirm(true);
+      // Check if we're in the morning window (ARP → ARP + 3h, wider than before)
+      const now     = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const arp     = profile.anchorTime;
+      // Show if within ARP to ARP+3h (wider window since we have wake detection now)
+      if (nowMins >= Math.max(arp - 30, 0) && nowMins <= arp + 180) {
+        setShowMorningConfirm(true);
+      }
     })();
   }, [isOnboarding, profile]);
 
@@ -245,7 +267,43 @@ export default function HomeScreen() {
     },
   });
 
-  // ─── ONBOARDING: removed (data collection moved to onboarding pager) ──────
+  // ─── Layer 1 — Home orientation guide handlers ────────────────────────────
+
+  const GUIDE_MESSAGES = [
+    'This is your day, built around your natural rhythm.',
+    'This is what matters right now.',
+    "I'll guide you through it.",
+  ] as const;
+
+  const GUIDE_STEP_KEYS = [
+    GUIDE_KEYS.HOME_RHYTHM,
+    GUIDE_KEYS.HOME_ACTION,
+    GUIDE_KEYS.HOME_RLO,
+  ] as const;
+
+  // Spotlight Y positions (approximate, relative to screen top)
+  // Adjusted for safe area + header height
+  const topOffset = insets.top + 60; // header space
+  const GUIDE_SPOTLIGHT_Y = [
+    topOffset + 80,   // Step 0: rhythm timeline area
+    topOffset + 200,  // Step 1: action card area
+    topOffset + 310,  // Step 2: R-Lo message area
+  ];
+
+  const handleGuideNext = useCallback(async () => {
+    if (guideStep === null) return;
+    await markGuideSeen(GUIDE_STEP_KEYS[guideStep]);
+    if (guideStep < 2) {
+      setGuideStep((guideStep + 1) as 0 | 1 | 2);
+    } else {
+      setGuideStep(null);
+    }
+  }, [guideStep]);
+
+  const handleGuideSkip = useCallback(async () => {
+    await skipHomeOrientation();
+    setGuideStep(null);
+  }, []);
 
   // ─── NORMAL MODE ──────────────────────────────────────────────────────────
   return (
@@ -261,7 +319,7 @@ export default function HomeScreen() {
           {/* Streak badge */}
           {streak > 0 && (
             <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakBadge}>
-              <Text style={sh.streakFire}>🔥</Text>
+              <Ionicons name="flame" size={14} color="#D97706" />
               <Text style={sh.streakCount}>{streak} day{streak > 1 ? 's' : ''}</Text>
             </Pressable>
           )}
@@ -316,6 +374,18 @@ export default function HomeScreen() {
         visible={showToast}
       />
 
+      {/* Layer 1 — Home orientation spotlight (shown once) */}
+      <RLoSpotlight
+        visible={guideStep !== null}
+        message={guideStep !== null ? GUIDE_MESSAGES[guideStep] : ''}
+        spotlightY={guideStep !== null ? GUIDE_SPOTLIGHT_Y[guideStep] : 0}
+        spotlightHeight={90}
+        onNext={handleGuideNext}
+        onSkip={handleGuideSkip}
+        step={(guideStep ?? 0) + 1}
+        totalSteps={3}
+      />
+
     </AmbientBackground>
   );
 }
@@ -343,6 +413,6 @@ const sh = StyleSheet.create({
     borderWidth:     1,
     borderColor:     'rgba(245,166,35,0.25)',
   },
-  streakFire:  { fontSize: 14 },
+
   streakCount: { fontSize: 12, fontWeight: '700', color: '#D97706' },
 });
