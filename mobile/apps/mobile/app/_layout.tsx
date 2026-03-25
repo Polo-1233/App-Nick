@@ -10,11 +10,8 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as Notifications from 'expo-notifications';
 import { initSentry } from '../lib/sentry';
 import { hasCompletedIntro, getOnboardingPhase } from '../lib/storage';
-
-// Init Sentry immediately — before any component renders
-initSentry();
 import { ThemeProvider, useTheme } from '../lib/theme-context';
-import { TourProvider } from '../lib/tour-context';
+// TourProvider removed — replaced by onboarding-guide system
 import { configurePurchases } from '../lib/purchases';
 import { AppSplash } from '../components/AppSplash';
 import { AuthProvider, useAuth } from '../lib/auth-context';
@@ -24,6 +21,9 @@ import { initAnalytics } from '../lib/analytics';
 import { scheduleDailyNotifications } from '../lib/daily-notifications';
 import { loadProfile } from '../lib/storage';
 import { recordFirstAppOpen, recordNotificationTapWake } from '../lib/wake-detection';
+
+// Init Crashlytics (no-op in Expo Go / simulator)
+initSentry();
 
 // ─── Keep native splash alive until AppSplash takes over ─────────────────────
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -250,7 +250,6 @@ function RootLayoutInner() {
         <Stack.Screen name="mrm-player"  options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="crp-player"  options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="login"       options={{ headerShown: false }} />
-        <Stack.Screen name="checkin"     options={{ headerShown: false }} />
         <Stack.Screen name="subscription"     options={{ headerShown: false }} />
         <Stack.Screen name="sleep-history"    options={{ headerShown: false }} />
 
@@ -258,7 +257,6 @@ function RootLayoutInner() {
         <Stack.Screen name="account"          options={{ headerShown: false }} />
         <Stack.Screen name="premium"          options={{ headerShown: false }} />
         <Stack.Screen name="lifestyle"        options={{ headerShown: false }} />
-        <Stack.Screen name="life-events"      options={{ headerShown: false }} />
         <Stack.Screen name="auth/callback"    options={{ headerShown: false, animation: 'none' }} />
 
 
@@ -288,13 +286,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={ghrv.root}>
       <ThemeProvider>
-        <TourProvider>
-          <AuthProvider>
-            <RootErrorBoundary>
-              <RootLayoutInner />
-            </RootErrorBoundary>
-          </AuthProvider>
-        </TourProvider>
+        <AuthProvider>
+          <RootErrorBoundary>
+            <RootLayoutInner />
+          </RootErrorBoundary>
+        </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

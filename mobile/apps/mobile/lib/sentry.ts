@@ -10,35 +10,50 @@
  *   log('User reached checkout');
  */
 
-import crashlytics from '@react-native-firebase/crashlytics';
+/**
+ * Crashlytics is only available in native builds (EAS).
+ * In Expo Go / simulator, all calls are no-ops.
+ */
+
+function getCrashlytics() {
+  try {
+    // Dynamic require — avoids crash if native module not linked (Expo Go / simulator)
+    return require('@react-native-firebase/crashlytics').default();
+  } catch {
+    return null;
+  }
+}
 
 export function initCrashlytics() {
-  // Enable crash reporting
-  crashlytics().setCrashlyticsCollectionEnabled(true);
+  const c = getCrashlytics();
+  if (!c) {
+    console.log('[Crashlytics] Native module not available — skipping (Expo Go / simulator)');
+    return;
+  }
+  c.setCrashlyticsCollectionEnabled(true);
   console.log('[Crashlytics] Initialised');
 }
 
-/** Record a JS error (non-fatal) */
 export function recordError(error: Error, context?: string) {
-  if (context) crashlytics().log(context);
-  crashlytics().recordError(error);
+  const c = getCrashlytics();
+  if (!c) return;
+  if (context) c.log(context);
+  c.recordError(error);
 }
 
-/** Log a breadcrumb message */
 export function log(message: string) {
-  crashlytics().log(message);
+  getCrashlytics()?.log(message);
 }
 
-/** Set user identifier (call after login) */
 export function setUser(userId: string, email?: string) {
-  void crashlytics().setUserId(userId);
-  if (email) void crashlytics().setAttribute('email', email);
+  const c = getCrashlytics();
+  if (!c) return;
+  void c.setUserId(userId);
+  if (email) void c.setAttribute('email', email);
 }
 
-/** Set custom key-value attribute */
 export function setAttribute(key: string, value: string) {
-  void crashlytics().setAttribute(key, value);
+  getCrashlytics()?.setAttribute(key, value);
 }
 
-// Legacy compat — keep initSentry name so existing call in _layout still works
 export const initSentry = initCrashlytics;
