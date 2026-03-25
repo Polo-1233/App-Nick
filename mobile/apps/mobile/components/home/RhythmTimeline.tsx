@@ -68,6 +68,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
   const TW = W - spacing.screen * 2;
 
   const [clockOpen, setClockOpen] = useState(false);
+  const [tappedSeg, setTappedSeg] = useState<number | null>(null);
   const [data, setData] = useState(() => computeRhythmData(nowMin(), wakeMin, idealCycles));
 
   useEffect(() => {
@@ -116,22 +117,21 @@ export const RhythmTimeline = memo(function RhythmTimeline({
       ? 'Day starts soon'
       : 'Day complete';
 
-  // ── MRM / CRP markers ────────────────────────────────────────────────────
-  // Show a single marker for the most relevant upcoming event
-  let marker: { type: 'mrm' | 'crp' | 'sleep'; segIdx: number; label: string } | null = null;
+  // ── MRM / CRP event chips ─────────────────────────────────────────────────
+  // Collect upcoming events to show below the status line (cleaner than floating badge)
+  type EventChip = { type: 'mrm' | 'crp'; label: string; segIdx: number };
+  const eventChips: EventChip[] = [];
 
   if (isActive) {
     const minsToMRM = 80 - elapsed;
     if (minsToMRM > 0 && minsToMRM <= 25 && currentSeg?.hasMRM) {
-      marker = { type: 'mrm', segIdx: currentIdx, label: `MRM ${Math.round(minsToMRM)}m` };
-    } else {
-      // Find next CRP
-      const crpSeg = segments.find((s, i) => s.isCRP && i >= currentIdx && !s.isPast);
-      if (crpSeg) {
-        const minsTo = ((crpSeg.startMin - data.nowMin) + 1440) % 1440;
-        if (minsTo < 180) {
-          marker = { type: 'crp', segIdx: crpSeg.index, label: minsTo <= 0 ? 'CRP now' : `CRP ${Math.round(minsTo)}m` };
-        }
+      eventChips.push({ type: 'mrm', segIdx: currentIdx, label: `MRM in ${Math.round(minsToMRM)}m` });
+    }
+    const crpSeg = segments.find((s, i) => s.isCRP && i >= currentIdx && !s.isPast);
+    if (crpSeg) {
+      const minsTo = ((crpSeg.startMin - data.nowMin) + 1440) % 1440;
+      if (minsTo < 180) {
+        eventChips.push({ type: 'crp', segIdx: crpSeg.index, label: minsTo <= 0 ? 'CRP now' : `CRP in ${Math.round(minsTo)}m` });
       }
     }
   }
@@ -156,7 +156,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
         </View>
 
         {/* ── Track — all cycles ── */}
-        <View style={[tl.track, { width: TW, height: SEG_H_ACTIVE + 8, marginTop: marker ? 14 : 0 }]}>
+        <View style={[tl.track, { width: TW, height: SEG_H_ACTIVE + 8 }]}>
 
           {/* Segments */}
           {segments.map((seg, i) => {
@@ -191,22 +191,43 @@ export const RhythmTimeline = memo(function RhythmTimeline({
             const isSleep   = seg.isSleep && !isPast;
             const specialBg = isSpecial ? `${c.gold}15` : isSleep ? `${c.purple}12` : null;
 
+            // Tooltip info
+            const segTime = fmtMin(seg.startMin);
+            const segLabel = seg.isCRP ? 'CRP recovery' : seg.isSleep ? 'Sleep window' : seg.hasMRM ? `Cycle ${i + 1} · MRM` : `Cycle ${i + 1}`;
+
             return (
-              <View
+              <Pressable
                 key={i}
+                onPress={() => setTappedSeg(tappedSeg === i ? null : i)}
                 style={{
                   position: 'absolute',
                   left,
-                  top,
+                  top: 0,
                   width: segW,
-                  height: h,
-                  borderRadius: SEG_R,
-                  backgroundColor: specialBg ?? bgColor,
-                  borderWidth: borderW,
-                  borderColor,
-                  overflow: 'hidden',
+                  height: SEG_H_ACTIVE + 8,
                 }}
               >
+                {/* Tooltip */}
+                {tappedSeg === i && (
+                  <View style={[tl.tooltip, { bottom: SEG_H_ACTIVE + 10 }]}>
+                    <Text style={[tl.tooltipTime, { color: c.accent }]}>{segTime}</Text>
+                    <Text style={[tl.tooltipLabel, { color: c.textMuted }]}>{segLabel}</Text>
+                  </View>
+                )}
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: top,
+                    width: segW,
+                    height: h,
+                    borderRadius: SEG_R,
+                    backgroundColor: specialBg ?? bgColor,
+                    borderWidth: borderW,
+                    borderColor,
+                    overflow: 'hidden',
+                  }}
+                >
                 {/* Progress fill — only on active segment */}
                 {isCurr && (
                   <View style={{
@@ -233,6 +254,7 @@ export const RhythmTimeline = memo(function RhythmTimeline({
                   </View>
                 )}
               </View>
+              </Pressable>
             );
           })}
 
@@ -293,33 +315,42 @@ export const RhythmTimeline = memo(function RhythmTimeline({
             </View>
           )}
 
-          {/* ── Marker badge — floats above the relevant segment ── */}
-          {marker && (
-            <View style={[
-              tl.markerBadge,
-              {
-                left: marker.segIdx * (segW + GAP) + segW / 2 - 24,
-                backgroundColor: marker.type === 'crp' ? `${c.gold}20` : `${c.accent}18`,
-                borderColor: marker.type === 'crp' ? `${c.gold}40` : `${c.accent}30`,
-              },
-            ]}>
-              <Ionicons
-                name={marker.type === 'crp' ? 'flash' : 'ellipse'}
-                size={8}
-                color={marker.type === 'crp' ? c.gold : c.accent}
-              />
-              <Text style={[
-                tl.markerBadgeText,
-                { color: marker.type === 'crp' ? c.gold : c.accent },
-              ]}>
-                {marker.label}
-              </Text>
-            </View>
-          )}
+          {/* marker badges removed — events shown below status line */}
         </View>
 
         {/* ── Status line ── */}
         <Text style={[tl.statusLabel, { color: c.textMuted }]}>{statusLabel}</Text>
+
+        {/* ── Event chips — MRM / CRP ── */}
+        {eventChips.length > 0 && (
+          <View style={tl.eventRow}>
+            {eventChips.map((chip) => {
+              const isCRP = chip.type === 'crp';
+              const chipColor = isCRP ? c.gold : '#F59E0B'; // amber for MRM
+              return (
+                <View
+                  key={chip.type}
+                  style={[
+                    tl.eventChip,
+                    {
+                      backgroundColor: isCRP ? `${c.gold}22` : '#F59E0B22',
+                      borderColor:     isCRP ? `${c.gold}55` : '#F59E0B55',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={isCRP ? 'flash' : 'bed'}
+                    size={10}
+                    color={chipColor}
+                  />
+                  <Text style={[tl.eventChipText, { color: chipColor }]}>
+                    {chip.label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
       </Pressable>
 
@@ -374,22 +405,25 @@ const tl = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Marker badge (floats above track)
-  markerBadge: {
-    position:        'absolute',
-    top:             -14,
+  // Event chips row (MRM / CRP — below status line)
+  eventRow: {
+    flexDirection: 'row',
+    gap:           6,
+    marginTop:     2,
+  },
+  eventChip: {
     flexDirection:   'row',
     alignItems:      'center',
-    gap:             3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius:    8,
+    gap:             4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius:    20,
     borderWidth:     1,
   },
-  markerBadgeText: {
-    fontSize:   9,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+  eventChipText: {
+    fontSize:      11,
+    fontWeight:    '600',
+    letterSpacing: 0.1,
   },
 
   // Status label
@@ -397,5 +431,28 @@ const tl = StyleSheet.create({
     fontSize:      13,
     fontWeight:    '500',
     letterSpacing: -0.1,
+  },
+
+  // Tooltip (on segment tap)
+  tooltip: {
+    position:        'absolute',
+    alignSelf:       'center',
+    backgroundColor: '#141466',
+    borderRadius:    8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth:     1,
+    borderColor:     'rgba(28,159,218,0.20)',
+    alignItems:      'center',
+    zIndex:          100,
+    minWidth:        60,
+  },
+  tooltipTime: {
+    fontSize:   11,
+    fontWeight: '700',
+  },
+  tooltipLabel: {
+    fontSize:   9,
+    fontWeight: '600',
   },
 });
