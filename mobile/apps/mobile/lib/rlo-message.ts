@@ -23,6 +23,7 @@
  */
 
 import type { ActionState } from './action-state';
+import { getLevelIdentityMessage } from './rlo-mood';
 
 export type RLoCategory = 'reminder' | 'advice' | 'encouragement' | 'insight' | 'behavioral' | 'social_proof';
 
@@ -124,6 +125,15 @@ function getBehavioralMessage(b: BehaviorContext, seed: number): RLoMessage | nu
     return {
       category: 'behavioral',
       message:  "30 days. The rhythm is becoming part of who you are.",
+      hasCta:   false,
+    };
+  }
+
+  // Level identity reinforcement — every 5th day for non-Aware users
+  if (b.depthLevel !== 'Aware' && b.totalDaysActive > 0 && b.totalDaysActive % 5 === 0) {
+    return {
+      category: 'behavioral',
+      message:  getLevelIdentityMessage(b.depthLevel),
       hasCta:   false,
     };
   }

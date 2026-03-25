@@ -37,6 +37,8 @@ export const GUIDE_KEYS = {
   FEAT_INSIGHTS:  'feat_insights',   // First Insights tab visit
   FEAT_PLANNING:  'feat_planning',   // First Planning tab visit
   FEAT_STREAK:    'feat_streak',     // First streak badge tap
+  FEAT_PROFILE:   'feat_profile',    // First Profile tab visit
+  FEAT_CHALLENGE: 'feat_challenge',  // First weekly challenge seen
 } as const;
 
 export type GuideKey = typeof GUIDE_KEYS[keyof typeof GUIDE_KEYS];

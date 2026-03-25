@@ -147,6 +147,18 @@ export const ActionCard = memo(function ActionCard({
           </View>
         )}
 
+        {/* Countdown to next event — passive mode (no CTA, event > 30 min away) */}
+        {cardState.cta === null && cardState.nextEventIn !== null && cardState.nextEventIn > 0 && (
+          <View style={ac.countdownRow}>
+            <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.35)" />
+            <Text style={ac.countdownText}>
+              {cardState.nextEventIn >= 60
+                ? `Next in ${Math.floor(cardState.nextEventIn / 60)}h${cardState.nextEventIn % 60 > 0 ? `${String(cardState.nextEventIn % 60).padStart(2, '0')}` : ''}`
+                : `Next in ${cardState.nextEventIn} min`}
+            </Text>
+          </View>
+        )}
+
       </Animated.View>
     </Pressable>
   );
@@ -218,5 +230,17 @@ const ac = StyleSheet.create({
     color:      'rgba(255,255,255,0.35)',
     textAlign:  'center',
     letterSpacing: 0.3,
+  },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           6,
+    marginTop:     4,
+  },
+  countdownText: {
+    fontSize:   12,
+    fontWeight: '500',
+    color:      'rgba(255,255,255,0.35)',
+    letterSpacing: 0.2,
   },
 });

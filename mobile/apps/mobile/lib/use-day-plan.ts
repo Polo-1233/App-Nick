@@ -22,6 +22,8 @@ import { loadWindDownEnabled, scheduleWindDownForToday } from "./wind-down";
 import { scheduleAllNotifications } from "./notifications";
 import { nowMin as getCurrentMinute } from "./time-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { updateWidgetData } from "./widget-data";
+import { fmtMin } from "./time-utils";
 
 /** Raw inputs cached after each successful plan build, used by applyConflictOption. */
 interface CachedBuildInputs {
@@ -77,6 +79,68 @@ export function useDayPlan() {
 
       setDayPlan(plan);
       if (isInitial) setLoading(false);
+
+      // Update iOS widget data (best-effort, never throws).
+      void (async () => {
+        try {
+          // ── Derived metrics ──────────────────────────────────────────────
+          // Streak: consecutive days where cyclesCompleted >= idealCyclesPerNight
+          const sorted = [...weekHistory].sort((a, b) => b.date.localeCompare(a.date));
+          let streak = 0;
+          for (const night of sorted) {
+            if (night.cyclesCompleted >= profile.idealCyclesPerNight) streak++;
+            else break;
+          }
+
+          // Rhythm score: (weeklyTotal / weeklyTarget) * 100, capped at 100
+          const rawScore = plan.readiness.weeklyTarget > 0
+            ? (plan.readiness.weeklyTotal / plan.readiness.weeklyTarget) * 100
+            : 0;
+          const rhythmScore = Math.min(100, Math.round(rawScore));
+
+          // Level label + color based on readiness zone
+          const levelMap: Record<string, { label: string; color: string }> = {
+            green:  { label: 'Attuned',    color: '#3DDC97' },
+            yellow: { label: 'Building',   color: '#FBBF24' },
+            orange: { label: 'Recovering', color: '#F5A623' },
+          };
+          const level = levelMap[plan.readiness.zone] ?? levelMap.yellow;
+
+          // Next event from nextAction (if it has a scheduled time)
+          let nextEvent: string | null = null;
+          let nextEventType: string | null = null;
+          let nextEventMin: number | null = null;
+          if (plan.nextAction.scheduledAt != null) {
+            nextEventMin = plan.nextAction.scheduledAt - now;
+            if (nextEventMin > 0) {
+              const hrs = Math.floor(nextEventMin / 60);
+              const mins = nextEventMin % 60;
+              nextEvent = hrs > 0
+                ? `${plan.nextAction.title} in ${hrs}h ${mins}m`
+                : `${plan.nextAction.title} in ${mins}m`;
+              nextEventType = plan.nextAction.type;
+            }
+          }
+
+          await updateWidgetData({
+            streak,
+            rhythmScore,
+            nextEvent,
+            nextEventType,
+            nextEventMin,
+            sleepWindow: fmtMin(plan.cycleWindow.bedtime),
+            wakeTime:    fmtMin(plan.cycleWindow.wakeTime),
+            currentCycle: plan.readiness.weeklyTotal,
+            totalCycles:  plan.readiness.weeklyTarget,
+            rloMessage:   plan.rloMessage.text,
+            levelLabel:   level.label,
+            levelColor:   level.color,
+            updatedAt:    new Date().toISOString(),
+          });
+        } catch (e) {
+          if (__DEV__) console.warn('[useDayPlan] updateWidgetData failed:', e);
+        }
+      })();
 
       // Write sleep blocks to calendar (best-effort, once per day, non-blocking).
       void writeAllSleepBlocks(plan);

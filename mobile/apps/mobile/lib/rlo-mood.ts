@@ -85,3 +85,24 @@ export function getMoodMessage(input: MoodInput): string {
   }
   return 'Every day is a fresh start. Your rhythm begins with waking up.';
 }
+
+// ─── Level-up identity messages ──────────────────────────────────────────────
+// These reinforce the user's identity at their new rhythm depth level.
+// Shown by R-Lo after a level transition and periodically as behavioral messages.
+
+export function getLevelIdentityMessage(level: string): string {
+  switch (level) {
+    case 'Aware':
+      return "You're Aware now. You're starting to see the rhythm most people miss entirely.";
+    case 'Attuned':
+      return "You're Attuned. You sleep with more intention than 90% of people.";
+    case 'Calibrated':
+      return "Calibrated. Your rhythm is becoming second nature — like the athletes Nick coaches.";
+    case 'Embodied':
+      return "Embodied. Your body knows the rhythm before your mind does. That's mastery.";
+    case 'Integrated':
+      return "Integrated. Your rhythm is part of who you are. You've internalized R90 completely.";
+    default:
+      return "Your rhythm is deepening.";
+  }
+}

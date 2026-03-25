@@ -250,6 +250,108 @@ const FEATURES = [
   { icon: 'notifications-outline',text: 'Smart wind-down reminders' },
 ];
 
+// ─── Commitment Pact (between plan reveal and paywall) ──────────────────────
+
+const COMMITMENT_GOALS = [
+  { id: 'sleep',   icon: 'moon-outline'    as const, label: 'Sleep better',             color: '#A78BFA' },
+  { id: 'energy',  icon: 'flash-outline'   as const, label: 'More energy',              color: '#F2A623' },
+  { id: 'perform', icon: 'trophy-outline'  as const, label: 'Perform like an athlete',  color: '#1c9fda' },
+  { id: 'recover', icon: 'fitness-outline' as const, label: 'Recover faster',           color: '#3DDC97' },
+];
+
+function CommitmentStep({ onContinue }: { onContinue: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  return (
+    <Animated.View style={[cm.root, { opacity: fadeAnim }]}>
+      <Text style={cm.title}>My R90 commitment</Text>
+      <Text style={cm.sub}>What matters most to you?</Text>
+
+      <View style={cm.goals}>
+        {COMMITMENT_GOALS.map(g => {
+          const sel = selected === g.id;
+          return (
+            <Pressable
+              key={g.id}
+              style={[cm.goalCard, sel && { borderColor: g.color, backgroundColor: `${g.color}12` }]}
+              onPress={() => setSelected(g.id)}
+            >
+              <View style={[cm.goalIcon, { backgroundColor: `${g.color}18` }]}>
+                <Ionicons name={g.icon} size={20} color={sel ? g.color : TEXT_MUTED} />
+              </View>
+              <Text style={[cm.goalLabel, sel && { color: TEXT }]}>{g.label}</Text>
+              {sel && <Ionicons name="checkmark-circle" size={20} color={g.color} />}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable
+        style={[cm.commitBtn, !selected && { opacity: 0.4 }]}
+        onPress={selected ? onContinue : undefined}
+        disabled={!selected}
+      >
+        <Text style={cm.commitBtnText}>I commit →</Text>
+      </Pressable>
+
+      <Pressable onPress={onContinue} style={cm.skipBtn}>
+        <Text style={cm.skipText}>Skip</Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+const cm = StyleSheet.create({
+  root: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 28, gap: 20,
+  },
+  title: {
+    fontSize: 26, fontWeight: '700', color: TEXT,
+    textAlign: 'center', letterSpacing: -0.3,
+  },
+  sub: {
+    fontSize: 15, color: TEXT_SUB, textAlign: 'center',
+    marginBottom: 8,
+  },
+  goals: {
+    width: '100%', gap: 10,
+  },
+  goalCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: SURFACE, borderRadius: 16,
+    borderWidth: 2, borderColor: BORDER,
+    padding: 16,
+  },
+  goalIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  goalLabel: {
+    flex: 1, fontSize: 16, fontWeight: '600', color: TEXT_MUTED,
+  },
+  commitBtn: {
+    backgroundColor: ACCENT, borderRadius: 16,
+    paddingVertical: 18, width: '100%', alignItems: 'center',
+  },
+  commitBtnText: {
+    fontSize: 17, fontWeight: '700', color: '#FFFFFF',
+  },
+  skipBtn: {
+    paddingVertical: 8,
+  },
+  skipText: {
+    fontSize: 14, color: TEXT_MUTED,
+  },
+});
+
+// ─── Paywall ──────────────────────────────────────────────────────────────────
+
 function PaywallStep({ plan, onComplete }: { plan: PlanData; onComplete: () => void }) {
   const [packages,   setPackages]   = useState<PurchasesPackage[]>([]);
   const [selected,   setSelected]   = useState<'monthly' | 'yearly'>('yearly');
@@ -884,6 +986,7 @@ interface Props {
 
 export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Props) {
   const [step, setStep]         = useState<PlanStep>(calendarOnly ? 12 : 10);
+  const [showCommitment, setShowCommitment] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [plan, setPlan]         = useState<PlanData>({ onsetDisplay: '23:00', wakeDisplay: '06:30', cycles: 5 });
   const contentAnim             = useRef(new Animated.Value(1)).current;
@@ -923,10 +1026,15 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
     return () => clearTimeout(t);
   }, [contentAnim]);
 
-  // ── Step 11 → paywall → login ────────────────────────────────────────────
+  // ── Step 11 → commitment → paywall → login ─────────────────────────────
   const handlePlanContinue = useCallback(() => {
-    if (!calendarOnly) setShowPaywall(true);
+    if (!calendarOnly) setShowCommitment(true);
   }, [calendarOnly]);
+
+  const handleCommitmentDone = useCallback(() => {
+    setShowCommitment(false);
+    setShowPaywall(true);
+  }, []);
 
   const handlePaywallDone = useCallback(() => {
     setShowPaywall(false);
@@ -945,9 +1053,15 @@ export function OnboardingPlanOverlay({ onComplete, calendarOnly = false }: Prop
           </SafeAreaView>
         )}
 
-        {step === 11 && !showPaywall && (
+        {step === 11 && !showCommitment && !showPaywall && (
           <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
             <PlanRevealStep plan={plan} onContinue={handlePlanContinue} />
+          </SafeAreaView>
+        )}
+
+        {step === 11 && showCommitment && !showPaywall && (
+          <SafeAreaView style={ov.safe} edges={['top', 'bottom']}>
+            <CommitmentStep onContinue={handleCommitmentDone} />
           </SafeAreaView>
         )}
 

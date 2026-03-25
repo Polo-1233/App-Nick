@@ -188,6 +188,12 @@ export function WeeklyRecap({ visible, onClose }: WeeklyRecapProps) {
                 </Text>
               </View>
 
+              {/* Share button (placeholder — needs expo-sharing for image export) */}
+              <Pressable style={r.shareBtn}>
+                <Ionicons name="share-outline" size={16} color={ACCENT} />
+                <Text style={r.shareText}>Share my recap</Text>
+              </Pressable>
+
             </ScrollView>
           )}
 
@@ -228,6 +234,8 @@ const r = StyleSheet.create({
   rloRow:      { backgroundColor: `${ACCENT}10`, borderRadius: 14, padding: 14 },
   rloMsg:      { fontSize: 13, color: SUB, lineHeight: 20, fontStyle: 'italic' },
 
+  shareBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, backgroundColor: `${ACCENT}12`, borderRadius: 12, borderWidth: 1, borderColor: `${ACCENT}20` },
+  shareText:   { fontSize: 14, fontWeight: '600', color: ACCENT },
   closeBtn:    { backgroundColor: ACCENT, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 8, marginBottom: 8 },
   closeTxt:    { fontSize: 15, fontWeight: '700', color: TEXT },
 });

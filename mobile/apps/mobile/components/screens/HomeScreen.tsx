@@ -61,6 +61,8 @@ import { RhythmPointsToast }     from '../RhythmPointsToast';
 import { getFlow }              from '../../lib/rhythm-points';
 import { getDepth, getProgressToNext, type RhythmDepthState } from '../../lib/rhythm-depth';
 import { WeeklyRecap, shouldShowWeeklyRecap } from '../WeeklyRecap';
+import { WeeklyChallenge } from '../WeeklyChallenge';
+import { ShareCard, type ShareCardHandle } from '../ShareCard';
 import { usePremiumGate } from '../../lib/use-premium-gate';
 import { isMilestone, getMilestoneMessage } from '../../lib/rlo-mood';
 // getMissedCycleInfo now handled inside action-state.ts
@@ -99,6 +101,7 @@ export default function HomeScreen() {
   const [showLevelUp,        setShowLevelUp]         = useState<{ level: string; color: string } | null>(null);
   const [behaviorCtx,        setBehaviorCtx]         = useState<import('../../lib/rlo-message').BehaviorContext | undefined>(undefined);
   const streakBounce = useRef(new Animated.Value(1)).current;
+  const shareRef     = useRef<ShareCardHandle>(null);
   const [bannerEvent,        setBannerEvent]         = useState<{ title: string; start_time: string; event_type_hint?: string } | null>(null);
   const [bannerDismissed,    setBannerDismissed]     = useState(false);
   const [coachInsight,       setCoachInsight]        = useState<{ id: string; message: string } | null>(null);
@@ -407,7 +410,12 @@ export default function HomeScreen() {
             behavior={behaviorCtx}
           />
 
-          {/* 5. Secondary Cards — only rendered if data exists */}
+          {/* 5. Weekly Challenge */}
+          <View style={{ marginTop: 12 }}>
+            <WeeklyChallenge />
+          </View>
+
+          {/* 6. Secondary Cards — only rendered if data exists */}
           <SecondaryCards cards={secondaryCards} />
 
           {/* Sleep footer removed */}
@@ -526,23 +534,24 @@ const sh = StyleSheet.create({
     textTransform: 'uppercase',
   },
   progressRow: {
-    alignSelf:   'flex-end',
-    marginRight: 20,
-    marginTop:   12,
+    flexDirection:   'row',
+    justifyContent:  'center',
+    marginTop:       14,
+    marginHorizontal: 20,
   },
   progressBadge: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             6,
-    backgroundColor: 'rgba(245,166,35,0.12)',
-    borderRadius:    20,
-    paddingHorizontal: 12,
-    paddingVertical:   6,
-    borderWidth:     1,
-    borderColor:     'rgba(245,166,35,0.25)',
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               8,
+    backgroundColor:   'rgba(245,166,35,0.10)',
+    borderRadius:      24,
+    paddingHorizontal: 16,
+    paddingVertical:   8,
+    borderWidth:       1,
+    borderColor:       'rgba(245,166,35,0.20)',
   },
 
-  streakCount:  { fontSize: 12, fontWeight: '700', color: '#D97706' },
+  streakCount:  { fontSize: 15, fontWeight: '800', color: '#D97706' },
   badgeSep:     { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 2 },
   rhythmScore:  { fontSize: 12, fontWeight: '800', letterSpacing: -0.3 },
   levelDot:     { width: 6, height: 6, borderRadius: 3 },

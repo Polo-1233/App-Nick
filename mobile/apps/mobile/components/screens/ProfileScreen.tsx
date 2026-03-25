@@ -38,6 +38,8 @@ import {
   setOnboardingPhase,
 } from '../../lib/storage';
 import { useTheme } from '../../lib/theme-context';
+import { RLoTooltip } from '../RLoGuide';
+import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../../lib/onboarding-guide';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import type { ThemeMode } from '../../lib/theme';
 import { useAuth } from '../../lib/auth-context';
@@ -386,8 +388,11 @@ export default function ProfileScreen() {
   const [showDataModal, setShowDataModal] = useState(false);
   const [windDownEnabled,      setWindDownEnabled]      = useState(false);
   const [windDownMusicEnabled, setWindDownMusicEnabled] = useState(false);
+  const [showProfileTip,       setShowProfileTip]       = useState(false);
 
-
+  useEffect(() => {
+    shouldShowGuide(GUIDE_KEYS.FEAT_PROFILE).then(setShowProfileTip).catch(() => {});
+  }, []);
 
   useEffect(() => { void loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -505,6 +510,18 @@ export default function ProfileScreen() {
     <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
     <SafeAreaView style={{ flex: 1 }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+
+        {/* Profile tooltip — shown once on first visit */}
+        {showProfileTip && (
+          <RLoTooltip
+            visible={showProfileTip}
+            message="Your R90 identity. Customise your chronotype, track your depth, and manage your settings."
+            onDismiss={async () => {
+              await markGuideSeen(GUIDE_KEYS.FEAT_PROFILE);
+              setShowProfileTip(false);
+            }}
+          />
+        )}
 
         {/* ── 1. Identity ── */}
         <View style={s.identity}>
