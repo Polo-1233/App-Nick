@@ -558,28 +558,6 @@ function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
           </View>
         </View>
 
-        {/* ── This Week ── */}
-        <Animated.View style={[r.section, { opacity: weekAnim }]}>
-          <Text style={r.sectionTitle}>THIS WEEK</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={r.weekScroll}>
-            {weekDays.map((day) => (
-              <View key={day.dayShort} style={[r.weekDay, day.isToday && r.weekDayToday]}>
-                <Text style={[r.weekDayLabel, day.isToday && r.weekDayLabelToday]}>{day.dayShort}</Text>
-                <View style={r.weekDots}>
-                  {Array.from({ length: plan.cycles }).map((_, i) => (
-                    <View key={i} style={[r.weekDot, day.isToday && { backgroundColor: ACCENT }]} />
-                  ))}
-                </View>
-                <Text style={[r.weekBedtime, day.isToday && { color: ACCENT }]}>{mainOption.bedtime}</Text>
-                <Text style={r.weekWake}>{plan.wakeDisplay}</Text>
-              </View>
-            ))}
-          </ScrollView>
-          <Text style={r.weekNote}>
-            Consistent wake time is the foundation of the R90 method. Your body clock aligns to it within 7 days.
-          </Text>
-        </Animated.View>
-
         {/* ── R-Lo message ── */}
         <View style={r.rloRow}>
           <MascotImage emotion="Fiere" size="sm" />
