@@ -558,6 +558,13 @@ function PlanRevealStep({ plan, onContinue }: PlanRevealProps) {
           </View>
         </View>
 
+        {/* ── Wake time note ── */}
+        <View style={r.wakeNote}>
+          <Text style={r.wakeNoteText}>
+            Consistent wake time is the foundation of the R90 method. Your body clock aligns to it within 7 days.
+          </Text>
+        </View>
+
         {/* ── R-Lo message ── */}
         <View style={r.rloRow}>
           <MascotImage emotion="Fiere" size="sm" />
@@ -620,6 +627,8 @@ const r = StyleSheet.create({
   weekWake:            { fontSize: 10, color: TEXT_MUTED },
   weekNote:            { fontSize: 11, color: TEXT_MUTED, lineHeight: 16 },
   // R-Lo message
+  wakeNote:     { backgroundColor: 'rgba(28,159,218,0.10)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(28,159,218,0.20)' },
+  wakeNoteText: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 20, textAlign: 'center' },
   rloRow:              { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   rloBubble:           { flex: 1, backgroundColor: SURFACE, borderRadius: 16, borderTopLeftRadius: 4, borderWidth: 1, borderColor: BORDER, paddingHorizontal: 16, paddingVertical: 14 },
   rloText:             { fontSize: 14, color: TEXT, lineHeight: 22 },
