@@ -311,6 +311,10 @@ export default function OnboardingScreen() {
   const fadeAnim3 = useRef(new Animated.Value(0)).current;
   const fadeAnim4 = useRef(new Animated.Value(0)).current;
 
+  // Page 3 — R-Lo personalised greeting animation
+  const rloGreetAnim  = useRef(new Animated.Value(0)).current;
+  const rloGreetSlide = useRef(new Animated.Value(10)).current;
+
   // ── Page 1 — Cycle screen animations ─────────────────────────────────────
   // 4 phase blocks: opacity + scale, staggered 300ms each
   const phaseAnims = useRef([
@@ -498,6 +502,19 @@ export default function OnboardingScreen() {
       Animated.timing(fadeAnim3, { toValue: 1, duration: 600, delay: 100, useNativeDriver: true }).start();
     }
   }, [page, fadeAnim3]);
+
+  // Page 3 — R-Lo greeting appears when firstName is long enough
+  useEffect(() => {
+    if (firstName.trim().length >= 2) {
+      Animated.parallel([
+        Animated.timing(rloGreetAnim,  { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(rloGreetSlide, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start();
+    } else {
+      rloGreetAnim.setValue(0);
+      rloGreetSlide.setValue(10);
+    }
+  }, [firstName, rloGreetAnim, rloGreetSlide]);
 
 
 
@@ -917,6 +934,20 @@ export default function OnboardingScreen() {
                       </View>
                     </View>
                   </View>
+
+                  {/* R-Lo personalised greeting — appears when name >= 2 chars */}
+                  <Animated.View style={[
+                    s.rloGreetBubble,
+                    {
+                      opacity: rloGreetAnim,
+                      transform: [{ translateY: rloGreetSlide }],
+                    },
+                  ]}>
+                    <Text style={s.rloGreetEmoji}>✨</Text>
+                    <Text style={s.rloGreetText}>
+                      {`Hey ${firstName.trim()}! Let's build your rhythm together. 🌙`}
+                    </Text>
+                  </Animated.View>
                 </Animated.View>
               </View>
             )}
@@ -938,7 +969,7 @@ export default function OnboardingScreen() {
                     iconColor: '#F2A623',
                     label: 'AMer — Early riser',
                     range: '5:30 – 7:00',
-                    desc: "You're naturally alert in the morning and your focus drops in the evening.",
+                    desc: "You're the one who's sharp at 6 AM while everyone else hits snooze. Mornings are your superpower.",
                     defaultHour: 6,
                   },
                   {
@@ -947,7 +978,7 @@ export default function OnboardingScreen() {
                     iconColor: '#85B7EB',
                     label: 'Intermediate',
                     range: '7:00 – 8:00',
-                    desc: 'You adapt to both rhythms with a mid-morning energy peak.',
+                    desc: 'You adapt to whatever life throws at you. Your sweet spot is mid-morning to early evening.',
                     defaultHour: 7,
                   },
                   {
@@ -956,7 +987,7 @@ export default function OnboardingScreen() {
                     iconColor: '#A78BFA',
                     label: 'PMer — Night owl',
                     range: '8:00 – 10:00',
-                    desc: "You're more creative and focused in the evening. Mornings are harder.",
+                    desc: "Your brain kicks into gear when others are winding down. Late nights are when you do your best work.",
                     defaultHour: 8,
                   },
                 ]).map(opt => {
@@ -1047,6 +1078,11 @@ export default function OnboardingScreen() {
                       <Text style={arp.previewValue}>{fmtTime(((sleepOnset - 60) + 1440) % 1440)}</Text>
                       <Text style={arp.previewLabel}>Wind-down</Text>
                     </View>
+                  </View>
+
+                  {/* Ideal bedtime — derived from sleepOnset */}
+                  <View style={arp.bedtimeRow}>
+                    <Text style={arp.bedtimeText}>🌙 Ideal bedtime: {fmtTime(sleepOnset)}</Text>
                   </View>
 
                   {/* Out-of-range warning */}
@@ -1471,6 +1507,30 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
+  // R-Lo greeting bubble (Step 3 personalised reply)
+  rloGreetBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: SURFACE,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    alignSelf: 'stretch',
+  },
+  rloGreetEmoji: {
+    fontSize: 18,
+  },
+  rloGreetText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    fontStyle: 'italic',
+    color: TEXT_SUB,
+    lineHeight: 20,
+  },
+
   // ══════ PAGE 5 — ARP Setup ══════
   setupContent: {
     alignItems: 'center', gap: 8,
@@ -1667,6 +1727,19 @@ const arp = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: GOLD,
     lineHeight: 19,
+  },
+
+  // Ideal bedtime hint
+  bedtimeRow: {
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  bedtimeText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
+    color: TEXT_SUB,
   },
 
   // Live rhythm preview (Point #8)

@@ -166,7 +166,7 @@ export const CRP_CONTENT: ContentItem[] = [
     category:    'crp',
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     source:      require('../assets/audio/crp/meditation-breath-20min.mp3'),
-    premium:     true,
+    premium:     false,
   },
   {
     id:          'crp-nsdr',

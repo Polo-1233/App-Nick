@@ -51,6 +51,7 @@ import {
 
 // ─── Shared components ─────────────────────────────────────────────────────────
 import { Ionicons }          from '@expo/vector-icons';
+import { MascotImage }       from '../ui/MascotImage';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
 import { StreakDetail }          from '../StreakDetail';
@@ -67,6 +68,8 @@ import { usePremiumGate } from '../../lib/use-premium-gate';
 import { isMilestone, getMilestoneMessage } from '../../lib/rlo-mood';
 // getMissedCycleInfo now handled inside action-state.ts
 import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/coach-insights';
+import { saveMorningLight, saveMrmCompletion } from '../../lib/kspi';
+import { HapticsSuccess } from '../../utils/haptics';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
 } from '../../lib/storage';
@@ -108,7 +111,11 @@ export default function HomeScreen() {
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
   const [showStreakDetail,   setShowStreakDetail]     = useState(false);
   const [toastPoints,        setToastPoints]          = useState(0);
+  const [toastLabel,         setToastLabel]           = useState('Rhythm Points');
   const [showToast,          setShowToast]            = useState(false);
+  const [showLightBanner,    setShowLightBanner]      = useState(false);
+  const lightBannerAnim = useRef(new Animated.Value(0)).current;
+  const wakeButtonAnim  = useRef(new Animated.Value(1)).current;
 
   // Layer 1 — Home orientation guide (3 steps, shown once)
   const [guideStep, setGuideStep] = useState<0 | 1 | 2 | null>(null);
@@ -431,6 +438,23 @@ export default function HomeScreen() {
           : '--:--'}
         onConfirm={() => {
           setShowMorningConfirm(false);
+          // Celebration: haptic + pulse + toast
+          HapticsSuccess();
+          Animated.sequence([
+            Animated.timing(wakeButtonAnim, { toValue: 1.15, duration: 150, useNativeDriver: true }),
+            Animated.timing(wakeButtonAnim, { toValue: 1,    duration: 150, useNativeDriver: true }),
+          ]).start();
+          setToastPoints(5);
+          setToastLabel('Rise and shine ☀️');
+          setShowToast(true);
+          setTimeout(() => { setShowToast(false); setToastLabel('Rhythm Points'); }, 2000);
+          // Show morning light banner
+          setShowLightBanner(true);
+          Animated.timing(lightBannerAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+          // Auto-dismiss after 8s
+          setTimeout(() => {
+            Animated.timing(lightBannerAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowLightBanner(false));
+          }, 8000);
           // Refresh streak, depth, and bounce the badge
           getFlow().then(f => {
             if (f.currentStreak > 0) {
@@ -462,9 +486,31 @@ export default function HomeScreen() {
 
       <RhythmPointsToast
         points={toastPoints}
-        label="Rhythm Points"
+        label={toastLabel}
         visible={showToast}
       />
+
+      {/* Morning light banner */}
+      {showLightBanner && (
+        <Animated.View style={[ml.banner, { opacity: lightBannerAnim, transform: [{ translateY: lightBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }] }]}>
+          <Ionicons name="sunny" size={20} color="#F2A623" />
+          <Text style={ml.bannerText}>Get some daylight in the next 30 min — it sets your clock</Text>
+          <View style={ml.bannerActions}>
+            <Pressable style={ml.gotLightBtn} onPress={() => {
+              saveMorningLight(true).catch(() => {});
+              Animated.timing(lightBannerAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setShowLightBanner(false));
+            }}>
+              <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+              <Text style={ml.gotLightTxt}>Got light</Text>
+            </Pressable>
+            <Pressable onPress={() => {
+              Animated.timing(lightBannerAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setShowLightBanner(false));
+            }}>
+              <Text style={ml.skipTxt}>Skip</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Weekly recap (Sunday evening) */}
       <WeeklyRecap visible={showRecap} onClose={() => setShowRecap(false)} />
@@ -481,6 +527,11 @@ export default function HomeScreen() {
               <Pressable style={[lu.btn, { backgroundColor: showLevelUp.color }]} onPress={() => setShowLevelUp(null)}>
                 <Text style={lu.btnText}>Continue →</Text>
               </Pressable>
+              {/* Share level-up */}
+              <Pressable style={lu.shareRow} onPress={() => shareRef.current?.share()}>
+                <Ionicons name="share-outline" size={14} color="#1c9fda" />
+                <Text style={lu.shareText}>Share this milestone</Text>
+              </Pressable>
               {!isPremium && (
                 <Pressable style={lu.premiumBtn} onPress={() => { setShowLevelUp(null); router.push('/premium'); }}>
                   <Text style={lu.premiumBtnText}>Unlock all {showLevelUp.level} content</Text>
@@ -489,6 +540,15 @@ export default function HomeScreen() {
             </View>
           </View>
         </Modal>
+      )}
+
+      {/* Off-screen ShareCard for image generation */}
+      {showLevelUp && (
+        <ShareCard
+          ref={shareRef}
+          type="level-up"
+          data={{ level: showLevelUp.level, levelColor: showLevelUp.color }}
+        />
       )}
 
       {/* Layer 1 — Home orientation spotlight (shown once) */}
@@ -608,6 +668,17 @@ const lu = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  shareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+  },
+  shareText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1c9fda',
+  },
   premiumBtn: {
     paddingVertical: 10,
   },
@@ -615,5 +686,58 @@ const lu = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#1c9fda',
+  },
+});
+
+// ─── Morning Light Banner ─────────────────────────────────────────────────────
+const ml = StyleSheet.create({
+  banner: {
+    position: 'absolute',
+    bottom: 90,
+    left: 16,
+    right: 16,
+    backgroundColor: '#141466',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'column',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(242,166,35,0.20)',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  bannerText: {
+    fontSize: 14,
+    color: '#E6EDF7',
+    lineHeight: 20,
+    marginLeft: 30,
+    marginTop: -22,
+  },
+  bannerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginLeft: 30,
+  },
+  gotLightBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#3DDC97',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  gotLightTxt: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  skipTxt: {
+    fontSize: 14,
+    color: '#6B8CAE',
   },
 });
