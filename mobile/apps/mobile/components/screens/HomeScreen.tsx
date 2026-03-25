@@ -111,12 +111,24 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       const [p, onboarding] = await Promise.all([loadProfile(), loadOnboardingData()]);
-      if (onboarding?.firstName) setUserName(onboarding.firstName);
+
+      // ── SMOKE DATA — remove before production ──────────────────────────
+      const smokeProfile: UserProfile = { anchorTime: 390, idealCyclesPerNight: 5, chronotype: 'Neither', weeklyTarget: 35 };
+      const activeProfile = p ?? smokeProfile;
+      const smokeName = onboarding?.firstName ?? 'Thomas';
+      setUserName(smokeName);
+      setProfile(activeProfile);
+      setActionState(getCurrentActionState(getNowMin(), activeProfile.anchorTime, activeProfile.idealCyclesPerNight).state);
+      setStreak(7); // demo streak
+      setCoachInsight({ id: 'smoke-1', message: '90-minute cycles exist during the day too — that\'s why MRMs matter. Even 2 minutes makes a difference.' });
+      // ───────────────────────────────────────────────────────────────────
+
       if (p) {
         setProfile(p);
         setActionState(getCurrentActionState(getNowMin(), p.anchorTime, p.idealCyclesPerNight).state);
       }
-      getFlow().then(f => setStreak(f.currentStreak)).catch(() => {});
+      if (onboarding?.firstName) setUserName(onboarding.firstName);
+      getFlow().then(f => { if (f.currentStreak > 0) setStreak(f.currentStreak); }).catch(() => {});
       void ensureSignupDate();
       getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
     })();
@@ -171,22 +183,12 @@ export default function HomeScreen() {
     return () => clearTimeout(t);
   }, [phase, fetchGreeting, injectMessage]);
 
-  // ── Calendar banner ────────────────────────────────────────────────────────
+  // ── Calendar banner (real data) ────────────────────────────────────────────
   useEffect(() => {
     if (isOnboarding) return;
-    // DEMO: mock calendar event for Nick preview — remove before production
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(19, 30, 0, 0);
-    setBannerEvent({
-      title:           'Team performance review',
-      start_time:      tomorrow.toISOString(),
-      event_type_hint: 'meeting',
-    });
-    // Production:
-    // getUpcomingEvents(1).then(res => {
-    //   if (res.ok && res.data?.events?.[0]) setBannerEvent(res.data.events[0]);
-    // }).catch(() => {});
+    getUpcomingEvents(1).then(res => {
+      if (res.ok && res.data?.events?.[0]) setBannerEvent(res.data.events[0]);
+    }).catch(() => {});
   }, [isOnboarding]);
 
   // ── Morning confirmation (uses wake detection) ────────────────────────────
@@ -317,6 +319,11 @@ export default function HomeScreen() {
           ]}
         >
           {/* Streak badge */}
+          {/* DEMO banner — remove before production */}
+          <View style={sh.demoBanner}>
+            <Text style={sh.demoText}>DEMO MODE — Sample data</Text>
+          </View>
+
           {streak > 0 && (
             <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakBadge}>
               <Ionicons name="flame" size={14} color="#D97706" />
@@ -399,6 +406,23 @@ const s = StyleSheet.create({
 });
 
 const sh = StyleSheet.create({
+  demoBanner: {
+    alignSelf:       'center',
+    backgroundColor: 'rgba(245,166,35,0.15)',
+    borderRadius:    8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginTop:       8,
+    borderWidth:     1,
+    borderColor:     'rgba(245,166,35,0.30)',
+  },
+  demoText: {
+    fontSize:    10,
+    fontWeight:  '700',
+    color:       '#D97706',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   streakBadge: {
     flexDirection:   'row',
     alignItems:      'center',
