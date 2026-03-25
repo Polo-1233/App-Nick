@@ -644,7 +644,9 @@ export default function OnboardingScreen() {
                 <View style={s.nameContent}>
                   <View style={s.nameMascotArea}>
                     <View style={s.nameMascotGlow} />
-                    <MascotImage emotion="encourageant" style={s.nameMascotImg} />
+                    <Animated.View style={{ transform: [{ scale: mascotBreath }] }}>
+                      <MascotImage emotion="encourageant" style={s.nameMascotImg} />
+                    </Animated.View>
                   </View>
                   <Text style={s.nameTitle}>What should R-Lo call you?</Text>
                   <View style={s.nameInputWrap}>
