@@ -14,6 +14,7 @@ import { AudioPlayer } from '../components/AudioPlayer';
 import { MascotImage } from '../components/ui/MascotImage';
 import { RLoTooltip } from '../components/RLoGuide';
 import { SessionIntro } from '../components/SessionIntro';
+import { Glossary } from '../components/Glossary';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
@@ -38,8 +39,9 @@ export default function CrpPlayerScreen() {
   const [content,   setContent]   = useState<ContentItem | null>(null);
   const [completed, setCompleted] = useState(false);
   const [loading,   setLoading]   = useState(true);
-  const [showTip,   setShowTip]   = useState(false);
-  const [showIntro, setShowIntro] = useState(false);
+  const [showTip,      setShowTip]      = useState(false);
+  const [showIntro,    setShowIntro]    = useState(false);
+  const [showGlossary, setShowGlossary] = useState(false);
 
   useEffect(() => {
     getNextContent('crp', isPremium).then(c => { setContent(c); setLoading(false); });
@@ -100,7 +102,9 @@ export default function CrpPlayerScreen() {
         variant="crp"
         onComplete={() => { void handleComplete(); }}
         onClose={() => router.back()}
+        onInfo={() => setShowGlossary(true)}
       />
+      <Glossary visible={showGlossary} onClose={() => setShowGlossary(false)} />
       {newBadges.length > 0 && (
         <BadgeEarnedModal badgeIds={newBadges} onClose={clearBadges} />
       )}

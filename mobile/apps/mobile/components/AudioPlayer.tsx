@@ -210,10 +210,12 @@ export interface AudioPlayerProps {
   onClose:    () => void;
   variant:    'mrm' | 'crp' | 'winddown';
   showTimer?: boolean;
+  /** Optional info button (ⓘ) shown in the header alongside the close button */
+  onInfo?:    () => void;
 }
 
 export function AudioPlayer({
-  source, title, duration, onComplete, onClose, variant, showTimer = true,
+  source, title, duration, onComplete, onClose, variant, showTimer = true, onInfo,
 }: AudioPlayerProps) {
   const soundRef   = useRef<Audio.Sound | null>(null);
   const [isPlaying,    setIsPlaying]    = useState(false);
@@ -299,11 +301,18 @@ export function AudioPlayer({
       {variant === 'crp'      && <WaveBackground />}
       {variant === 'winddown' && <StarField />}
 
-      {/* Close button */}
+      {/* Header: optional info button (left) + close button (right) */}
       <SafeAreaView style={ap.safeArea} edges={['top']}>
-        <Pressable onPress={onClose} style={ap.closeBtn} hitSlop={12}>
-          <Ionicons name="close" size={22} color={TEXT} />
-        </Pressable>
+        <View style={ap.headerRow}>
+          {onInfo ? (
+            <Pressable onPress={onInfo} style={ap.headerBtn} hitSlop={12}>
+              <Ionicons name="information-circle-outline" size={22} color={TEXT} />
+            </Pressable>
+          ) : <View style={ap.headerBtn} />}
+          <Pressable onPress={onClose} style={ap.headerBtn} hitSlop={12}>
+            <Ionicons name="close" size={22} color={TEXT} />
+          </Pressable>
+        </View>
       </SafeAreaView>
 
       {/* Content */}
@@ -368,7 +377,8 @@ export function AudioPlayer({
 const ap = StyleSheet.create({
   root:       { flex: 1, backgroundColor: BG, justifyContent: 'center' },
   safeArea:   { position: 'absolute', top: 0, right: 0, left: 0 },
-  closeBtn:   { alignSelf: 'flex-end', padding: 16 },
+  headerRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8 },
+  headerBtn:  { padding: 12, width: 46, alignItems: 'center' },
   content:    { alignItems: 'center', paddingHorizontal: 32, gap: 16 },
   duration:   { fontSize: 13, color: MUTED, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase' },
   title:      { fontSize: 22, fontWeight: '700', color: TEXT, textAlign: 'center', lineHeight: 30 },
