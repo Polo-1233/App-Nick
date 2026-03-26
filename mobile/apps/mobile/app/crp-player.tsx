@@ -13,11 +13,17 @@ import { Audio, AVPlaybackStatus } from 'expo-av';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { MascotImage } from '../components/ui/MascotImage';
 import { RLoTooltip } from '../components/RLoGuide';
+import { SessionIntro } from '../components/SessionIntro';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
+import { SessionComplete } from '../components/SessionComplete';
+import { syncTeamChallengeProgress } from '../lib/team-challenges';
+import { trackCRP } from '../lib/activity-tracker';
+import { useBadgeEvaluation } from '../lib/use-badge-evaluation';
+import { BadgeEarnedModal } from '../components/BadgeEarnedModal';
 import type { ContentItem } from '../lib/content-registry';
 
 const BG     = '#0a0a3a';
@@ -28,21 +34,33 @@ const TEXT   = '#FFFFFF';
 export default function CrpPlayerScreen() {
   const router        = useRouter();
   const { isPremium } = usePremiumGate();
+  const { newBadges, evaluate: evalBadges, clearBadges } = useBadgeEvaluation();
   const [content,   setContent]   = useState<ContentItem | null>(null);
   const [completed, setCompleted] = useState(false);
   const [loading,   setLoading]   = useState(true);
   const [showTip,   setShowTip]   = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
     getNextContent('crp', isPremium).then(c => { setContent(c); setLoading(false); });
-    shouldShowGuide(GUIDE_KEYS.FEAT_CRP).then(setShowTip).catch(() => {});
+    shouldShowGuide(GUIDE_KEYS.FEAT_CRP).then(v => {
+      if (v) setShowIntro(true);
+    }).catch(() => {});
   }, [isPremium]);
+
+  async function dismissIntro() {
+    await markGuideSeen(GUIDE_KEYS.FEAT_CRP);
+    setShowIntro(false);
+  }
 
   async function handleComplete() {
     if (!content) return;
     await markContentPlayed('crp', content.id);
     await addPoints(POINTS.CRP_COMPLETE, 'crp_done').catch(() => {});
     await addSignal(SIGNAL.CRP_COMPLETE).catch(() => {});
+    await trackCRP().catch(() => {});
+    void syncTeamChallengeProgress('crp_completions');
+    void evalBadges();
     setCompleted(true);
   }
 
@@ -53,32 +71,28 @@ export default function CrpPlayerScreen() {
   if (completed) {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <View style={s.doneWrap}>
-          <MascotImage emotion="Fiere" size="md" />
-          <Text style={s.doneTitle}>Great recovery.</Text>
-          <Text style={s.doneSub}>+{POINTS.CRP_COMPLETE} Rhythm Points ✦</Text>
-          <Pressable style={[s.closeBtn, { backgroundColor: GOLD }]} onPress={() => router.back()}>
-            <Text style={s.closeTxt}>Close</Text>
-          </Pressable>
-        </View>
+        <SessionComplete
+          title="Recovery complete!"
+          sessionName={content?.title ?? 'CRP Session'}
+          duration={`${Math.round((content?.duration ?? 1200) / 60)} min`}
+          points={POINTS.CRP_COMPLETE}
+          signal={SIGNAL.CRP_COMPLETE}
+          accentColor={GOLD}
+          onDismiss={() => router.back()}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <View style={s.root}>
-      {showTip && (
-        <View style={{ position: 'absolute', top: 80, left: 0, right: 0, zIndex: 50 }}>
-          <RLoTooltip
-            visible={showTip}
-            message="This is your recovery time. 20 minutes to recharge."
-            onDismiss={async () => {
-              await markGuideSeen(GUIDE_KEYS.FEAT_CRP);
-              setShowTip(false);
-            }}
-          />
-        </View>
-      )}
+      {/* Multi-step intro — shown once on first CRP visit */}
+      <SessionIntro
+        visible={showIntro}
+        sessionType="crp"
+        onStart={dismissIntro}
+        onSkip={dismissIntro}
+      />
       <AudioPlayer
         source={content.source}
         title={content.title}
@@ -87,6 +101,9 @@ export default function CrpPlayerScreen() {
         onComplete={() => { void handleComplete(); }}
         onClose={() => router.back()}
       />
+      {newBadges.length > 0 && (
+        <BadgeEarnedModal badgeIds={newBadges} onClose={clearBadges} />
+      )}
     </View>
   );
 }

@@ -35,10 +35,12 @@ import { RLoSpotlight }       from '../RLoGuide';
 import {
   GUIDE_KEYS,
   shouldStartHomeOrientation,
+  shouldShowGuide,
   markGuideSeen,
   skipHomeOrientation,
   migrateFromLegacyTour,
 } from '../../lib/onboarding-guide';
+import { RLoTooltip } from '../RLoGuide';
 
 // ─── Home sub-components (clean module) ────────────────────────────────────────
 import {
@@ -54,9 +56,12 @@ import { Ionicons }          from '@expo/vector-icons';
 import { MascotImage }       from '../ui/MascotImage';
 import { AmbientBackground } from '../ui/AmbientBackground';
 import { MorningConfirmation, CONFIRM_DATE_KEY } from '../MorningConfirmation';
+import { Glossary }              from '../Glossary';
 import { StreakDetail }          from '../StreakDetail';
 import { RhythmPointsToast }     from '../RhythmPointsToast';
 import { RhythmDepthSheet }     from '../RhythmDepthSheet';
+import { RhythmScoreSheet }    from '../RhythmScoreSheet';
+import { MilestoneModal }     from '../MilestoneModal';
 // OnboardingChatFlow removed — data collection moved to onboarding pager
 
 // ─── Utilities & data ──────────────────────────────────────────────────────────
@@ -72,6 +77,19 @@ import { getTodayInsight, markInsightSeen, ensureSignupDate } from '../../lib/co
 import { shouldShowNotifPrompt, dismissNotifPrompt, markNotifGranted } from '../../lib/contextual-permissions';
 import * as Notifications from 'expo-notifications';
 import { saveMorningLight, saveMrmCompletion } from '../../lib/kspi';
+import { getVisibilityRules, type VisibilityRules } from '../../lib/progressive-disclosure';
+import { getThisWeekActivity, getLastWeekActivity, getMissedMornings, recordMorningStatus } from '../../lib/activity-tracker';
+import { loadCommitmentGoal } from '../../lib/storage';
+import { evaluateProactiveInsights, evaluateProactiveInsightsML, type ProactiveInsight, type ProactiveContext } from '../../lib/proactive-engine';
+import { PROACTIVE_ML_ENABLED } from '../../lib/feature-flags';
+import { deliverInsight, consumePendingInsight } from '../../lib/proactive-delivery';
+import { loadSnapshots } from '../../lib/weekly-snapshots';
+import { ProactiveCard } from '../home/ProactiveCard';
+import { EveningMoodPrompt } from '../home/EveningMoodPrompt';
+import { takeWeeklySnapshotIfNeeded, getGraphData, type WeeklySnapshot } from '../../lib/weekly-snapshots';
+import { RhythmScoreMini } from '../RhythmScoreMini';
+import { useBadgeEvaluation } from '../../lib/use-badge-evaluation';
+import { BadgeEarnedModal } from '../BadgeEarnedModal';
 import { HapticsSuccess } from '../../utils/haptics';
 import {
   loadProfile, loadWeekHistory, hasCompletedIntro, loadOnboardingData,
@@ -87,6 +105,7 @@ export default function HomeScreen() {
   const { openChat }                   = useChatContext();
   const { isPremium }                  = usePremiumGate();
   const { dayPlan, needsOnboarding, refreshPlan } = useDayPlanContext();
+  const { newBadges, evaluate: evalBadges, clearBadges } = useBadgeEvaluation();
   const { phase, advance }             = useOnboardingPhase();
   const router                         = useRouter();
   const { goToPage }                   = usePager();
@@ -114,6 +133,12 @@ export default function HomeScreen() {
   const [showMorningConfirm, setShowMorningConfirm]  = useState(false);
   const [showStreakDetail,   setShowStreakDetail]     = useState(false);
   const [showDepthSheet,     setShowDepthSheet]       = useState(false);
+  const [showScoreSheet,     setShowScoreSheet]       = useState(false);
+  const [showGlossary,       setShowGlossary]         = useState(false);
+  const [milestoneStreak,    setMilestoneStreak]      = useState<number | null>(null);
+  const [sparklineData,      setSparklineData]        = useState<WeeklySnapshot[]>([]);
+  const [showEveningMood,    setShowEveningMood]      = useState(false);
+  const [proactiveCard,      setProactiveCard]        = useState<ProactiveInsight | null>(null);
   const [toastPoints,        setToastPoints]          = useState(0);
   const [toastLabel,         setToastLabel]           = useState('Rhythm Points');
   const [showToast,          setShowToast]            = useState(false);
@@ -122,8 +147,12 @@ export default function HomeScreen() {
   const lightBannerAnim = useRef(new Animated.Value(0)).current;
   const wakeButtonAnim  = useRef(new Animated.Value(1)).current;
 
+  // Progressive disclosure — controls what's visible based on days since signup
+  const [vis, setVis] = useState<VisibilityRules | null>(null);
+  const [progressTooltip, setProgressTooltip] = useState<string | null>(null);
+
   // Layer 1 — Home orientation guide (3 steps, shown once)
-  const [guideStep, setGuideStep] = useState<0 | 1 | 2 | null>(null);
+  const [guideStep, setGuideStep] = useState<number | null>(null);
 
   const hasMountedFocus  = useRef(false);
   const hasRedirected    = useRef(false);
@@ -137,23 +166,29 @@ export default function HomeScreen() {
     (async () => {
       const [p, onboarding] = await Promise.all([loadProfile(), loadOnboardingData()]);
 
-      // ── SMOKE DATA — remove before production ──────────────────────────
-      const smokeProfile: UserProfile = { anchorTime: 390, idealCyclesPerNight: 5, chronotype: 'Neither', weeklyTarget: 35 };
-      const activeProfile = p ?? smokeProfile;
-      const smokeName = onboarding?.firstName ?? 'Thomas';
-      setUserName(smokeName);
-      setProfile(activeProfile);
-      setActionState(getCurrentActionState(getNowMin(), activeProfile.anchorTime, activeProfile.idealCyclesPerNight).state);
-      setStreak(7); // demo streak
-      setCoachInsight({ id: 'smoke-1', message: '90-minute cycles exist during the day too — that\'s why MRMs matter. Even 2 minutes makes a difference.' });
-      // ───────────────────────────────────────────────────────────────────
-
-      if (p) {
-        setProfile(p);
-        setActionState(getCurrentActionState(getNowMin(), p.anchorTime, p.idealCyclesPerNight).state);
+      if (!p) {
+        // No profile yet — user may still be onboarding
+        return;
       }
+      setProfile(p);
+      setActionState(getCurrentActionState(getNowMin(), p.anchorTime, p.idealCyclesPerNight).state);
       if (onboarding?.firstName) setUserName(onboarding.firstName);
-      getFlow().then(f => { if (f.currentStreak > 0) setStreak(f.currentStreak); }).catch(() => {});
+
+      // Auto-detect missed morning (if MRM window passed without confirmation today)
+      const nowM = getNowMin();
+      const mrmWindowEnd = p.anchorTime + 30;
+      const lastConfirm = await AsyncStorage.getItem(CONFIRM_DATE_KEY).catch(() => null);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (nowM > mrmWindowEnd && lastConfirm !== todayStr) {
+        void recordMorningStatus(false);
+      }
+
+      getFlow().then(f => {
+        if (f.currentStreak > 0) {
+          setStreak(f.currentStreak);
+          if (isMilestone(f.currentStreak)) setMilestoneStreak(f.currentStreak);
+        }
+      }).catch(() => {});
       // Load rhythm score from week history
       loadWeekHistory().then(h => {
         if (h && h.length > 0 && p) {
@@ -162,22 +197,82 @@ export default function HomeScreen() {
           setRhythmScore(Math.min(100, Math.round((totalCycles / weekTarget) * 100)));
         }
       }).catch(() => {});
-      // Load rhythm depth + build behavior context for R-Lo
-      Promise.all([getDepth(), getFlow()]).then(([d, f]) => {
+      // Load rhythm depth + activity data + evening mood + build behavior context
+      Promise.all([
+        getDepth(),
+        getFlow(),
+        getThisWeekActivity(),
+        getMissedMornings(),
+        loadCommitmentGoal(),
+        AsyncStorage.getItem('@r90:eveningMood:latest').catch(() => null),
+      ]).then(([d, f, activity, missed, goal, moodRaw]) => {
         const { level, next, pct } = getProgressToNext(d.signal);
         setDepthInfo({ levelLabel: level.label, levelColor: level.color, nextLabel: next?.label ?? null, pct });
+        // Parse yesterday's evening mood
+        let eveningMood: string | undefined;
+        if (moodRaw) {
+          try {
+            const { date, mood } = JSON.parse(moodRaw);
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (date === yesterday.toISOString().slice(0, 10)) eveningMood = mood;
+          } catch {}
+        }
         setBehaviorCtx({
           streak:             f.currentStreak,
           bestStreak:         f.bestStreak,
           weekAligned:        f.weekAligned,
           depthLevel:         level.label,
           totalDaysActive:    d.totalDaysActive,
-          winddownsThisWeek:  0,  // would need to query — acceptable default
-          crpsThisWeek:       0,
-          missedMornings:     f.currentStreak === 0 && f.bestStreak > 0 ? 1 : 0,
+          winddownsThisWeek:  activity.winddowns,
+          crpsThisWeek:       activity.crps,
+          mrmsThisWeek:       activity.mrms,
+          missedMornings:     missed,
+          commitmentGoal:     goal ?? undefined,
+          eveningMood,
         });
       }).catch(() => {});
       void ensureSignupDate();
+      // Badge catch-up evaluation (daily)
+      void evalBadges();
+      // Weekly snapshot for rhythm score graph
+      void takeWeeklySnapshotIfNeeded();
+      getGraphData().then(setSparklineData).catch(() => {});
+      // Proactive insights — check for pending or evaluate new
+      consumePendingInsight('home_card').then(async (pending) => {
+        if (pending) { setProactiveCard(pending); return; }
+        // Build context and evaluate
+        try {
+          const [f2, pts, d2, act, lastAct, snaps, missed2, goal2, moodRaw] = await Promise.all([
+            getFlow(), import('../../lib/rhythm-points').then(m => m.getPoints()),
+            getDepth(), getThisWeekActivity(), getLastWeekActivity(),
+            loadSnapshots(), getMissedMornings(), loadCommitmentGoal(),
+            AsyncStorage.getItem('@r90:quickReplies:v1'),
+          ]);
+          const moods: Array<{ date: string; value: string }> = moodRaw ? JSON.parse(moodRaw) : [];
+          const ctx: ProactiveContext = {
+            flow: f2, points: pts, depth: { signal: d2.signal, totalDaysActive: d2.totalDaysActive },
+            activity: act, lastWeekActivity: lastAct, weeklySnapshots: snaps,
+            commitmentGoal: goal2 ?? undefined, hourOfDay: new Date().getHours(),
+            dayOfWeek: new Date().getDay(), recentMoodReplies: moods,
+          };
+          const evaluate = PROACTIVE_ML_ENABLED ? evaluateProactiveInsightsML : evaluateProactiveInsights;
+          const insight = await evaluate(ctx);
+          if (insight) { await deliverInsight(insight); setProactiveCard(insight); }
+        } catch {}
+      }).catch(() => {});
+      // Evening mood prompt — show if evening and no mood today
+      const hour = new Date().getHours();
+      if (hour >= 20 || hour < 1) {
+        const moodRaw = await AsyncStorage.getItem('@r90:eveningMood:latest').catch(() => null);
+        const hasMoodToday = moodRaw ? (() => {
+          try { return JSON.parse(moodRaw).date === todayStr; } catch { return false; }
+        })() : false;
+        if (!hasMoodToday) setShowEveningMood(true);
+      }
+
+      // Progressive disclosure — load visibility rules
+      getVisibilityRules().then(setVis).catch(() => {});
       // Check for weekly recap (Sunday evening / Monday morning)
       shouldShowWeeklyRecap().then(show => { if (show) setShowRecap(true); }).catch(() => {});
       getTodayInsight().then(i => { if (i) setCoachInsight(i); }).catch(() => {});
@@ -192,6 +287,25 @@ export default function HomeScreen() {
     }, 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // ── Progressive disclosure tooltips ────────────────────────────────────────
+  useEffect(() => {
+    if (!vis || progressTooltip) return;
+    (async () => {
+      if (vis.showStreak && streak > 0 && await shouldShowGuide(GUIDE_KEYS.FEAT_STREAK_INTRO)) {
+        setProgressTooltip('streak'); return;
+      }
+      if (vis.showWeeklyChallenge && await shouldShowGuide(GUIDE_KEYS.FEAT_CHALLENGE_INTRO)) {
+        setProgressTooltip('challenge'); return;
+      }
+      if (vis.showRhythmScore && rhythmScore !== null && await shouldShowGuide(GUIDE_KEYS.FEAT_SCORE_INTRO)) {
+        setProgressTooltip('score'); return;
+      }
+      if (vis.showRhythmDepth && depthInfo && await shouldShowGuide(GUIDE_KEYS.FEAT_DEPTH_INTRO)) {
+        setProgressTooltip('depth'); return;
+      }
+    })();
+  }, [vis, streak, rhythmScore, depthInfo]);
 
   // ── Redirect to onboarding if intro not done ───────────────────────────────
   useEffect(() => {
@@ -334,31 +448,37 @@ export default function HomeScreen() {
   // ─── Layer 1 — Home orientation guide handlers ────────────────────────────
 
   const GUIDE_MESSAGES = [
-    'This is your day, built around your natural rhythm.',
-    'This is what matters right now.',
-    "I'll guide you through it.",
+    "This timeline shows your day in 90-minute cycles.\nThe bright segment is the cycle you're in right now.",
+    'This card tells you what to do next.\nIt updates automatically as your day progresses.',
+    "I'm R-Lo, your rhythm companion.\nTap here to chat with me anytime.",
+    'Swipe or tap to explore:\nToday · Planning · Coach · Profile',
+    'Your bedtime is calculated from your wake time and cycles.\nStick to it — even on weekends.',
   ] as const;
 
   const GUIDE_STEP_KEYS = [
     GUIDE_KEYS.HOME_RHYTHM,
     GUIDE_KEYS.HOME_ACTION,
     GUIDE_KEYS.HOME_RLO,
+    GUIDE_KEYS.HOME_TABS,
+    GUIDE_KEYS.HOME_BEDTIME,
   ] as const;
 
-  // Spotlight Y positions (approximate, relative to screen top)
-  // Adjusted for safe area + header height
-  const topOffset = insets.top + 60; // header space
+  const topOffset = insets.top + 60;
   const GUIDE_SPOTLIGHT_Y = [
-    topOffset + 80,   // Step 0: rhythm timeline area
-    topOffset + 200,  // Step 1: action card area
-    topOffset + 310,  // Step 2: R-Lo message area
+    topOffset + 80,   // Step 0: rhythm timeline
+    topOffset + 200,  // Step 1: action card
+    topOffset + 310,  // Step 2: R-Lo message
+    insets.top + 680, // Step 3: tab bar (bottom)
+    topOffset + 150,  // Step 4: bedtime (timeline area)
   ];
+
+  const TOTAL_GUIDE_STEPS = 5;
 
   const handleGuideNext = useCallback(async () => {
     if (guideStep === null) return;
     await markGuideSeen(GUIDE_STEP_KEYS[guideStep]);
-    if (guideStep < 2) {
-      setGuideStep((guideStep + 1) as 0 | 1 | 2);
+    if (guideStep < TOTAL_GUIDE_STEPS - 1) {
+      setGuideStep((guideStep + 1) as any);
     } else {
       setGuideStep(null);
     }
@@ -373,6 +493,15 @@ export default function HomeScreen() {
   return (
     <AmbientBackground wakeMin={profile?.anchorTime} style={s.root}>
       <SafeAreaView style={s.safe} edges={['top']}>
+        {/* Glossary icon — top right */}
+        <Pressable
+          style={s.glossaryBtn}
+          onPress={() => setShowGlossary(true)}
+          hitSlop={12}
+        >
+          <Ionicons name="book-outline" size={20} color="rgba(159,176,197,0.7)" />
+        </Pressable>
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -380,11 +509,22 @@ export default function HomeScreen() {
             { paddingBottom: insets.bottom + 32 },
           ]}
         >
-          {/* Progression row — streak dominant, points + level secondary */}
-          {(streak > 0 || depthInfo) && (
+          {/* Progression row — progressive disclosure */}
+          {(vis?.showStreak && streak > 0) || (vis?.showRhythmDepth && depthInfo) ? (
             <View style={sh.progressWrap}>
+              {/* Streak tooltip */}
+              {progressTooltip === 'streak' && (
+                <RLoTooltip
+                  visible
+                  message="This is your rhythm streak. It counts how many days in a row you've followed your plan. Miss a day? You get 2 grace days before it resets."
+                  onDismiss={async () => {
+                    await markGuideSeen(GUIDE_KEYS.FEAT_STREAK_INTRO);
+                    setProgressTooltip(null);
+                  }}
+                />
+              )}
               {/* Streak — dominant */}
-              {streak > 0 && (
+              {vis?.showStreak && streak > 0 && (
                 <Animated.View style={{ transform: [{ scale: streakBounce }] }}>
                   <Pressable onPress={() => setShowStreakDetail(true)} style={sh.streakRow}>
                     <Ionicons name="flame" size={22} color="#D97706" />
@@ -392,23 +532,50 @@ export default function HomeScreen() {
                   </Pressable>
                 </Animated.View>
               )}
-              {/* Secondary row: score + level */}
+              {/* Score tooltip */}
+              {progressTooltip === 'score' && (
+                <RLoTooltip
+                  visible
+                  message="This shows how close you are to your weekly cycle target. 35 cycles per week is the gold standard."
+                  onDismiss={async () => {
+                    await markGuideSeen(GUIDE_KEYS.FEAT_SCORE_INTRO);
+                    setProgressTooltip(null);
+                  }}
+                />
+              )}
+              {/* Secondary row: sparkline + score + level */}
               <View style={sh.secondaryRow}>
-                {rhythmScore !== null && (
-                  <View style={sh.secondaryItem}>
+                {vis?.showRhythmScore && sparklineData.length >= 2 && (
+                  <RhythmScoreMini snapshots={sparklineData} onPress={() => goToPage(2)} />
+                )}
+                {vis?.showRhythmScore && rhythmScore !== null && (
+                  <Pressable onPress={() => setShowScoreSheet(true)} style={sh.secondaryItem}>
                     <Ionicons name="star-outline" size={12} color="#6B8CAE" />
                     <Text style={sh.secondaryText}>{rhythmScore}%</Text>
-                  </View>
+                    <Ionicons name="chevron-forward" size={8} color="rgba(255,255,255,0.25)" />
+                  </Pressable>
                 )}
-                {depthInfo && (
+                {/* Depth tooltip */}
+                {progressTooltip === 'depth' && (
+                  <RLoTooltip
+                    visible
+                    message="Rhythm Depth shows how deeply the R90 method is becoming part of your life. It grows as you use more features consistently."
+                    onDismiss={async () => {
+                      await markGuideSeen(GUIDE_KEYS.FEAT_DEPTH_INTRO);
+                      setProgressTooltip(null);
+                    }}
+                  />
+                )}
+                {vis?.showRhythmDepth && depthInfo && (
                   <Pressable onPress={() => setShowDepthSheet(true)} style={sh.secondaryItem}>
                     <View style={[sh.levelDot, { backgroundColor: depthInfo.levelColor }]} />
                     <Text style={[sh.secondaryText, { color: depthInfo.levelColor }]}>{depthInfo.levelLabel}</Text>
+                    <Ionicons name="chevron-forward" size={8} color="rgba(255,255,255,0.25)" />
                   </Pressable>
                 )}
               </View>
             </View>
-          )}
+          ) : null}
 
           {/* 2. Rhythm Timeline */}
           <RhythmTimeline
@@ -430,12 +597,44 @@ export default function HomeScreen() {
             onChatTap={openChat}
             mood={{ streak, zone: dayPlan?.readiness?.zone ?? null }}
             behavior={behaviorCtx}
+            emotionOverride={proactiveCard?.emotion}
           />
 
-          {/* 5. Weekly Challenge */}
-          <View style={{ marginTop: 12 }}>
-            <WeeklyChallenge />
-          </View>
+          {/* 4a. Evening mood prompt */}
+          <EveningMoodPrompt
+            visible={showEveningMood}
+            onSelect={async (mood) => {
+              const today = new Date().toISOString().slice(0, 10);
+              await AsyncStorage.setItem('@r90:eveningMood:latest', JSON.stringify({ mood, date: today })).catch(() => {});
+              setShowEveningMood(false);
+              setBehaviorCtx(prev => prev ? { ...prev, eveningMood: mood } : prev);
+            }}
+          />
+
+          {/* 4b. Proactive insight card */}
+          {proactiveCard && (
+            <ProactiveCard
+              insight={proactiveCard}
+              onDismiss={() => setProactiveCard(null)}
+            />
+          )}
+
+          {/* 5. Weekly Challenge — progressive disclosure Day 3+ */}
+          {vis?.showWeeklyChallenge && (
+            <View style={{ marginTop: 12 }}>
+              {progressTooltip === 'challenge' && (
+                <RLoTooltip
+                  visible
+                  message="Each week, you get a mini challenge. Complete it for bonus points and to build deeper habits."
+                  onDismiss={async () => {
+                    await markGuideSeen(GUIDE_KEYS.FEAT_CHALLENGE_INTRO);
+                    setProgressTooltip(null);
+                  }}
+                />
+              )}
+              <WeeklyChallenge />
+            </View>
+          )}
 
           {/* 6. Secondary Cards — only rendered if data exists */}
           <SecondaryCards cards={secondaryCards} />
@@ -503,6 +702,27 @@ export default function HomeScreen() {
         visible={showDepthSheet}
         onClose={() => setShowDepthSheet(false)}
       />
+
+      <RhythmScoreSheet
+        visible={showScoreSheet}
+        score={rhythmScore}
+        onClose={() => setShowScoreSheet(false)}
+      />
+
+      {/* Badge earned celebration */}
+      {newBadges.length > 0 && (
+        <BadgeEarnedModal badgeIds={newBadges} onClose={clearBadges} />
+      )}
+
+      {milestoneStreak !== null && depthInfo && (
+        <MilestoneModal
+          visible
+          streak={milestoneStreak}
+          levelLabel={depthInfo.levelLabel}
+          levelColor={depthInfo.levelColor}
+          onClose={() => setMilestoneStreak(null)}
+        />
+      )}
 
       <RhythmPointsToast
         points={toastPoints}
@@ -615,8 +835,11 @@ export default function HomeScreen() {
         onNext={handleGuideNext}
         onSkip={handleGuideSkip}
         step={(guideStep ?? 0) + 1}
-        totalSteps={3}
+        totalSteps={TOTAL_GUIDE_STEPS}
       />
+
+      {/* Glossary bottom sheet */}
+      <Glossary visible={showGlossary} onClose={() => setShowGlossary(false)} />
 
     </AmbientBackground>
   );
@@ -627,27 +850,14 @@ const s = StyleSheet.create({
   root:                { flex: 1 },
   safe:                { flex: 1 },
   scroll:              { flexGrow: 1 },
+  glossaryBtn: {
+    position: 'absolute', top: 10, right: 16, zIndex: 10,
+    padding: 6,
+  },
   timelinePlaceholder: { height: 90, marginHorizontal: 20, marginTop: 10 },
 });
 
 const sh = StyleSheet.create({
-  demoBanner: {
-    alignSelf:       'center',
-    backgroundColor: 'rgba(245,166,35,0.15)',
-    borderRadius:    8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginTop:       8,
-    borderWidth:     1,
-    borderColor:     'rgba(245,166,35,0.30)',
-  },
-  demoText: {
-    fontSize:    10,
-    fontWeight:  '700',
-    color:       '#D97706',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
   progressWrap: {
     alignItems:       'center',
     marginTop:        14,

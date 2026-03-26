@@ -30,6 +30,11 @@ import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { HapticsLight, HapticsSuccess } from '../utils/haptics';
 import { saveChecklistRecord } from '../lib/kspi';
+import { syncTeamChallengeProgress } from '../lib/team-challenges';
+import { incrementWindDownCount } from '../lib/badges';
+import { useBadgeEvaluation } from '../lib/use-badge-evaluation';
+import { BadgeEarnedModal } from '../components/BadgeEarnedModal';
+import { trackWinddown } from '../lib/activity-tracker';
 import { requestNotifications } from '../lib/permissions';
 import {
   shouldShowNotifPrompt,
@@ -37,6 +42,7 @@ import {
   markNotifGranted,
 } from '../lib/contextual-permissions';
 import { RLoTooltip } from '../components/RLoGuide';
+import { SessionIntro } from '../components/SessionIntro';
 import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
 import type { ContentItem } from '../lib/content-registry';
 
@@ -320,6 +326,7 @@ function ContentPhase({
     await markContentPlayed('winddown', content.id);
     await addPoints(POINTS.WINDDOWN_CONTENT, 'winddown_content').catch(() => {});
     await addSignal(SIGNAL.WINDDOWN_COMPLETE).catch(() => {});
+    void syncTeamChallengeProgress('winddown_completions');
     onComplete();
   }
 
@@ -539,13 +546,22 @@ function GoodnightPhase({ onClose }: { onClose: () => void }) {
 export default function WindDownScreen() {
   const router        = useRouter();
   const { isPremium } = usePremiumGate();
+  const { newBadges, evaluate: evalBadges, clearBadges } = useBadgeEvaluation();
   const [phase, setPhase] = useState<WindDownPhase>('intro');
   const [showWdTip,    setShowWdTip]   = useState(false);
+  const [showIntro,    setShowIntro]   = useState(false);
 
-  // Check contextual prompts
+  // Check contextual prompts — show multi-step intro on first visit
   useEffect(() => {
-    shouldShowGuide(GUIDE_KEYS.FEAT_WINDDOWN).then(setShowWdTip).catch(() => {});
+    shouldShowGuide(GUIDE_KEYS.FEAT_WINDDOWN).then(v => {
+      if (v) setShowIntro(true);
+    }).catch(() => {});
   }, []);
+
+  async function dismissWinddownIntro() {
+    await markGuideSeen(GUIDE_KEYS.FEAT_WINDDOWN);
+    setShowIntro(false);
+  }
 
   const next = useCallback((p: WindDownPhase) => setPhase(p), []);
 
@@ -561,6 +577,9 @@ export default function WindDownScreen() {
       const count = raw ? parseInt(raw, 10) : 0;
       await AsyncStorage.setItem(WINDDOWN_COUNT_KEY, String(count + 1));
     } catch { /* non-fatal */ }
+    await incrementWindDownCount().catch(() => {});
+    await trackWinddown().catch(() => {});
+    await evalBadges();
     router.replace('/(tabs)');
   }, [router]);
 
@@ -571,13 +590,17 @@ export default function WindDownScreen() {
           <Pressable onPress={() => router.back()} style={s.closeBtn}>
             <Ionicons name="close" size={22} color={MUTED} />
           </Pressable>
+          {/* Multi-step intro shown on first visit (before IntroPhase auto-advance) */}
+          <SessionIntro
+            visible={showIntro}
+            sessionType="winddown"
+            onStart={dismissWinddownIntro}
+            onSkip={dismissWinddownIntro}
+          />
           <IntroPhase
             onNext={() => next('checklist')}
-            showTip={showWdTip}
-            onDismissTip={async () => {
-              await markGuideSeen(GUIDE_KEYS.FEAT_WINDDOWN);
-              setShowWdTip(false);
-            }}
+            showTip={false}
+            onDismissTip={undefined}
           />
         </SafeAreaView>
       )}
@@ -608,6 +631,11 @@ export default function WindDownScreen() {
 
       {phase === 'goodnight' && (
         <GoodnightPhase onClose={() => { void handleGoodnight(); }} />
+      )}
+
+      {/* Badge celebration */}
+      {newBadges.length > 0 && (
+        <BadgeEarnedModal badgeIds={newBadges} onClose={clearBadges} />
       )}
     </View>
   );

@@ -12,11 +12,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { MascotImage } from '../components/ui/MascotImage';
 import { RLoTooltip } from '../components/RLoGuide';
+import { SessionIntro } from '../components/SessionIntro';
 import { usePremiumGate } from '../lib/use-premium-gate';
 import { getNextContent, markContentPlayed } from '../lib/content-registry';
 import { addPoints, POINTS } from '../lib/rhythm-points';
 import { addSignal, SIGNAL } from '../lib/rhythm-depth';
 import { GUIDE_KEYS, shouldShowGuide, markGuideSeen } from '../lib/onboarding-guide';
+import { SessionComplete } from '../components/SessionComplete';
+import { saveMrmCompletion } from '../lib/kspi';
+import { syncTeamChallengeProgress } from '../lib/team-challenges';
+import { trackMRM } from '../lib/activity-tracker';
+import { useBadgeEvaluation } from '../lib/use-badge-evaluation';
+import { BadgeEarnedModal } from '../components/BadgeEarnedModal';
 import type { ContentItem } from '../lib/content-registry';
 
 const BG     = '#0a0a3a';
@@ -27,25 +34,38 @@ const MUTED  = '#6B8CAE';
 export default function MrmPlayerScreen() {
   const router           = useRouter();
   const { isPremium }    = usePremiumGate();
+  const { newBadges, evaluate: evalBadges, clearBadges } = useBadgeEvaluation();
   const [content,   setContent]   = useState<ContentItem | null>(null);
   const [completed, setCompleted] = useState(false);
   const [loading,   setLoading]   = useState(true);
   const [showTip,   setShowTip]   = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
 
   useEffect(() => {
     getNextContent('mrm', isPremium).then(c => {
       setContent(c);
       setLoading(false);
     });
-    // Layer 2: show contextual tip on first MRM visit
-    shouldShowGuide(GUIDE_KEYS.FEAT_MRM).then(setShowTip).catch(() => {});
+    // Layer 2: show multi-step intro on first MRM visit
+    shouldShowGuide(GUIDE_KEYS.FEAT_MRM).then(v => {
+      if (v) setShowIntro(true);
+    }).catch(() => {});
   }, [isPremium]);
+
+  async function dismissIntro() {
+    await markGuideSeen(GUIDE_KEYS.FEAT_MRM);
+    setShowIntro(false);
+  }
 
   async function handleComplete() {
     if (!content) return;
     await markContentPlayed('mrm', content.id);
     await addPoints(POINTS.MRM_COMPLETE, 'mrm_done').catch(() => {});
     await addSignal(SIGNAL.MRM_COMPLETE).catch(() => {});
+    await saveMrmCompletion().catch(() => {});
+    await trackMRM().catch(() => {});
+    void syncTeamChallengeProgress('mrm_completions');
+    void evalBadges();
     setCompleted(true);
   }
 
@@ -60,33 +80,27 @@ export default function MrmPlayerScreen() {
   if (completed) {
     return (
       <SafeAreaView style={s.root} edges={['top', 'bottom']}>
-        <View style={s.doneWrap}>
-          <MascotImage emotion="Fiere" size="md" />
-          <Text style={s.doneTitle}>Break done.</Text>
-          <Text style={s.doneSub}>+{POINTS.MRM_COMPLETE} Rhythm Points ✦</Text>
-          <Pressable style={s.closeBtn} onPress={() => router.back()}>
-            <Text style={s.closeTxt}>Close</Text>
-          </Pressable>
-        </View>
+        <SessionComplete
+          title="Break done!"
+          sessionName={content?.title ?? 'Micro Recovery'}
+          duration={`${Math.round((content?.duration ?? 120) / 60)} min`}
+          points={POINTS.MRM_COMPLETE}
+          signal={SIGNAL.MRM_COMPLETE}
+          onDismiss={() => router.back()}
+        />
       </SafeAreaView>
     );
   }
 
   return (
     <View style={s.root}>
-      {/* Layer 2 tooltip — shown once on first MRM */}
-      {showTip && (
-        <View style={{ position: 'absolute', top: 80, left: 0, right: 0, zIndex: 50 }}>
-          <RLoTooltip
-            visible={showTip}
-            message="This is a reset moment. 2 minutes to help you stay sharp."
-            onDismiss={async () => {
-              await markGuideSeen(GUIDE_KEYS.FEAT_MRM);
-              setShowTip(false);
-            }}
-          />
-        </View>
-      )}
+      {/* Multi-step intro — shown once on first MRM visit */}
+      <SessionIntro
+        visible={showIntro}
+        sessionType="mrm"
+        onStart={dismissIntro}
+        onSkip={dismissIntro}
+      />
       <AudioPlayer
         source={content.source}
         title={content.title}
@@ -95,6 +109,9 @@ export default function MrmPlayerScreen() {
         onComplete={() => { void handleComplete(); }}
         onClose={() => router.back()}
       />
+      {newBadges.length > 0 && (
+        <BadgeEarnedModal badgeIds={newBadges} onClose={clearBadges} />
+      )}
     </View>
   );
 }
