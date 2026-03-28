@@ -16,13 +16,14 @@
       "assets/**/*"
     ],
     "splash": {
-      "image": "./assets/images/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0A0A"
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0a0a3a"
     },
     "ios": {
       "bundleIdentifier": "com.metalab.r90navigator",
       "supportsTablet": false,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "com.apple.developer.healthkit": true,
         "com.apple.developer.healthkit.background-delivery": true
@@ -31,7 +32,8 @@
         "NSCalendarsUsageDescription": "R-Lo · Sleep Coach reads your calendar to detect conflicts with your sleep schedule and suggest adjustments.",
         "NSUserNotificationUsageDescription": "Get a gentle nudge when it's time to start your pre-sleep routine or take a recovery nap.",
         "NSHealthShareUsageDescription": "R-Lo · Sleep Coach reads your sleep and activity data to personalise your recovery recommendations.",
-        "NSHealthUpdateUsageDescription": "R-Lo · Sleep Coach may write sleep sessions to Apple Health."
+        "NSHealthUpdateUsageDescription": "R-Lo · Sleep Coach may write sleep sessions to Apple Health.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "usesAppleSignIn": true
     },
@@ -61,14 +63,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0A0A0A",
-          "image": "./assets/images/icon.png",
-          "resizeMode": "contain",
+          "backgroundColor": "#0a0a3a",
+          "image": "./assets/splash.png",
+          "resizeMode": "cover",
           "imageWidth": 200,
           "android": {
-            "backgroundColor": "#0A0A0A",
-            "image": "./assets/images/icon.png",
-            "resizeMode": "contain",
+            "backgroundColor": "#0a0a3a",
+            "image": "./assets/splash.png",
+            "resizeMode": "cover",
             "imageWidth": 200
           }
         }
@@ -87,13 +89,18 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "./plugins/withModularHeaders"
     ],
     "extra": {
       "router": {},
+      "expo-navigation-bar": {
+        "position": "absolute"
+      },
       "eas": {
-        "projectId": "7d42ee2c-3236-4060-b482-11c5a8065fd1"
+        "projectId": "949ac06f-2d27-4313-a864-2f87980fff9a"
       }
-    }
+    },
+    "owner": "thomas.metalab"
   }
 }
