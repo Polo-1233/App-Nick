@@ -38,6 +38,7 @@
       "usesAppleSignIn": true
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "package": "com.metalab.r90navigator",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
@@ -46,7 +47,8 @@
       "permissions": [
         "READ_CALENDAR",
         "android.permission.READ_CALENDAR",
-        "android.permission.WRITE_CALENDAR"
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
